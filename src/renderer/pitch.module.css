@@ -96,10 +96,11 @@
 
 .selectionRing {
   fill: none;
-  stroke: var(--st-accent);
-  stroke-width: 2px;
+  stroke: var(--st-accent); /* overridden inline: ball = white, player = team colour */
+  stroke-width: 2.5px;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
+  filter: drop-shadow(0 0 0.6px rgba(255, 255, 255, 0.9));
 }
 
 .hoverRing {
@@ -425,4 +426,21 @@
   font-weight: 700;
   fill: var(--st-accent, #2563eb);
   user-select: none;
+}
+
+.ghostToken {
+  cursor: crosshair;
+}
+
+.ghostToken circle {
+  stroke: rgba(255, 255, 255, 0.8);
+  stroke-width: 0.16;
+}
+
+.ghostToken text {
+  font-size: 1.6px;
+  font-weight: 700;
+  fill: #fff;
+  user-select: none;
+  pointer-events: none;
 }

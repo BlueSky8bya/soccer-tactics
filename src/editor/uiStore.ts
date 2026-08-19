@@ -178,7 +178,12 @@ export const useUiStore = create<UiState>((set) => ({
   setTourStep: (step) => set((s) => ({ tour: { ...s.tour, step } })),
   endTour: () => set({ tour: { active: false, step: 0 } }),
   setPlaying: (playing) =>
-    set((s) => ({ playback: { ...s.playback, playing }, hasPlayed: s.hasPlayed || playing })),
+    set((s) => ({
+      // Stopping (pause, click, end) always returns to the start: the vivid tokens belong at their
+      // original spots while authoring; the play is only ever watched from the beginning.
+      playback: { ...s.playback, playing, ...(playing ? {} : { t: 0 }) },
+      hasPlayed: s.hasPlayed || playing,
+    })),
   setSpeed: (speed) => set((s) => ({ playback: { ...s.playback, speed } })),
   setLoop: (loop) => set((s) => ({ playback: { ...s.playback, loop } })),
   selectSegment: (selectedSegmentId) => set({ selectedSegmentId }),

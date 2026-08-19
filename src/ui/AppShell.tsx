@@ -4,6 +4,7 @@ import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
+import { PlayerCard } from './PlayerCard'
 import { ActionsPanel, GuidePanel } from './SidePanels'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { StepBar } from './StepBar'
@@ -110,6 +111,7 @@ export function AppShell() {
         <div className={styles.pitchFrame}>
           <SimplePitch />
         </div>
+        <PlayerCard />
         {errors.length > 0 && (
           <div className={styles.emptyHint} role="alert">
             ⚠ {t('tl.issue.cycle')}
@@ -122,48 +124,34 @@ export function AppShell() {
         <div className={styles.simpleBar}>
           <button
             type="button"
-            className={`${styles.btn} ${ui.animMode ? styles.btnPrimary : ''} ${styles.animToggle}`}
-            onClick={() => ui.setAnimMode(!ui.animMode)}
-            data-tour="anim-mode"
-            aria-pressed={ui.animMode}
+            className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
+            onClick={pb.toggle}
+            data-tour="play"
+            title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
+            aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
           >
-            🎬 {t('simple.animMode')}
+            {ui.playback.playing ? '❚❚' : '▶'}
           </button>
-          {!ui.animMode && <span className={styles.muted}>{t('simple.needAnim')}</span>}
-          {ui.animMode && (
-            <>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
-                onClick={pb.toggle}
-                data-tour="play"
-                title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
-                aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
-              >
-                {ui.playback.playing ? '❚❚' : '▶'}
-              </button>
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={pb.restart}
-                title={`${t('tl.restart')} (Home)`}
-                aria-label={t('tl.restart')}
-              >
-                ↺
-              </button>
-              <button
-                type="button"
-                className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
-                onClick={() => ui.setLoop(!ui.playback.loop)}
-                title={`${t('tl.loop')} (G)`}
-                aria-label={t('tl.loop')}
-                aria-pressed={ui.playback.loop}
-              >
-                ⟳
-              </button>
-              <StepBar />
-            </>
-          )}
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={pb.restart}
+            title={`${t('tl.restart')} (Home)`}
+            aria-label={t('tl.restart')}
+          >
+            ↺
+          </button>
+          <button
+            type="button"
+            className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
+            onClick={() => ui.setLoop(!ui.playback.loop)}
+            title={`${t('tl.loop')} (G)`}
+            aria-label={t('tl.loop')}
+            aria-pressed={ui.playback.loop}
+          >
+            ⟳
+          </button>
+          <StepBar />
         </div>
       </footer>
 

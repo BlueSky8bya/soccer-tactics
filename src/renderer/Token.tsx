@@ -64,7 +64,9 @@ export const Token = memo(function Token(p: TokenProps) {
   if (p.kind === 'player') {
     body = (
       <>
-        {p.selected && <circle r={r + 0.7} className={styles.selectionRing} />}
+        {p.selected && (
+          <circle r={r + 0.7} className={styles.selectionRing} style={{ stroke: p.color }} />
+        )}
         {!p.selected && p.hovered && <circle r={r + 0.5} className={styles.hoverRing} />}
         {p.moving && p.heading !== undefined && (
           <path
@@ -101,7 +103,9 @@ export const Token = memo(function Token(p: TokenProps) {
           className={styles.ballShadow}
           style={{ opacity: Math.max(0.12, 0.42 - h * 0.05) }}
         />
-        {p.selected && <circle r={r + 0.8} className={styles.selectionRing} />}
+        {p.selected && (
+          <circle r={r + 0.8} className={styles.selectionRing} style={{ stroke: '#ffffff' }} />
+        )}
         {!p.selected && p.hovered && <circle r={r + 0.6} className={styles.hoverRing} />}
         <g transform={`scale(${scale})`}>
           <circle r={r} className={styles.ball} />

@@ -26,7 +26,9 @@ export function usePlaybackController(duration: number) {
       if (t >= durRef.current) {
         if (st.playback.loop) t = 0
         else {
-          useUiStore.setState({ playback: { ...st.playback, t: durRef.current, playing: false } })
+          // Playback finished → snap back to the start, so the vivid tokens sit at their original
+          // spots and only the faint ghosts mark the path ends (authoring view stays readable).
+          useUiStore.setState({ playback: { ...st.playback, t: 0, playing: false } })
           raf.current = null
           return
         }

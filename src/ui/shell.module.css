@@ -965,7 +965,10 @@
 .guideGroup {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
+  padding: var(--st-space-2) var(--st-space-3);
+  background: var(--st-surface-2);
+  border-radius: var(--st-radius-m);
 }
 
 .guideTitle {
@@ -978,14 +981,28 @@
 
 .guideRow {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  color: var(--st-text-2);
-  line-height: 1.35;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--st-border);
+}
+
+.guideRow:last-child {
+  border-bottom: 0;
+  padding-bottom: 2px;
 }
 
 .guideRow .kbd {
-  flex: 0 0 auto;
+  font-size: 11.5px;
+  padding: 1px 7px;
+  line-height: 19px;
+}
+
+.guideHint {
+  color: var(--st-text-2);
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
 .guideDim {
@@ -1145,4 +1162,68 @@
 
 .stepChipActive .stepCount {
   background: #fff;
+}
+
+.panelField {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--st-text-2);
+}
+
+.panelSelect {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 6px;
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-s);
+  background: var(--st-surface);
+  color: var(--st-text);
+  min-width: 0;
+}
+
+/* ---------- player card (selected player editor) ---------- */
+
+.playerCard {
+  position: absolute;
+  top: var(--st-space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--st-surface) 96%, transparent);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-pill);
+  box-shadow: var(--st-shadow-2);
+  font-size: 12.5px;
+}
+
+.playerCard label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--st-text-2);
+}
+
+.playerCard input,
+.playerCard select {
+  font: inherit;
+  font-size: 12.5px;
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-s);
+  background: var(--st-surface);
+  color: var(--st-text);
+  padding: 3px 6px;
+}
+
+.playerNum {
+  width: 46px;
+}
+
+.playerName {
+  width: 96px;
 }

@@ -427,6 +427,51 @@ export function tailEndAt(
   return seg.path.waypoints[seg.path.waypoints.length - 1]?.p ?? null
 }
 
+/**
+ * Ball dragged at authoring time = move its STARTING point (kickoff spot), even when passes exist:
+ * resting spot, the opening possession (retarget to `holderId` / remove when loose) and the first
+ * pass's origin all move together. QA: "공이 안 움직여" once a pass had been drawn.
+ */
+/** Translate every authored path of an entity by delta (group drag moves whole plays together). */
+export function shiftEntityPathsInDraft(doc: TacticDocument, entityId: Id, delta: Vec2): void {
+  const track = findTrack(doc, entityId)
+  if (!track) return
+  for (const s of track.segments) {
+    if (!('path' in s)) continue
+    for (const w of s.path.waypoints) {
+      w.p = { x: w.p.x + delta.x, y: w.p.y + delta.y }
+      if (w.handleIn) w.handleIn = { x: w.handleIn.x + delta.x, y: w.handleIn.y + delta.y }
+      if (w.handleOut) w.handleOut = { x: w.handleOut.x + delta.x, y: w.handleOut.y + delta.y }
+    }
+  }
+}
+
+export function moveBallStartInDraft(doc: TacticDocument, to: Vec2, holderId: Id | null): void {
+  const holder = holderId ? doc.players.find((p) => p.id === holderId) : undefined
+  const rest = holder ? { x: holder.home.x + 1.1, y: holder.home.y + 0.7 } : to
+  doc.ball.home = rest
+  if (holder) doc.ball.initialHolderId = holder.id
+  else delete doc.ball.initialHolderId
+  const track = findTrack(doc, doc.ball.id)
+  if (!track) return
+  const first = track.segments[0]
+  if (first && first.kind === 'possessed' && first.trigger.type === 'at' && first.trigger.t === 0) {
+    if (holder) first.holderId = holder.id
+    else track.segments.shift()
+  }
+  const firstPath = track.segments.find((s) => 'path' in s)
+  if (firstPath && 'path' in firstPath) {
+    const wp = firstPath.path.waypoints[0]
+    if (wp) {
+      const dx = rest.x - wp.p.x
+      const dy = rest.y - wp.p.y
+      wp.p = { ...rest }
+      if (wp.handleIn) wp.handleIn = { x: wp.handleIn.x + dx, y: wp.handleIn.y + dy }
+      if (wp.handleOut) wp.handleOut = { x: wp.handleOut.x + dx, y: wp.handleOut.y + dy }
+    }
+  }
+}
+
 export function shiftTailInDraft(
   draft: TacticDocument,
   entityId: Id,

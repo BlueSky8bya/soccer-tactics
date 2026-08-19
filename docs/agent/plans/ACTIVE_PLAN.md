@@ -90,3 +90,6 @@ npm run typecheck && npm run lint && npm test && npm run build && npm run harnes
 
 ### 2026-08-20 — R14 (사용자 지시)
 - 재생바 제거, 단계 1~9 + 끝 동기화(stepDur=최장 자연 길이), 라이트 고정, 배지 흐림. CHG-20260820-022, ADR-0009 v3.
+
+### 2026-08-20 — R15 (사용자 지시)
+- ⚡ 제거, PlayerCard(번호/이름/포지션), 포메이션 셀렉트, 조작법 가독성, 칩 1~9. CHG-20260820-023.

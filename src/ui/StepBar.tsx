@@ -15,8 +15,7 @@ export function StepBar() {
   const setCurrentStep = useUiStore((s) => s.setCurrentStep)
   const selectedSegmentId = useUiStore((s) => s.selectedSegmentId)
   const counts = stepCounts(doc)
-  const lastUsed = counts.reduce((last, n, i) => (n > 0 ? i + 1 : last), 0)
-  const visible = Math.min(MAX_STEP, Math.max(3, lastUsed + 1, currentStep))
+  const visible = MAX_STEP // 1~9 always visible (user 2026-08-20)
 
   return (
     <div className={styles.stepBar} role="group" aria-label={t('simple.steps')}>

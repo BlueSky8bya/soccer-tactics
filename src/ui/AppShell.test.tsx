@@ -60,15 +60,11 @@ function setup() {
 }
 
 describe('AppShell (simple mode, ADR-0009)', () => {
-  it('renders pitch, ball, side panels; play bar appears with animation mode', async () => {
+  it('renders pitch, ball, side panels, play bar and step chips', async () => {
     const { container } = setup()
     expect(screen.getByRole('application', { name: /pitch/i })).toBeTruthy()
     expect(container.querySelectorAll('[data-kind="ball"]').length).toBe(1)
-    // play bar + step chips appear once animation mode is switched on
-    expect(screen.queryByRole('button', { name: '재생' })).toBeNull()
-    await act(async () => {
-      screen.getByRole('button', { name: /애니메이션 모드/ }).click()
-    })
+    // play bar + step chips are always visible (no mode toggle)
     expect(screen.getByRole('button', { name: '재생' })).toBeTruthy()
     expect(screen.getByRole('group', { name: '단계' })).toBeTruthy()
   })

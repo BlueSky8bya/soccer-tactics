@@ -102,18 +102,13 @@ describe('interactive tour (first visit)', () => {
       screen.getByRole('button', { name: /양 팀 채우기/ }).click()
     })
     await wait(600)
-    expect(useUiStore.getState().tour.step).toBe(1) // anim-mode step
-    await act(async () => {
-      useUiStore.getState().setAnimMode(true)
-    })
-    await wait(600)
-    expect(useUiStore.getState().tour.step).toBe(2) // run step
+    expect(useUiStore.getState().tour.step).toBe(1) // run step
     const p = core.getDocument().players[0]!
     await act(async () => {
       addStepRun(core, p.id, makePath([p.home, { x: p.home.x + 8, y: p.home.y }]).waypoints, 1)
     })
     await wait(600)
-    expect(useUiStore.getState().tour.step).toBe(3)
+    expect(useUiStore.getState().tour.step).toBe(2)
     // skip → ends + remembered
     await act(async () => {
       screen.getByRole('button', { name: '건너뛰기' }).click()

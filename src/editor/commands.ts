@@ -171,6 +171,19 @@ export function setPlayerNumber(core: EditorCore, id: Id, number: number): void 
   )
 }
 
+export function setPlayerRole(core: EditorCore, id: Id, role: string): void {
+  core.transaction(
+    'Set role',
+    (d) => {
+      const p = d.players.find((x) => x.id === id)
+      if (!p) return
+      if (role) p.role = role
+      else delete p.role
+    },
+    { coalesceKey: `role:${id}` },
+  )
+}
+
 export function setPlayerLabel(core: EditorCore, id: Id, label: string): void {
   core.transaction(
     'Set label',

@@ -308,3 +308,63 @@ Change:
 Validation: typecheck/lint/test 90/build/harness/format PASS; Playwright(OS dark): bg rgb(242,238,226), 스크럽 없음, 두 런(짧/긴) 동시 종료 재생, 콘솔 클린. ADR-0009 v2의 "같이 시작(자연 속도)" 항목을 본 결정으로 대체.
 Related: ADR-0009. Rollback: revert.
 
+### CHG-20260820-023 — UX — 자동 대응 제거 · 선수 정보 카드 · 포메이션 선택 · 조작법 가독성 · 단계 칩 1~9 상시 (PLAN-004 R15)
+
+Problem: 사용자 지시 5건 — ⚡ 버튼 제거; 선수 클릭 시 이름·포지션 편집(기본 표시는 등번호만); 양 팀 채우기에 포메이션 선택; 오른쪽 조작법 가독성; 단계 칩이 1~3만 보임.
+Change:
+- AutoReactPanel 삭제(엔진 `applyReaction`은 잔존, UI 미노출). 투어 마지막 문구 갱신.
+- `PlayerCard.tsx`: 선수 1명 선택 시 필드 상단에 번호/이름/포지션(GK·DF·MF·FW) 카드. `setPlayerRole`(coalesce). 토큰 기본 표시는 등번호(이름 설정 시 아래 표시).
+- ActionsPanel: Home/Away 포메이션 셀렉트(12종) → 채우기.
+- GuidePanel: 그룹 카드 + 줄 단위(칩 위·설명 아래) 레이아웃, 카피 축약.
+- StepBar: 1~9 상시 표시.
+Validation: typecheck/lint/test 90/build/harness/format PASS; Playwright: 3-5-2/4-2-3-1 채우기, 카드에서 이름 "손흥민" 편집·토큰 표시, ⚡ 버튼 없음, 칩 9개, 콘솔 클린.
+Related: ADR-0009. Rollback: revert.
+
+### CHG-20260820-024 — UX — 세분화된 포지션 + 이름(포지션) 표시 (PLAN-004 R16)
+
+Problem: 포지션 4개로 단조로움; 이름 A + 포지션 B면 토큰에 A(B) 표시 요청.
+Change: PlayerCard 포지션 그룹 셀렉트 19종(GK/CB/LCB/RCB/LB/RB/LWB/RWB/SW/CDM/CM/CAM/LM/RM/LW/RW/SS/CF/ST). 토큰 라벨 = 이름(포지션).
+Validation: test 90/build/harness/format PASS; Playwright 손흥민(LW) 확인.
+
+### CHG-20260820-025 — UX — 휙 던지기 제거 · 팀색 하이라이트 · 연속 패스 체인 (PLAN-004 R17)
+
+Problem: 사용자 지시 — 그리기는 더블클릭만(휙 던지기 제거); 선택 하이라이트 = 공 흰색·선수 팀 색; A→B 패스 후 B가 이어서 패스하는 식의 연속 그리기가 안 됨(경로 시작이 항상 t=0 위치).
+Change:
+- 휙 던지기 제거(fling.ts/test 삭제, 제스처·안내·투어 문구 정리).
+- 선택 링: 공 = 흰색, 선수 = 팀 색(드롭섀도로 동색 토큰에서도 가시).
+- `startDraw` 시작점 = `lastKnownPosition`(모든 authored 움직임 이후 위치) → 공 재더블클릭 시 마지막 수신자에서 이어 패스, 선수 재더블클릭 시 이전 런 끝에서 이어 달림. 패서는 트랙 마지막 보유자(기존 passerFor).
+- 라벨: 이름+포지션 = 이름(포지션) · 이름만 = 이름 · 포지션만 = 포지션 (사용자 확정).
+Validation: test 86(-4 fling)/build/harness/format PASS; Playwright: 10→8(1단계) 후 공 더블클릭 → 8에서 시작해 7로(2단계), 재생 끝 공=7, 링 색 흰/팀색 확인, 콘솔 클린.
+
+### CHG-20260820-026 — UX — 고스트 체인 · Shift+드래그 그리기 · 모드 토글 제거 (PLAN-004 R18)
+
+Problem: 사용자 지시 — 원래 위치는 선명하게, 진행 순서대로 점점 흐린 엔티티를 두고 그걸 잡아 이어 그리기; 더블클릭 대신 Shift+클릭(드래그); 애니메이션 모드 버튼 제거.
+Change:
+- SimplePitch: authored 경로마다 끝 위치에 **고스트 토큰**(팀색/공 흰색, 순서대로 opacity 0.55→0.22, 번호 표시). 고스트 Shift+드래그 = 그 위치에서 이어서 그리기(`data-ghost` 히트). 라이브 토큰 Shift+드래그 = 원래 위치에서 그리기. 더블클릭 제스처 제거.
+- 애니메이션 모드 토글 제거 — 재생 바·단계 칩 상시. 투어 5장(anim-mode 장 삭제), 조작법 병합.
+Validation: test 86/build/harness/format PASS; Playwright: 패스1(10→8) → 고스트 Shift+드래그로 8→7(2단계) → 재생 체인 확인, 고스트 2개, 콘솔 클린.
+
+### CHG-20260820-027 — FIX/UX — 포메이션 포지션 표시 · 고스트 최상위(Shift 게이트) (PLAN-004 R19)
+
+Problem: 사용자 — ① 양 팀 채우기 후 카드 포지션이 "—"(포메이션 role DF/DM/AM/MF/FW가 셀렉트 목록에 없음) ② 움직인 위치(고스트)가 선수 토큰 아래 깔려 다시 클릭 불가, 특히 공 고스트가 수신자 밑에 숨어 "공이 클릭이 안 돼".
+Change:
+- PlayerCard ROLE_GROUPS에 포메이션 계열(DF/MF/DM/AM/FW) 포함 + 미지 값도 옵션으로 표시.
+- 고스트 레이어를 토큰 **위**로 이동, **Shift 누른 동안만** pointer-events(+투명도 강조) — 평소 클릭은 토큰이 받고, Shift+드래그는 겹친 선수 위에서도 고스트를 잡음. 공 고스트 반경 1.3m.
+Validation: test 86/build/harness/format PASS; Playwright: #9 카드 포지션 FW 표시, 선수 8 위에 겹친 공 고스트를 Shift+드래그 → 8→7 패스 체인 재생(공 최종 7), 콘솔 클린.
+
+### CHG-20260820-028 — FEAT/FIX — 지그재그 체인 드로잉 · 공 시작점 이동 (PLAN-004 R20)
+
+Problem: 사용자 — ① 공이 패스를 그린 뒤에는 드래그로 안 움직임(시작 보유 세그먼트 우선 + 잔디 드롭 취소 정책) ② 지그재그: Shift를 계속 누른 채 누르고-끌고-놓기를 반복하면 다리(leg)가 이어지고, 원위치 선명 → 다리마다 점점 흐린 고스트, 경로 순서 배지 1,2,3.
+Change:
+- `segmentCommands.moveBallStartInDraft`: 공 드래그 = 시작 지점 이동 — 휴식 위치·initialHolder(선수 위 드롭=보유, 잔디=루즈)·첫 possessed@0·첫 패스 원점이 함께 이동. 취소 정책 제거.
+- SimplePitch 체인: Shift 유지 중 각 press-drag-release = 새 다리, **단계 자동 +1**(1,2,3…), 다음 press는 마지막 위치에서 시작(빈 곳을 눌러도). Shift 떼면 체인 종료. 고스트는 다리마다 0.55→0.44→0.33….
+Validation: test 86/build/harness/format PASS; Playwright: #2 지그재그 3다리(배지 1,2,3 · 고스트 3단 흐림), 패스 authored 상태에서 공 150px 이동, 재생 무경고, 콘솔 클린.
+
+### CHG-20260820-029 — FIX/UX — 재생 후 원위치 복귀 · 그룹 드래그가 경로도 이동 (PLAN-004 R21)
+
+Problem: 사용자 — ① 재생이 끝나면 토큰이 마지막 위치에 선명하게 남아 고스트와 겹침(선명=시작, 흐림=끝이어야) ② 마퀴로 묶어 끌 때 공/선수의 그린 경로도 같이 이동해야.
+Change:
+- usePlayback: 재생 종료(비반복) 시 playhead 0. uiStore.setPlaying(false): **어떤 정지든**(일시정지·토큰 클릭·종료) playhead 0 — 편집 화면에선 선명 토큰=시작 위치 불변.
+- `shiftEntityPathsInDraft` + SimplePitch 그룹 드래그(2개 이상): 홈 + 모든 authored 경로 waypoint(공 트랙 포함)를 증분 이동 — 묶은 플레이 전체가 통째로 이동.
+Validation: test 86/build/harness/format PASS; Playwright: 재생 후 #2 원위치(0px)·고스트 유지, 그룹(공+8+9+10) 80,60 이동 시 경로 고스트도 80,60 이동, 콘솔 클린.
+

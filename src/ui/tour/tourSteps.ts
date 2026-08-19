@@ -1,5 +1,4 @@
 import type { Id, TacticDocument } from '@/domain/types'
-import { useUiStore } from '@/editor/uiStore'
 
 /** What a step can look at to decide "done". `entry` = document when the step became active. */
 export interface TourContext {
@@ -65,21 +64,13 @@ export const TOUR_STEPS: TourStep[] = [
     done: (c) => c.doc.players.length > 0,
   },
   {
-    id: 'anim-mode',
-    title: '애니메이션 모드',
-    body: '움직임을 그리려면 아래 [🎬 애니메이션 모드]를 켜세요. 재생·단계 바가 나타나요.',
-    available: (c) => c.doc.players.length > 0,
-    target: () => '[data-tour="anim-mode"]',
-    done: (c) => c.animMode,
-  },
-  {
     id: 'run',
     title: '이동 경로',
-    body: '선수를 더블클릭한 뒤 끌면 이동 경로가 그려져요. (그냥 끌면 위치만 이동, 휙 던지면 달리기)',
-    kbd: '더블클릭+드래그',
+    body: 'Shift를 누른 채 선수를 끌면 이동 경로가 그려져요. (그냥 끌면 위치만 이동해요) 흐린 토큰을 Shift+드래그하면 그 위치에서 이어서 그려요.',
+    kbd: 'Shift+드래그',
     placement: 'side',
     avoid: () => '[data-kind="ball"]',
-    available: (c) => c.doc.players.length > 0 && c.animMode,
+    available: (c) => c.doc.players.length > 0,
     target: (c) => {
       const id = pickPlayer(c.doc, [9, 7, 11])
       return id ? `[data-entity="${id}"]` : null
@@ -89,10 +80,10 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'pass',
     title: '패스',
-    body: '공을 더블클릭한 뒤 받을 선수까지 끌면 패스예요. 공을 선수 위에 그냥 놓으면 그 선수가 공을 가져요.',
-    kbd: '더블클릭+드래그',
+    body: 'Shift를 누른 채 공을 받을 선수까지 끌면 패스예요. 공을 선수 위에 그냥 놓으면 그 선수가 공을 가져요.',
+    kbd: 'Shift+드래그',
     placement: 'side',
-    available: (c) => c.doc.players.length > 0 && c.animMode,
+    available: (c) => c.doc.players.length > 0,
     target: () => '[data-kind="ball"]',
     done: (c) =>
       passCount(c.doc) > passCount(c.entry) ||
@@ -103,19 +94,16 @@ export const TOUR_STEPS: TourStep[] = [
     title: '재생과 단계',
     body: 'Space 또는 ▶로 재생해요. 아래 ①②③이 순서예요 — 같은 번호는 같이 시작해서 같이 끝나고, 다음 번호가 이어서 시작해요. 경로 끝의 번호 배지로 바꿔요.',
     kbd: 'Space',
-    available: (c) => c.doc.players.length > 0 && c.animMode,
+    available: (c) => c.doc.players.length > 0,
     target: () => '[data-tour="play"]',
     done: (c) => c.hasPlayed,
   },
   {
     id: 'finish',
     title: '준비 끝!',
-    body: '상대 반응이 필요하면 상단 ⚡ 자동 대응. 이 튜토리얼은 ? 도움말에서 다시 볼 수 있어요.',
+    body: '이 튜토리얼은 오른쪽 위 ? 도움말에서 언제든 다시 볼 수 있어요.',
     kbd: '?',
     target: () => '[data-tour="tour-restart"]',
-    onEnter: () => {
-      useUiStore.getState().setAutoReactOpen(false)
-    },
     done: () => false,
     terminal: true,
   },
