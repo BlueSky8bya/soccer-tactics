@@ -117,6 +117,13 @@ Red2.track:   move{press, trigger onEvent(ball.received(Ball.travel#1), +0.0)}
 ```
 → 단위테스트: stateAt(0.3) Blue2 미이동, stateAt(1.2) ball detach 직후, stateAt(1.8) receive, Red2 start=receive 시각.
 
+## Amendment 2026-08-20 (Timing.decel, PLAN-003 M6 정합화)
+
+- `Timing`에 선택 변형 `{ speed, decel }` 추가(`src/domain/types.ts`). 운동학 `s(t)=v₀t−½at²`, 정지 거리 `v₀²/2a`, 경로가 짧으면 조기 도착. `compile.buildSchedule`이 `MoveSchedule.decel`로 전달, `schedulePosAt/scheduleEndDistance`가 사용. 용도: 공/선수 "휙 던지기"(ADR-0006 라운드 4).
+- **스키마 정책**: 추가 선택 필드이므로 `SCHEMA_VERSION = 1` 유지(기존 문서는 그대로 읽힘, 구형 리더는 `decel` 무시 시 등속으로 해석). 필드 제거/의미 변경 시에만 버전 증가.
+- 파생 이벤트·trigger 해석은 변경 없음. `Keyframe`은 여전히 사용자 노출 개념 아님.
+- 알려진 문서-구현 차이(Codex Audit, 범위 밖 후보): compile은 위상 정렬 대신 반복 해석(최대 1000회), `stateAt.findSegment`는 선형 탐색 — 현재 규모(≤23 엔티티, 수십 segment)에서 성능 영향 없음. 성능 측정 후 필요 시 별도 ADR.
+
 ## Consequences
 
 - (+) v1 UI가 `at`/`afterSegment`만 노출해도 데이터가 이벤트 trigger 지원 → 후속 확장 무비용.

@@ -132,7 +132,12 @@ export interface Marker {
 
 export type Easing = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
 
-export type Timing = { duration: Seconds } | { speed: MetresPerSecond }
+/**
+ * duration — fixed time; speed — constant speed; speed+decel — launch speed with constant
+ * deceleration (kinematics: s(t)=v0·t−½a·t², stops when v=0 or at path end). Used for flung balls.
+ */
+export type Timing =
+  { duration: Seconds } | { speed: MetresPerSecond } | { speed: MetresPerSecond; decel: number }
 
 export interface SegmentBase {
   id: Id

@@ -38,6 +38,13 @@ compile memo: `compiledFor(revision)` — revision 단위 캐시 1개.
 - useReducer+Context: 성능·selector 부족.
 → Zustand + immer patches 자체 history (코드 ~150줄) 선택.
 
+## Amendment 2026-08-19 (M1 구현)
+
+- 히스토리 엔트리는 patch 목록 대신 **immer 구조 공유 before/after 문서 참조**를 저장한다(`src/editor/editorCore.ts`). 의미(transaction, drag=1 step, cancel, coalesce)는 동일하고 undo/redo가 O(1)·구현 단순. 메모리 = 변경 경로만(immer 구조 공유). patch는 추후 diff 공유가 필요해지면 `produceWithPatches`로 재도입 가능.
+- Store 구성: `EditorCore`(document+history, 프레임워크 무관, `useSyncExternalStore`로 React 바인딩) + `uiStore`(Zustand). 별도 documentStore/historyStore 대신 하나의 core가 두 역할 — 경계는 API로 유지.
+- Nudge 병합: `coalesceKey` + 500ms 창.
+- 렌더/모션 경계: `src/renderer/Token`은 순수(위치 in → SVG out). pickup/drop spring은 `src/ui/pitch/AnimatedToken` 래퍼 — `harness:verify`가 renderer 내 spring import를 차단함(2026-08-19 실제로 1회 차단 → 구조 수정).
+
 ## Consequences
 
 - (+) drag 1 step, Esc cancel 자연스러움(Sense of Control).

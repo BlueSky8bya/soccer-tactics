@@ -1,0 +1,368 @@
+.root {
+  border-top: 1px solid var(--st-border);
+  background: var(--st-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--st-space-2);
+  padding: var(--st-space-2) var(--st-space-3);
+  min-height: 48px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--st-text);
+  border-radius: var(--st-radius-s);
+  height: 30px;
+  min-width: 30px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition:
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    transform var(--st-motion-fast) var(--st-ease-out);
+}
+
+.btn:hover {
+  background: var(--st-surface-2);
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btnPrimary {
+  background: var(--st-accent);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 13px;
+}
+
+.btnPrimary:hover {
+  background: var(--st-accent);
+  filter: brightness(1.08);
+}
+
+.btnActive {
+  background: color-mix(in srgb, var(--st-accent) 16%, transparent);
+  color: var(--st-accent);
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  color: var(--st-text-2);
+  min-width: 40px;
+  text-align: center;
+}
+
+.scrubber {
+  flex: 1;
+  height: 18px;
+  position: relative;
+  cursor: pointer;
+  border-radius: var(--st-radius-pill);
+}
+
+.scrubber::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 7px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--st-surface-2);
+}
+
+.scrubber:focus-visible {
+  outline: 2px solid var(--st-accent);
+}
+
+.scrubFill {
+  position: absolute;
+  left: 0;
+  top: 7px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--st-accent);
+  pointer-events: none;
+}
+
+.playhead {
+  position: absolute;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--st-surface);
+  border: 2px solid var(--st-accent);
+  transform: translateX(-50%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.tick {
+  position: absolute;
+  top: 5px;
+  width: 2px;
+  height: 8px;
+  background: var(--st-text-2);
+  opacity: 0.7;
+  transform: translateX(-50%);
+  pointer-events: none;
+  border-radius: 1px;
+}
+
+.speeds {
+  display: flex;
+  gap: 2px;
+}
+
+.speedBtn {
+  min-width: 34px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.issues {
+  padding: 4px var(--st-space-3);
+  font-size: 12px;
+  color: #b45309;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+}
+
+.tracks {
+  overflow: hidden;
+  border-top: 1px solid var(--st-border);
+  position: relative;
+}
+
+.empty,
+.hint {
+  padding: var(--st-space-2) var(--st-space-3);
+  font-size: 12.5px;
+  color: var(--st-text-2);
+}
+
+.rows {
+  position: relative;
+  padding: var(--st-space-2) var(--st-space-3) 0;
+  max-height: 140px;
+  overflow: auto;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: center;
+  gap: var(--st-space-2);
+  height: 24px;
+  margin-bottom: 4px;
+  border-radius: var(--st-radius-s);
+}
+
+.rowSelected {
+  background: color-mix(in srgb, var(--st-accent) 8%, transparent);
+}
+
+.rowLabel {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding-left: 6px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  color: var(--st-text-2);
+}
+
+.lane {
+  position: relative;
+  height: 100%;
+  background: var(--st-surface-2);
+  border-radius: var(--st-radius-s);
+}
+
+.block {
+  position: absolute;
+  top: 3px;
+  height: 18px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  cursor: grab;
+  opacity: 0.92;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  user-select: none;
+}
+
+.block:hover {
+  opacity: 1;
+}
+
+.blockPossess {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.35) 0 4px,
+    transparent 4px 8px
+  );
+  color: var(--st-text-2);
+  cursor: default;
+  box-shadow: none;
+}
+
+.blockTravel {
+  border-radius: 9px;
+}
+
+.blockSelected {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+.blockLabel {
+  pointer-events: none;
+}
+
+.resize {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  border-radius: 0 5px 5px 0;
+}
+
+.resize:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.playheadLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--st-accent);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* ---------- groups / filter (M2) ---------- */
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  position: sticky;
+  top: 0;
+  background: var(--st-surface);
+  z-index: 1;
+}
+
+.filterBtn {
+  height: 24px;
+  font-size: 11.5px;
+  padding: 0 8px;
+  border-radius: var(--st-radius-pill);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 1px var(--st-border);
+}
+
+.group {
+  margin-bottom: 4px;
+}
+
+.groupHead {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--st-text-2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: var(--st-radius-s);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.groupHead:hover {
+  background: var(--st-surface-2);
+  color: var(--st-text);
+}
+
+.groupHead:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 1px;
+}
+
+.groupChevron {
+  width: 10px;
+  display: inline-block;
+}
+
+.groupMeta {
+  margin-left: auto;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowLabel {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-left: 3px solid transparent;
+  font: inherit;
+  text-align: left;
+  height: 100%;
+}
+
+.rowLabel:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 1px;
+}
+
+.forcedTag {
+  color: var(--st-accent);
+  margin-left: 4px;
+  font-size: 9px;
+}
+
+/* ---------- focus-visible (M5) ---------- */
+
+.btn:focus-visible,
+.block:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 1px;
+}

@@ -1,0 +1,83 @@
+.bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--st-radius-pill);
+  background: color-mix(in srgb, var(--st-surface) 92%, transparent);
+  border: 1px solid var(--st-border);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    0 8px 20px rgba(0, 0, 0, 0.14);
+  transform-origin: bottom center;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--st-text);
+  font: inherit;
+  font-size: 12.5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--st-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition:
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    transform var(--st-motion-fast);
+}
+
+.btn:hover {
+  background: var(--st-surface-2);
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btnActive {
+  background: color-mix(in srgb, var(--st-accent) 16%, transparent);
+  color: var(--st-accent);
+}
+
+.btn kbd {
+  font: inherit;
+  font-size: 10.5px;
+  color: var(--st-text-2);
+  border: 1px solid var(--st-border);
+  border-radius: 4px;
+  padding: 0 4px;
+  line-height: 15px;
+}
+
+.textEdit {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+}
+
+.textInput {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--st-text);
+  background: var(--st-surface);
+  border: 1px solid var(--st-accent);
+  border-radius: var(--st-radius-s);
+  padding: 4px 8px;
+  min-width: 160px;
+  box-shadow: 0 0 0 3px var(--st-accent-soft);
+  outline: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 1px;
+}

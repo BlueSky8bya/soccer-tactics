@@ -1,0 +1,389 @@
+.stage {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+.stage:focus-visible {
+  box-shadow: 0 0 0 2px var(--st-accent);
+  border-radius: var(--st-radius-m);
+}
+
+.pitch {
+  pointer-events: none;
+}
+
+.surround {
+  fill: var(--st-pitch-surround, #1f6b3b);
+}
+
+.grass {
+  fill: var(--st-pitch-grass);
+}
+
+.grassAlt {
+  fill: var(--st-pitch-grass-alt);
+}
+
+.line {
+  fill: none;
+  stroke: var(--st-pitch-line);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+
+.spot {
+  fill: var(--st-pitch-line);
+}
+
+.goal {
+  fill: none;
+  stroke: var(--st-pitch-line);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.85;
+}
+
+/* ---------- tokens ---------- */
+
+.token {
+  cursor: grab;
+}
+
+.tokenDragging {
+  cursor: grabbing;
+}
+
+.tokenHit {
+  fill: transparent;
+  pointer-events: all;
+}
+
+.tokenBody {
+  stroke: #fff;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0.15px 0.35px rgba(0, 0, 0, 0.35));
+}
+
+.tokenNumber {
+  fill: #fff;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 1.7px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  letter-spacing: -0.02em;
+}
+
+.tokenLabel {
+  fill: rgba(255, 255, 255, 0.92);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 1.2px;
+  text-anchor: middle;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 0.25px;
+}
+
+.selectionRing {
+  fill: none;
+  stroke: var(--st-accent);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.hoverRing {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.ball {
+  fill: var(--st-ball);
+  stroke: #1d1d1f;
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.ballPattern {
+  fill: #1d1d1f;
+  pointer-events: none;
+}
+
+/* ---------- snap guides ---------- */
+
+.guide {
+  stroke: var(--st-accent);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 4 4;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.guidePoint {
+  fill: none;
+  stroke: var(--st-accent);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* ---------- paths ---------- */
+
+.pathLayer {
+  pointer-events: none;
+}
+
+.pathGroup {
+  pointer-events: none;
+  transition: opacity var(--st-motion-base) var(--st-ease-out);
+}
+
+.pathDim {
+  opacity: 0.35;
+}
+
+.pathHit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.path {
+  fill: none;
+  stroke-width: 2.5px;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.92;
+}
+
+.pathMove {
+}
+
+.pathPass {
+  stroke-dasharray: 6 5;
+}
+
+.pathLofted {
+  stroke-dasharray: 2 5;
+  stroke-width: 3px;
+}
+
+.pathShot {
+  stroke-width: 4px;
+}
+
+.pathSelected .path {
+  stroke-width: 3.5px;
+  filter: drop-shadow(0 0 0.6px rgba(255, 255, 255, 0.9));
+  opacity: 1;
+}
+
+.pathDraft {
+  opacity: 0.75;
+  stroke-dasharray: 3 3;
+}
+
+.waypointHit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: grab;
+}
+
+.waypoint {
+  fill: #fff;
+  stroke: var(--st-accent);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.waypointStart {
+  fill: var(--st-accent);
+  stroke: #fff;
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.waypointLabel {
+  fill: #fff;
+  font-size: 1.3px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 0.3px;
+  pointer-events: none;
+}
+
+.handleLine {
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 2 2;
+  pointer-events: none;
+}
+
+/* ---------- heading / motion cue ---------- */
+
+.headingCue {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.stageWrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.stagePathTool {
+  cursor: crosshair;
+}
+
+/* ---------- ball & motion cues (round 2) ---------- */
+
+.ballShadow {
+  fill: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.ballSpecular {
+  fill: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+.headingWedge {
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.trailDot {
+  fill: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
+
+.marquee {
+  fill: color-mix(in srgb, var(--st-accent) 12%, transparent);
+  stroke: var(--st-accent);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+/* ---------- annotations ---------- */
+
+.drawingLayer {
+  pointer-events: none;
+}
+
+.drawing {
+  pointer-events: all;
+  cursor: move;
+}
+
+.drawingSelected {
+  filter: drop-shadow(0 0 0.5px #fff) drop-shadow(0 0 1.2px var(--st-accent));
+}
+
+.drawingDraft {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.zone {
+  fill-opacity: 0.16;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 5 4;
+}
+
+.annotArrow {
+  fill: none;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+
+.annotHit {
+  stroke: transparent;
+  stroke-width: 14px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+}
+
+.annotText {
+  font-size: 2px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-family: inherit;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 0.3px;
+}
+
+.annotTextBg {
+  fill: rgba(0, 0, 0, 0.38);
+}
+
+.stageZoneTool,
+.stageTextTool,
+.stageArrowTool {
+  cursor: crosshair;
+}
+
+/* ---------- attached pass start (ISSUE-006) ---------- */
+
+.attachedStart {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.attachedRing {
+  fill: none;
+  stroke: var(--st-accent);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 3 2;
+}
+
+.attachedDot {
+  fill: var(--st-accent);
+  stroke: #fff;
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------- path-scrub ghost (UI-only) ---------- */
+
+.scrubGhost {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 2 2;
+  pointer-events: none;
+  opacity: 0.9;
+}
