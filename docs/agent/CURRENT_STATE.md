@@ -24,7 +24,7 @@ PLAN-003(Codex 계획·Claude 구현) 완료 → 사용자 브라우저 리뷰 �
 
 미구현/후순위: Record 모드, Scene/Phase 복제, 상대 공격 반응(ADR-0008 Proposed), Playwright, Inspector transaction coalescing(ADR-0005), playback 렌더 프로파일링, schema nested validation.
 
-저장소: 커밋 `da3b61f`,`3e11047` 이후 **전부 uncommitted**(M1~end-to-end). 사용자 지시 시 커밋. push 0.
+저장소: `7ce964f` (end-to-end + PLAN-003, 2026-08-20 사용자 지시로 커밋). push 0 — 지시 시만.
 
 ## Active Work
 

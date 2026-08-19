@@ -19,7 +19,7 @@ PLAN-003 결과의 브라우저 체감 피드백 수집 → 다음 목표 확정
 
 | ID | Question | Materiality | Options | Recommendation | Resolution |
 |---|---|---|---|---|---|
-| D-01 | 커밋 시점 | Low | 지금 / 리뷰 후 | **지금** (PLAN-003 롤백 단위 확보) | Open |
+| D-01 | 커밋 시점 | Low | 지금 / 리뷰 후 | **지금** | Resolved: `7ce964f` 커밋 |
 
 ## Plan Reversal Log
 
