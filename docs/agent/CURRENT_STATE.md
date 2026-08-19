@@ -11,7 +11,7 @@ M1 Tactical Board Foundation 시작 대기 (`plans/ACTIVE_PLAN.md` PLAN-20260819
 ## Current Status
 
 - **M0 완료**: Harness 전체 + 제품 문서 + ADR-0001~0006/VDR-0001 Accepted + Vite skeleton. 검증 전부 PASS(아래).
-- 저장소: `main`, origin = `https://github.com/BlueSky8bya/soccer-tactics.git` (원격 비어 있음). **커밋 0개, push 0회** — 사용자 요청 시만.
+- 저장소: `main`, origin = `https://github.com/BlueSky8bya/soccer-tactics.git` (원격 비어 있음). **초기 커밋 `da3b61f` (2026-08-19, 사용자 지시). push 0회** — 사용자 요청 시만.
 - 구현: `src/domain/types.ts`(ADR-0003 스키마), `factories.ts`, `src/engine/vec.ts`, `src/ui/tokens.css`, `src/app/*` placeholder. editor/renderer/presets 비어 있음(M1).
 - 결정: A-01 localStorage+JSON(M5) · A-02 미터 · A-03 PC 1차 · A-04 일반 formation · A-05 i18n-ready ko · A-06 Option 3 — 전부 Resolved.
 - 사용자 지시(세션 2): 레퍼런스는 anti-reference, HCI 근거 설계, Apple spring 조작감 → ADR-0006.
@@ -47,7 +47,7 @@ Resolution: node 22.19+ 또는 24 LTS로 올리면 경고 소멸. 선택.
 
 ## Next Exact Steps
 
-1. (사용자) 커밋 원하면 지시 → 초기 커밋 `chore: bootstrap WHITEHAVEN harness + skeleton (M0)`. push는 별도 지시.
+1. (사용자) push 원하면 지시 → `git push -u origin main` (permissions deny 때문에 명시 승인 필요).
 2. (사용자) "M1 시작" → ACTIVE_PLAN Status In Progress → M1.1 stores+history부터 (`src/editor/`), 테스트 우선.
 3. 다음 세션 시작 시 hook 출력 확인 → ISSUE-002 갱신.
 4. M1 완료 시 DoD §3 DELEGATED 항목(drag 체감·스냅·Pitch 비율)을 사용자에게 체크리스트로 제시.
