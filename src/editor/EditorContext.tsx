@@ -1,26 +1,18 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useSyncExternalStore,
-  type ReactNode,
-} from 'react'
+import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react'
 import { createEmptyDocument } from '@/domain'
 import { EditorCore, type EditorSnapshot } from './editorCore'
-import { ensureDefaultTeams } from './commands'
-import { loadAutosave, startAutosave } from './persistence'
+import { seedDefaultTeams } from './commands'
 
 const EditorCtx = createContext<EditorCore | null>(null)
 
 export function EditorProvider({ core, children }: { core?: EditorCore; children: ReactNode }) {
   const value = useMemo(() => {
+    // Refresh = a clean pitch, no persistence (user decision 2026-08-20: lightweight site).
     const c =
-      core ?? new EditorCore(loadAutosave() ?? createEmptyDocument({ title: 'Untitled tactic' }))
-    ensureDefaultTeams(c)
+      core ?? new EditorCore(seedDefaultTeams(createEmptyDocument({ title: '제목 없는 전술' })))
+    if (c.getDocument().teams.length === 0) c.load(seedDefaultTeams(c.getDocument()))
     return c
   }, [core])
-  useEffect(() => (core ? undefined : startAutosave(value)), [core, value])
   return <EditorCtx.Provider value={value}>{children}</EditorCtx.Provider>
 }
 

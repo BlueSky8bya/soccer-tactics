@@ -1,100 +1,38 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { setDocumentTitle } from '@/editor/commands'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
-import { useUiStore, type Tool } from '@/editor/uiStore'
-import { AutoReactPanel } from './AutoReactPanel'
-import { DocMenu } from './DocMenu'
-import { FormationPicker } from './FormationPicker'
-import { HelpPanel } from './HelpPanel'
-import { Inspector } from './Inspector'
+import { useCompiled } from '@/editor/useCompiled'
+import { usePlaybackController } from '@/editor/usePlayback'
+import { useUiStore } from '@/editor/uiStore'
+import { ActionsPanel, GuidePanel } from './SidePanels'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
+import { StepBar } from './StepBar'
 import { t } from './i18n'
 import { prefersReducedMotion } from './motion/spring'
-import { PitchStage } from './pitch/PitchStage'
+import { SimplePitch } from './pitch/SimplePitch'
 import styles from './shell.module.css'
-import { Timeline } from './timeline/Timeline'
-import { KEYMAP } from './keymap'
+import { TourOverlay } from './tour/TourOverlay'
+import { hasSeenTour } from './tour/tourStorage'
 import { useEditorKeyboard } from './useEditorKeyboard'
 
-interface ToolDef {
-  id: Tool
-  icon: string
-  label: 'tool.select' | 'tool.addPlayer' | 'tool.path' | 'tool.zone' | 'tool.text' | 'tool.arrow'
-  short: string
-  key?: string
-  enabled: boolean
-}
-
-const TOOLS: ToolDef[] = [
-  {
-    id: 'select',
-    icon: '↖',
-    label: 'tool.select',
-    short: '선택',
-    key: KEYMAP.tools.select.label,
-    enabled: true,
-  },
-  {
-    id: 'add-player',
-    icon: '＋',
-    label: 'tool.addPlayer',
-    short: '선수',
-    key: KEYMAP.tools.addPlayer.label,
-    enabled: true,
-  },
-  {
-    id: 'path',
-    icon: '↝',
-    label: 'tool.path',
-    short: '경로',
-    key: KEYMAP.tools.path.label,
-    enabled: true,
-  },
-  {
-    id: 'arrow',
-    icon: '→',
-    label: 'tool.arrow',
-    short: '화살표',
-    key: KEYMAP.tools.arrow.label,
-    enabled: true,
-  },
-  {
-    id: 'zone',
-    icon: '▭',
-    label: 'tool.zone',
-    short: '구역',
-    key: KEYMAP.tools.zone.label,
-    enabled: true,
-  },
-  {
-    id: 'text',
-    icon: 'T',
-    label: 'tool.text',
-    short: '텍스트',
-    key: KEYMAP.tools.text.label,
-    enabled: true,
-  },
-]
-
+/**
+ * Single simple mode (ADR-0009, user decision 2026-08-20): pitch + play + steps. No tool rail,
+ * no inspector, no tracks. Everything is authored with the mouse on the pitch.
+ */
 export function AppShell() {
   const core = useEditor()
   const { doc, canUndo, canRedo } = useEditorSnapshot()
-  const tool = useUiStore((s) => s.tool)
-  const setTool = useUiStore((s) => s.setTool)
-  const activeTeamId = useUiStore((s) => s.activeTeamId)
-  const setActiveTeam = useUiStore((s) => s.setActiveTeam)
-  const snapEnabled = useUiStore((s) => s.snapEnabled)
-  const setSnapEnabled = useUiStore((s) => s.setSnapEnabled)
+  const compiled = useCompiled()
+  const ui = useUiStore()
+  const pb = usePlaybackController(compiled.duration)
+  const titleBefore = useRef('')
   const setReducedMotion = useUiStore((s) => s.setReducedMotion)
-  const setShortcutsOpen = useUiStore((s) => s.setShortcutsOpen)
-  const selection = useUiStore((s) => s.selection)
-  const theme = useUiStore((s) => s.theme)
-  const setTheme = useUiStore((s) => s.setTheme)
+  const startTour = useUiStore((s) => s.startTour)
   useEditorKeyboard()
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-  }, [theme])
+    document.documentElement.dataset.theme = 'light' // overrides any stored dark preference
+  }, [])
 
   useEffect(() => {
     setReducedMotion(prefersReducedMotion())
@@ -104,41 +42,36 @@ export function AppShell() {
     return () => mq?.removeEventListener?.('change', on)
   }, [setReducedMotion])
 
+  // First visit (cookie/localStorage flag absent) → interactive tour.
   useEffect(() => {
-    if (!activeTeamId && doc.teams[0]) setActiveTeam(doc.teams[0].id)
-  }, [activeTeamId, doc.teams, setActiveTeam])
+    if (!hasSeenTour()) startTour(0)
+  }, [startTour])
 
-  const hasPlayers = doc.players.length > 0
-  const pathNeedsSelection = tool === 'path' && selection.length === 0
+  const errors = compiled.issues.filter((i) => i.level === 'error')
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-simple="true">
       <header className={styles.top}>
-        <DocMenu />
         <input
           className={styles.title}
           value={doc.meta.title}
           onChange={(e) => setDocumentTitle(core, e.target.value)}
+          onFocus={(e) => {
+            titleBefore.current = e.currentTarget.value
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            else if (e.key === 'Escape') {
+              setDocumentTitle(core, titleBefore.current)
+              e.currentTarget.blur()
+            }
+          }}
           aria-label={t('doc.rename')}
           spellCheck={false}
         />
-        <span className={styles.group}>
-          {doc.teams.map((team) => (
-            <FormationPicker key={team.id} team={team} />
-          ))}
-        </span>
+        <span className={styles.hintInline}>{t('simple.topHint')}</span>
         <span className={styles.spacer} />
         <span className={styles.group}>
-          <AutoReactPanel />
-          <button
-            type="button"
-            className={`${styles.btn} ${snapEnabled ? styles.btnActive : ''}`}
-            onClick={() => setSnapEnabled(!snapEnabled)}
-            title={snapEnabled ? t('topbar.snapOn') : t('topbar.snapOff')}
-            aria-pressed={snapEnabled}
-          >
-            ⌗ {t('topbar.snap')}
-          </button>
           <button
             type="button"
             className={styles.btn}
@@ -161,18 +94,9 @@ export function AppShell() {
           </button>
           <button
             type="button"
-            className={styles.btn}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title={theme === 'dark' ? t('topbar.themeLight') : t('topbar.themeDark')}
-            aria-label={theme === 'dark' ? t('topbar.themeLight') : t('topbar.themeDark')}
-            aria-pressed={theme === 'dark'}
-          >
-            {theme === 'dark' ? '☀' : '☾'}
-          </button>
-          <button
-            type="button"
             className={`${styles.btn} ${styles.helpBtn}`}
-            onClick={() => setShortcutsOpen(true)}
+            onClick={() => ui.setShortcutsOpen(true)}
+            data-tour="tour-restart"
             title={t('topbar.help')}
             aria-label={t('topbar.help')}
           >
@@ -181,66 +105,70 @@ export function AppShell() {
         </span>
       </header>
 
-      <nav className={styles.rail} aria-label="Tools">
-        {TOOLS.map((td) => (
-          <button
-            key={td.id}
-            type="button"
-            className={`${styles.btn} ${styles.railBtn} ${tool === td.id ? styles.btnActive : ''}`}
-            onClick={() => td.enabled && setTool(td.id)}
-            disabled={!td.enabled}
-            title={`${t(td.label)}${td.key ? ` (${td.key})` : ''}${td.enabled ? '' : ` — ${t('tool.soon')}`}`}
-            aria-label={`${t(td.label)}${td.key ? ` (${td.key})` : ''}`}
-            aria-pressed={tool === td.id}
-          >
-            <span>{td.icon}</span>
-            <span className={styles.railLabel}>{td.short}</span>
-          </button>
-        ))}
-        <span className={styles.railSep} />
-        {doc.teams.map((team) => (
-          <button
-            key={team.id}
-            type="button"
-            className={`${styles.btn} ${styles.railBtn} ${activeTeamId === team.id && tool === 'add-player' ? styles.btnActive : ''}`}
-            onClick={() => {
-              setActiveTeam(team.id)
-              setTool('add-player')
-            }}
-            title={`${t('tool.addPlayer')} — ${team.name}`}
-            aria-label={`${t('tool.addPlayer')} — ${team.name}`}
-          >
-            <span
-              className={styles.teamDot}
-              style={{ background: team.color, width: 14, height: 14 }}
-            />
-            <span className={styles.railLabel}>{team.name}</span>
-          </button>
-        ))}
-      </nav>
-
-      <main className={styles.pitchArea}>
+      <ActionsPanel />
+      <main className={styles.pitchAreaSimple}>
         <div className={styles.pitchFrame}>
-          <PitchStage />
+          <SimplePitch />
         </div>
-        {!hasPlayers && <div className={styles.emptyHint}>{t('empty.hint')}</div>}
-        {pathNeedsSelection && <div className={styles.emptyHint}>{t('path.needSelection')}</div>}
-        {tool === 'path' && selection.length > 0 && (
-          <div className={styles.emptyHint}>{t('path.drawHint')}</div>
+        {errors.length > 0 && (
+          <div className={styles.emptyHint} role="alert">
+            ⚠ {t('tl.issue.cycle')}
+          </div>
         )}
-        {tool === 'zone' && <div className={styles.emptyHint}>{t('draw.zoneHint')}</div>}
       </main>
-
-      <aside className={styles.side}>
-        <Inspector />
-        <HelpPanel />
-      </aside>
+      <GuidePanel />
 
       <footer className={styles.bottomWrap}>
-        <Timeline />
+        <div className={styles.simpleBar}>
+          <button
+            type="button"
+            className={`${styles.btn} ${ui.animMode ? styles.btnPrimary : ''} ${styles.animToggle}`}
+            onClick={() => ui.setAnimMode(!ui.animMode)}
+            data-tour="anim-mode"
+            aria-pressed={ui.animMode}
+          >
+            🎬 {t('simple.animMode')}
+          </button>
+          {!ui.animMode && <span className={styles.muted}>{t('simple.needAnim')}</span>}
+          {ui.animMode && (
+            <>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
+                onClick={pb.toggle}
+                data-tour="play"
+                title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
+                aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
+              >
+                {ui.playback.playing ? '❚❚' : '▶'}
+              </button>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={pb.restart}
+                title={`${t('tl.restart')} (Home)`}
+                aria-label={t('tl.restart')}
+              >
+                ↺
+              </button>
+              <button
+                type="button"
+                className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
+                onClick={() => ui.setLoop(!ui.playback.loop)}
+                title={`${t('tl.loop')} (G)`}
+                aria-label={t('tl.loop')}
+                aria-pressed={ui.playback.loop}
+              >
+                ⟳
+              </button>
+              <StepBar />
+            </>
+          )}
+        </div>
       </footer>
 
       <ShortcutsOverlay />
+      <TourOverlay />
     </div>
   )
 }

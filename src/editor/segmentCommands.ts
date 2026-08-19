@@ -19,15 +19,15 @@ import type { EditorCore } from './editorCore'
 export const newIdFor = newId
 
 export const SPEED_PRESETS = [
-  { id: 'walk', label: 'walk', speed: 1.5 },
-  { id: 'jog', label: 'jog', speed: 3 },
-  { id: 'run', label: 'run', speed: 5 },
-  { id: 'sprint', label: 'sprint', speed: 7.5 },
+  { id: 'walk', label: '걷기', speed: 1.5 },
+  { id: 'jog', label: '조깅', speed: 3 },
+  { id: 'run', label: '달리기', speed: 5 },
+  { id: 'sprint', label: '전력질주', speed: 7.5 },
 ] as const
 export const PASS_SPEED_PRESETS = [
-  { id: 'short', label: 'short', speed: 10 },
-  { id: 'firm', label: 'firm', speed: 16 },
-  { id: 'driven', label: 'driven', speed: 22 },
+  { id: 'short', label: '짧게', speed: 10 },
+  { id: 'firm', label: '보통', speed: 16 },
+  { id: 'driven', label: '강하게', speed: 22 },
 ] as const
 export const DEFAULT_PLAYER_SPEED = 5
 export const DEFAULT_PASS_SPEED = 16
@@ -51,7 +51,11 @@ export function findSegment(
   return undefined
 }
 
-function ensureTrack(draft: TacticDocument, entityId: Id, entityKind: 'player' | 'ball'): Track {
+export function ensureTrack(
+  draft: TacticDocument,
+  entityId: Id,
+  entityKind: 'player' | 'ball',
+): Track {
   const scene = sceneOf(draft)
   let track = scene.timeline.tracks.find((t) => t.entityId === entityId)
   if (!track) {
@@ -117,6 +121,26 @@ export function addMoveSegment(
   return id
 }
 
+/**
+ * Who passes: the track's last open-ended possession is the truth for "who holds the ball at the end of
+ * the authored sequence"; callers' `holderId` (resolved at the playhead) is a hint, `initialHolderId` last.
+ * ISSUE (QA r3): falling back to the initial holder after a pass created a possessed(#10) chained after
+ * possessed(#8) → cycle ("unresolvable trigger").
+ */
+export function passerFor(doc: TacticDocument, track: Track, hint: Id | undefined): Id | undefined {
+  const last = track.segments[track.segments.length - 1]
+  if (last?.kind === 'possessed') return last.holderId
+  return hint ?? doc.ball.initialHolderId
+}
+
+/** Trigger for a "holder possesses the ball" segment inserted before a pass/fling at time `at`. */
+export function possessTrigger(last: Segment | undefined, at: number): Trigger {
+  if (!last) return { type: 'at', t: 0 }
+  // Never chain after an open-ended (duration 0) possession: its end IS the next start → cycle.
+  if (last.kind === 'possessed') return { type: 'at', t: Math.max(0, at) }
+  return { type: 'afterSegment', segmentId: last.id, anchor: 'end', offset: 0 }
+}
+
 export interface AddTravelOptions {
   at: number
   travelKind?: BallTravelKind
@@ -134,17 +158,13 @@ export function addBallTravel(core: EditorCore, waypoints: Waypoint[], opts: Add
     const doc = d as TacticDocument
     const track = ensureTrack(doc, doc.ball.id, 'ball')
     const last = track.segments[track.segments.length - 1]
-    const holder =
-      opts.holderId ?? (last?.kind === 'possessed' ? last.holderId : doc.ball.initialHolderId)
+    const holder = passerFor(doc, track, opts.holderId)
     // Make sure the ball is possessed by the holder before the pass (explicit segment).
     if (holder && !(last && last.kind === 'possessed' && last.holderId === holder)) {
-      const trig: Trigger = last
-        ? { type: 'afterSegment', segmentId: last.id, anchor: 'end', offset: 0 }
-        : { type: 'at', t: 0 }
       track.segments.push({
         id: newId('seg'),
         kind: 'possessed',
-        trigger: trig,
+        trigger: possessTrigger(last, opts.at),
         timing: { duration: 0 },
         holderId: holder,
       })
@@ -174,20 +194,37 @@ export function addBallTravel(core: EditorCore, waypoints: Waypoint[], opts: Add
 }
 
 export function removeSegment(core: EditorCore, segmentId: Id): void {
-  core.transaction('Delete segment', (d) => {
-    const doc = d as TacticDocument
+  core.transaction('Delete segment', (d) => removeSegmentInDraft(d as TacticDocument, segmentId))
+}
+
+export function removeSegmentInDraft(doc: TacticDocument, segmentId: Id): void {
+  {
     const scene = sceneOf(doc)
     for (const track of scene.timeline.tracks) {
       const i = track.segments.findIndex((s) => s.id === segmentId)
       if (i < 0) continue
+      const removed = track.segments[i]!
       track.segments.splice(i, 1)
+      // A pass owns the receiver's possession that follows it: drop that too (an orphan possessed
+      // chained after an open-ended possessed is a cycle — QA r6 N1).
+      const follower = track.segments[i]
+      if (
+        removed.kind === 'travel' &&
+        follower &&
+        follower.kind === 'possessed' &&
+        follower.trigger.type === 'afterSegment' &&
+        follower.trigger.segmentId === segmentId
+      )
+        track.segments.splice(i, 1)
       // Re-chain the next segment if it pointed at the removed one.
       const next = track.segments[i]
       const prev = track.segments[i - 1]
       if (next && next.trigger.type === 'afterSegment' && next.trigger.segmentId === segmentId) {
-        next.trigger = prev
-          ? { type: 'afterSegment', segmentId: prev.id, anchor: 'end', offset: next.trigger.offset }
-          : { type: 'at', t: 0 }
+        const offset = next.trigger.offset
+        next.trigger =
+          prev && prev.kind !== 'possessed'
+            ? { type: 'afterSegment', segmentId: prev.id, anchor: 'end', offset }
+            : { type: 'at', t: Math.max(0, offset) }
       }
     }
     // Any other segment referencing it → convert to absolute 0 (compile would otherwise error).
@@ -204,7 +241,7 @@ export function removeSegment(core: EditorCore, segmentId: Id): void {
       }
     }
     scene.timeline.tracks = scene.timeline.tracks.filter((t) => t.segments.length > 0)
-  })
+  }
 }
 
 export function setSegmentTiming(core: EditorCore, segmentId: Id, timing: Timing): void {
@@ -262,35 +299,98 @@ export function moveWaypointInDraft(
   if (wp.handleOut) wp.handleOut = { x: wp.handleOut.x + dx, y: wp.handleOut.y + dy }
 }
 
+/** Radius (m) within which a player at the pass end point counts as the receiver. */
+export const RECEIVE_RADIUS_M = 3.5
+
+/**
+ * Re-resolve who receives a travel segment from its END point and the players' positions at arrival.
+ * Keeps the following `possessed` segment in sync (set/insert/remove) and pass↔loose kind.
+ * Used after the end of a pass was dragged (tail/waypoint edit) — ISSUE: receiver used to stay stale → ball teleported.
+ */
+export function syncTravelReceiverInDraft(
+  draft: TacticDocument,
+  segmentId: Id,
+  playersAtArrival: readonly { id: Id; pos: Vec2 }[],
+  radius = RECEIVE_RADIUS_M,
+): void {
+  const f = findSegment(draft, segmentId)
+  if (!f || f.segment.kind !== 'travel') return
+  const seg = f.segment
+  const end = seg.path.waypoints[seg.path.waypoints.length - 1]?.p
+  if (!end) return
+  const prev = f.track.segments[f.index - 1]
+  const passer = prev && prev.kind === 'possessed' ? prev.holderId : undefined
+  const near = playersAtArrival
+    .filter((p) => p.id !== passer)
+    .map((p) => ({ id: p.id, dist: Math.hypot(p.pos.x - end.x, p.pos.y - end.y) }))
+    .filter((x) => x.dist <= radius)
+    .sort((a, b) => a.dist - b.dist)[0]
+  const receiver = near?.id
+  if (receiver) seg.receiverId = receiver
+  else delete seg.receiverId
+  if (seg.travelKind === 'pass' || seg.travelKind === 'loose')
+    seg.travelKind = receiver ? 'pass' : 'loose'
+  const nx = f.track.segments[f.index + 1]
+  if (
+    nx &&
+    nx.kind === 'possessed' &&
+    nx.trigger.type === 'afterSegment' &&
+    nx.trigger.segmentId === segmentId
+  ) {
+    if (receiver) nx.holderId = receiver
+    else f.track.segments.splice(f.index + 1, 1)
+  } else if (receiver) {
+    f.track.segments.splice(f.index + 1, 0, {
+      id: `${segmentId}-recv`,
+      kind: 'possessed',
+      trigger: { type: 'afterSegment', segmentId, anchor: 'end', offset: 0 },
+      timing: { duration: 0 },
+      holderId: receiver,
+    })
+  }
+}
+
 export function setWaypointHold(
   core: EditorCore,
   segmentId: Id,
   waypointId: Id,
   hold: number,
 ): void {
-  core.transaction('Set hold', (d) => {
-    const f = findSegment(d as TacticDocument, segmentId)
-    if (!f || !('path' in f.segment)) return
-    const wp = f.segment.path.waypoints.find((w) => w.id === waypointId)
-    if (!wp) return
-    if (hold > 0) wp.hold = hold
-    else delete wp.hold
-  })
+  core.transaction(
+    'Set hold',
+    (d) => {
+      const f = findSegment(d as TacticDocument, segmentId)
+      if (!f || !('path' in f.segment)) return
+      const wp = f.segment.path.waypoints.find((w) => w.id === waypointId)
+      if (!wp) return
+      if (hold > 0) wp.hold = hold
+      else delete wp.hold
+    },
+    { coalesceKey: `hold:${segmentId}:${waypointId}` },
+  )
 }
 
 /** Give the ball to a player at scene start (initial possession). */
+/** Draft form of giveBallTo (used inside a drag transaction so the drop is ONE undo step). */
+export function giveBallToInDraft(doc: TacticDocument, playerId: Id | null): void {
+  if (!playerId) {
+    delete doc.ball.initialHolderId
+    return
+  }
+  const p = doc.players.find((x) => x.id === playerId)
+  if (!p) return
+  doc.ball.initialHolderId = playerId
+  doc.ball.home = { x: p.home.x + 1.1, y: p.home.y + 0.7 }
+  // An authored opening possession (possessed @0) is the truth at t=0 — retarget it too,
+  // otherwise "공 주기" looks like it did nothing (QA r4 C-3).
+  const track = findTrack(doc, doc.ball.id)
+  const first = track?.segments[0]
+  if (first && first.kind === 'possessed' && first.trigger.type === 'at' && first.trigger.t === 0)
+    first.holderId = playerId
+}
+
 export function giveBallTo(core: EditorCore, playerId: Id | null): void {
-  core.transaction('Give ball', (d) => {
-    const doc = d as TacticDocument
-    if (!playerId) {
-      delete doc.ball.initialHolderId
-      return
-    }
-    const p = doc.players.find((x) => x.id === playerId)
-    if (!p) return
-    doc.ball.initialHolderId = playerId
-    doc.ball.home = { x: p.home.x + 1.1, y: p.home.y + 0.7 }
-  })
+  core.transaction('Give ball', (d) => giveBallToInDraft(d as TacticDocument, playerId))
 }
 
 export function clearTimeline(core: EditorCore): void {
@@ -308,6 +408,25 @@ export function clearTimeline(core: EditorCore): void {
  * later segment of the same track so the chain stays continuous. Use inside core.update.
  * Returns false when there is nothing to edit at that time (caller falls back to home editing).
  */
+/** End point of the path segment that a tail-drag at time `t` edits (null when none). */
+export function tailEndAt(
+  doc: TacticDocument,
+  entityId: Id,
+  segmentTimes: Record<Id, { start: number; end: number }>,
+  t: number,
+): Vec2 | null {
+  const track = findTrack(doc, entityId)
+  if (!track) return null
+  let seg: Segment | undefined
+  for (const s of track.segments) {
+    const tm = segmentTimes[s.id]
+    if (!tm || !('path' in s)) continue
+    if (t >= tm.start) seg = s
+  }
+  if (!seg || !('path' in seg)) return null
+  return seg.path.waypoints[seg.path.waypoints.length - 1]?.p ?? null
+}
+
 export function shiftTailInDraft(
   draft: TacticDocument,
   entityId: Id,
@@ -348,8 +467,11 @@ export function shiftTailInDraft(
 // ---------- fling (release-velocity → deterministic segment) ----------
 
 export const FLING = {
-  /** Cursor speed (m/s in pitch units) above which a release counts as a fling. */
-  minCursorSpeed: 22,
+  /**
+   * Cursor speed (m/s in pitch units) above which a release counts as a fling.
+   * 45 m/s ≈ 450 px/s on a 1060 px pitch — a deliberate flick, well above an ordinary reposition drag.
+   */
+  minCursorSpeed: 45,
   ball: { gain: 0.35, minV0: 8, maxV0: 28, decel: 4 },
   player: { gain: 0.22, minDist: 3, maxDist: 28 },
 } as const
@@ -395,16 +517,12 @@ export function addBallFling(
       scene.timeline.tracks.push(track)
     }
     const last = track.segments[track.segments.length - 1]
-    const holder =
-      opts.holderId ?? (last?.kind === 'possessed' ? last.holderId : doc.ball.initialHolderId)
+    const holder = passerFor(doc, track, opts.holderId)
     if (holder && !(last && last.kind === 'possessed' && last.holderId === holder)) {
-      const trig: Trigger = last
-        ? { type: 'afterSegment', segmentId: last.id, anchor: 'end', offset: 0 }
-        : { type: 'at', t: 0 }
       track.segments.push({
         id: newId('seg'),
         kind: 'possessed',
-        trigger: trig,
+        trigger: possessTrigger(last, opts.at),
         timing: { duration: 0 },
         holderId: holder,
       })

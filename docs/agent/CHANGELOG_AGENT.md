@@ -146,3 +146,165 @@ Change:
 - M6: ADR-0003 Amendment(decel), ADR-0007 Implementation Note, PROJECT_MAP, CURRENT_STATE, Handoff.
 Validation: 각 마일스톤 후 typecheck/lint/test/build/harness PASS (M1 58 → M2 63 → M3 68 → M4 74 → M5 78 tests). DELEGATED: 브라우저 체크리스트(CURRENT_STATE).
 Related: PLAN-20260820-003, ADR-0003/0006/0007/0008. Rollback: 마일스톤 단위 파일 복원(uncommitted — 커밋 권장).
+
+
+### CHG-20260820-009 — FIX/REFACTOR — Codex Audit hygiene backlog (PLAN-004 R1)
+
+Problem: Codex Harness Audit(PLAN-003)이 범위 밖으로 남긴 P0/P1: import 검증 얕음, Inspector 입력이 키 입력마다 undo entry(ADR-0005 위반), renderer→editor 역참조, Timeline→PitchStage 결합, 낡은 문서.
+Change:
+- `editor/validateDocument.ts`(중첩 구조 검증: teams/players/ball/drawings/scenes/tracks/segments/trigger/timing/path, 참조 무결성) + `persistence.parseDocument`가 `DocumentValidationError`(문제 목록) throw. autosave 복원도 같은 경로.
+- ADR-0005 준수: `setPlayerNumber/Label`, `setDocumentTitle`, `setWaypointHold`, `updateDrawingText`에 필드별 coalesceKey(500ms 병합).
+- `engine/geometry.ts`로 이동(순수), `editor/geometry.ts`는 re-export. `ui/teamColor.ts` 신설 — Timeline이 PitchStage를 import하지 않음.
+- 문서: `src/ui/AGENTS.md` 라우팅 갱신, Constitution 불변조건 1에 createdAt 예외 명문화.
+Validation: typecheck/lint/test 81/build/harness PASS.
+Related: PLAN-20260820-004, ADR-0005, Codex Audit(completed/PLAN-003). Rollback: revert.
+
+### CHG-20260820-010 — FIX/UX — First-visit walkthrough (PLAN-004 R2): launcher, checklist, fling bug
+
+Problem: 첫 방문 시뮬레이션(Playwright, 빈 localStorage)에서 (1) 빈 필드 + 작은 힌트 pill뿐 → 뭘 해야 할지 안 보임, 예시는 ☰ 안에 숨음 (2) **일반 드래그가 fling 경로로 오인** — 멈췄다 놓아도 마지막 이동 샘플로 속도 계산(22 m/s 임계 = 220 px/s) → 선수 재배치 불가 (3) 포메이션 후 공이 아무도 안 가짐(센터 서클에 #10과 겹침) (4) 자동 대응 기본 팀이 Home(선수 있는 팀), Away 0명이어도 경고 없음 (5) `?` 오버레이에 개발자 문구(`src/ui/keymap.ts`) 노출.
+Change:
+- `ui/EmptyState.tsx` — 빈 필드 중앙 런처(액션만, 튜토리얼 아님): **양 팀 채우고 시작**(Home 4-3-3 · Away 4-4-2, 1 undo step) · 예시 2종 · "직접 배치: W" 한 줄. 선수 생기면 사라짐, 비모달.
+- `ui/GettingStarted.tsx` — Inspector 빈 상태를 라이브 4단계 체크리스트로(배치/달리기/공/재생, 문서·재생 상태로 자동 ✓; `uiStore.hasPlayed`). 전부 완료 시 한 줄로 축소.
+- `ui/pitch/fling.ts` — `releaseVelocity(samples, now)`: 마지막 이동 후 **100 ms 이상 지나 놓으면 fling 아님**(stale). `FLING.minCursorSpeed` 22 → **45 m/s**. [WH-CHANGE]
+- `commands.applyFormationInDraft` + `applyFormations(core, picks)` — 빈 필드 첫 채움이면 공을 그 팀에서 공에 가장 가까운 선수에게(킥오프 느낌). 이후 변경은 재배정 안 함(기존 테스트 유지).
+- `AutoReactPanel` — 보유자 없으면 authored 움직임이 적은 팀(동률 → Away) 기본, 선수 0명이면 경고 + "4-4-2 채우기" 버튼, 생성 비활성.
+- `FormationPicker` ▾ chevron(드롭다운 어포던스), ShortcutsOverlay 개발자 문구 제거.
+Validation: typecheck/lint/test 89 (+8: fling 4, quick start 2, first-visit e2e 2)/build/harness PASS. Playwright 스크린샷 워크스루(첫 방문 → 채우기 → 느린 드래그=이동 확인 → Alt+드래그 런/패스 → 재생) 수행.
+Related: PLAN-20260820-004 R2, ISSUE-008(fling 상수 일부 확정), ADR-0006 D4. Rollback: revert.
+
+### CHG-20260820-011 — FEAT/UX — Interactive first-visit tour (PLAN-004 R3)
+
+Problem: 첫 방문자가 "뭘 어떻게" 해야 하는지 화면에서 직접 안내받지 못함. 사용자 요청(2026-08-20): 쿠키로 첫 방문 감지, 실제 버튼·단축키·토큰을 **화면에서 동적으로 하이라이트**하며 **직접 해보게** 하는 튜토리얼.
+Change:
+- `src/ui/tour/` — `tourSteps.ts`(8단계: 양 팀 채우기 → 선수 옮기기 → Alt+드래그 달리기 → 공 Alt+드래그 패스 → Space 재생 → 트랙(V) → ⚡ 자동 대응 생성 → 끝; 각 단계 `target` 셀렉터 + `done` 술어(문서/재생 상태) + 선택적 `anchor`/`placement`), `TourOverlay.tsx`(SVG 마스크 스포트라이트 + 펄스 링 + 카드; rAF로 대상 bbox 추적 → 스프링 토큰·패널 이동 따라감; **비차단**(카드만 pointer-events); 행동 수행 시 ✓ 후 자동 진행, 이미 끝난 단계 자동 건너뜀, 다음/건너뛰기/완료), `tourStorage.ts`(localStorage `st:tour:seen:v1` + 쿠키 `st_tour_seen` — 둘 중 하나면 본 것으로).
+- 앵커: `data-tour="quick-start|launcher|play|tracks|auto-react|help"`, 토큰은 `[data-entity=id]`, 공은 `[data-kind=ball]`.
+- uiStore `tour {active, step}` + `startTour/setTourStep/endTour`, `hasPlayed`. AppShell 마운트 시 `!hasSeenTour()` → 시작. HelpPanel "🎓 튜토리얼 다시 보기".
+- reduce-motion: 전환/펄스 제거.
+Validation: typecheck/lint/test **94**(+5 tour)/build/harness/format PASS. Playwright `pw/tour.cjs`: 8단계 전부 실제 행동으로 자동 진행, 완료 후 reload 시 미표시(cookie `st_tour_seen=1`) 확인.
+Related: PLAN-20260820-004 R3, ADR-0006 D5(disclosure — 튜토리얼은 일시 레이어, 3단계 아님). Rollback: revert.
+
+### CHG-20260820-012 — FIX/UX — QA 루프 1라운드 수정 (PLAN-004 R4)
+
+Problem: QA 에이전트(첫 방문자 역할, Playwright 스크린샷) 1라운드 보고 — P0 3: ① 기본 팀 추가가 undo 항목이라 Ctrl+Z로 팀이 사라지고 런처가 무반응 ② 새 전술/예시/JSON 열기가 history를 비움(되돌릴 수 없음, 확인 없음) ③ 패스 도착 시각에 공을 끌면 끝점만 옮겨지고 수신자는 그대로 → 순간이동. P1 5: 패스 직후 Space가 도착 시각부터 재생, 예시 로드 후 정지 화면, ⚡ 팝오버 Esc 안 닫힘/`?` 위에 남음, Inspector가 도움말 패널에 잘림, 투어가 `?` 위에 그려지고 대안 CTA를 어둡게 함. P2: 자동 대응 제거가 팀별, 영어 프리셋 라벨, 테마가 OS 설정 무시, 텍스트 더블클릭 편집 없음, 포메이션 라벨 stale 등.
+Change:
+- `commands.seedDefaultTeams`(순수) — 부트스트랩/새 전술은 문서에 팀을 심어 history 밖. `replaceDocument` = **단일 undo 항목**(`transaction(() => doc)`), Ctrl+O도 동일. DocMenu 새 전술: 작업물 있으면 **인라인 확인**(모달 아님), `hasPlayed` 리셋.
+- `segmentCommands.syncTravelReceiverInDraft` + `RECEIVE_RADIUS_M` — 공 경로 끝/경유지 드래그 커밋 시 도착 시각 위치로 수신자 재해석(pass↔loose, 뒤따르는 possessed 동기화). tail 드래그는 드롭(공 주기) 로직을 타지 않음.
+- uiStore `playFrom` + `setPlayheadAuto(t, from)`; 수동 seek가 지움; `usePlayback.play()`는 `playFrom`부터 재생(방금 그린 패스를 봄). rAF tick은 setState 직접(플래그 보존).
+- 예시 로드(런처·메뉴) → 자동 재생. 제목 input 폭 clamp.
+- AutoReactPanel Esc 닫기 + `?` 열면 닫힘(FormationPicker도 store 구독). 생성분 **모두** 제거. 라벨 폭.
+- CSS: inspector `min-height 52%` + thin scrollbar, help `max-height 44%`; tour z-index 45(<overlay 50) + `?` 열리면 숨김; 1단계는 런처 전체 스포트라이트.
+- 카피: 속도 프리셋 걷기/조깅/달리기/전력질주 · 짧게/보통/강하게 · 가감속 일정/가속/감속/가속→감속 · 움직임 목록 "움직임 1 · 0.0s→4.7s" · 체크리스트/투어 "이동 경로" 통일 · 팀 0명이면 포메이션 "없음".
+- 테마: 저장값 없으면 `prefers-color-scheme`. 텍스트 주석 더블클릭 → 인라인 편집.
+Validation: typecheck/lint/test **98**(+4)/build/harness/format PASS; `pw/tour.cjs` 8단계 PASS.
+Related: PLAN-20260820-004 R4, QA round 1 report. 미수정(보류): Shift+클릭 additive(키맵 결정 유지), 미니바 가장자리 flip, t=0에서 패스 중인 공 드래그 힌트, 필터 빈 상태 문구, 체크리스트 "행동 기반만 ✓". Rollback: revert.
+
+### CHG-20260820-013 — FIX/UX — QA 루프 2라운드 수정 (PLAN-004 R5)
+
+Problem: QA 2라운드 — 1라운드 11건 중 9 FIXED, 잔존 2(Space 단축키 경로가 `playFrom` 무시 / 텍스트 더블클릭: Chromium pointerdown `detail`=0), 신규 P1 3(Tab이 pitch SVG에 갇힘, 마우스로 버튼 클릭 후 Space가 그 버튼 재실행, 저장/열기 토스트가 제목 위에 겹침), P2 9.
+Change:
+- useEditorKeyboard: Space — 키보드 포커스(`:focus-visible`) 컨트롤만 Space 소유, 마우스 포커스 버튼은 blur 후 재생/정지; `playFrom` 존중. Tab — 마지막 토큰 다음(또는 Shift로 첫 토큰 앞)에서 pitch를 벗어남(포커스 트랩 해소).
+- PitchStage: 텍스트 주석 더블클릭을 자체 타이머(350ms)로 판정 → 인라인 편집.
+- `.status` 토스트를 헤더 아래 pill로. 제목 input Enter=확정+blur, Esc=되돌리기+blur.
+- 타임라인 `.rows` `max-height: clamp(140px, 30vh, 420px)` + thin scrollbar. 팀 필터에 행이 없으면 빈 문구(● 행 설명).
+- 투어: `avoid`(토큰 단계는 공을 가리지 않게 후보 위치 선택), `onEnter`(마지막 단계: ⚡ 닫고 도움말 열고 🎓 버튼으로 scrollIntoView, 타깃=🎓 버튼), 예시 로드 시 마지막 카드로 점프. `?` 열면 ☰도 닫힘. `?` 대화상자 Tab 포커스 트랩.
+- 체크리스트: 투어 중 숨김(안내 중복 방지), 제목 "지금 상태", 문구를 상태 서술로.
+- 시작 조건 카피: "오프셋(초)", 옵션 끝 "+ " 제거, 연결 후 힌트 숨김.
+Validation: typecheck/lint/test 98/build/harness/format PASS; `pw/tour.cjs` 8단계 PASS(마지막 단계 🎓 스포트라이트 확인).
+Related: PLAN-20260820-004 R5, QA round 2. Rollback: revert.
+
+### CHG-20260820-014 — FIX — QA 루프 3라운드 수정 (PLAN-004 R6)
+
+Problem: QA 3라운드 — 2라운드 11건 중 10 FIXED. **P0**: 첫 채움(initialHolder=#10) 후 패스 1(10→8) 다음 패스를 그리면 `holderId` 힌트가 초기 보유자로 떨어져 `possessed(#10)`이 open-ended `possessed(#8)` 뒤에 afterSegment로 체인 → 순환("unresolvable trigger") → 재생 불가. P1: 마우스로 누른 버튼 뒤 Space — Chromium은 keydown 시점에 이미 `:focus-visible`=true라 이전 수정이 무효. P2: Ctrl+S 토스트 없음, 타임라인 문제 배너가 영어 개발자 문구, 빈 필드에서 투어 "다음" 시 2~3단계가 타깃 없이 런처를 가림, S 도구에서 기존 라벨 더블클릭이 새 상자, 1280 다크에서 7단계 카드가 Inspector를 가림, 4단계 "공을 선수 위에 놓으면" 안내가 ✓로 안 이어짐.
+Change:
+- `segmentCommands.passerFor/possessTrigger` — 패서는 트랙의 마지막 open-ended possessed 보유자가 진실(힌트·initialHolder는 후순위); open-ended possessed 뒤에는 afterSegment 대신 `at: playhead`로 possessed 삽입(순환 불가). addBallTravel/addBallFling 공통. PitchStage 힌트도 트랙 우선. 회귀 테스트(잘못된 힌트를 줘도 issue 0).
+- useEditorKeyboard: 입력 모달리티 추적(pointerdown → 'pointer', Tab/화살표 → 'keyboard'); 포인터 포커스 버튼은 Space를 가로채지 않음(blur 후 재생), 키보드 포커스는 버튼이 소유. a11y 테스트는 Tab으로 모달리티 지정.
+- uiStore `toast/flashToast` + DocMenu 표시; Ctrl+S → "다운로드 시작".
+- Timeline 문제 배너 한국어화·중복 제거·개수.
+- 투어: `available`(선수 없으면 2~7단계 건너뜀 → 마지막 카드), 4단계 done에 보유자 변경(핸드오버) 포함, ⚡ 단계 카드는 옆(`side`)에.
+- S 도구에서 기존 텍스트 라벨 클릭 → 그 라벨 편집.
+Validation: typecheck/lint/test **99**(+1)/build/harness/format PASS; headless 체인 패스(10→8→7) 재생 확인, `pw/tour.cjs` PASS.
+Related: PLAN-20260820-004 R6, QA round 3. 보류: 달리는 수신자 위 재배치 시 수신자 유실(ISSUE-009 범위), 투어 중 fling 감도(헤드리스 저신뢰). Rollback: revert.
+
+### CHG-20260820-015 — FIX — QA 루프 4라운드 수정 (PLAN-004 R7)
+
+Problem: QA 4라운드(실전 11v11 편집) — 3라운드 6/6 FIXED. **P0**: `PitchStage.endGesture`가 `useCallback([core])`로 첫 렌더의 `finishDraw`(→ `resolved`/`compiled`)를 고정 → 패스 수신자를 t=0 위치로 판정(달려간 선수에게 "—"), 두 번째 런의 prevEnd=0(오프셋 오류), 루즈볼 fling 시작점이 stale. P1: 보유 중인 공 드래그가 커서에서 ~3 m 어긋나 핸드오버 실패(grab이 `home`=센터 기준). P2: 공 주기가 authored 첫 possessed를 못 바꿈, 비행 중 공 tail 드래그가 커서를 안 따라감, 순환 세그먼트가 트랙에서 사라짐, 토스트 live region 누락.
+Change:
+- PitchStage: `endGestureImpl`은 매 렌더 재생성(최신 상태), 리스너는 ref 래퍼(`endGesture = useCallback(ref, [])`)를 잡음. 블록을 `finishDraw/syncBallReceivers` 뒤로 이동(TDZ lint).
+- 공 드래그 grab = 렌더 위치 기준(보유자 발), tail 모드(비행 중)는 패스 END를 커서로(`tailEndAt`) → 드롭한 선수로 수신자 재해석.
+- `giveBallTo`: 첫 possessed@0 보유자도 교체. Timeline: 미해석 세그먼트도 명목 시각에 빗금 블록(`blockUnresolved`)으로 표시·선택 가능. 토스트 `role=status`.
+- 펄스 effect deps 정리, a11y 테스트는 투어 비활성+여유 대기(플레이크).
+Validation: typecheck/lint/test 99/build/harness/format PASS; headless: 달려간 #9에게 End에서 패스 → 수신자 #9, 보유 공 드롭 → #8 보유, 투어 8단계 PASS.
+Related: PLAN-20260820-004 R7, QA round 4. 보류(P2): 타임라인 블록 키보드 조작, 미니바가 이웃 토큰 가림. Rollback: revert.
+
+### CHG-20260820-016 — FIX — QA 루프 5라운드 수정 (PLAN-004 R8)
+
+Problem: QA 5라운드(최종 검증) — 4라운드 7건 중 5 FIXED. 잔존: 루즈볼 fling 시작점이 놓은 지점, 보유 공 드래그 중 토큰이 안 움직임. 신규 P1: 포메이션 변경이 그 팀 움직임을 확인 없이 지우고 공 트랙에 사라진 선수 참조(고스트 패스)를 남김; 트랙 패널 래퍼가 180px 고정(rows 30vh 클램프 무의미) → 마지막 행 도달 불가. P2: 모든 세그먼트가 순환이면 트랙 패널이 빈 문구, 패스 종료 후 공 flick이 tail 재편집, 8/8 카드가 스포트라이트와 멀리.
+Change:
+- PitchStage: 보유 공(authored 트랙 없음) 드래그 중 draft에서 보유자 해제 → 토큰이 커서를 따라감(드롭이 결정); authored 트랙이 있으면 **고스트**(점선+점) 표시. 루즈볼 fling은 드래그 전 위치에서 시작. `ballAfter`(공의 마지막 움직임이 끝난 시각): 드래그 = **그 시각의 새 패스**(드롭 지점 수신자, 도착으로 playhead), flick = 킥; tail 모드는 활성 구간에서만.
+- `commands.pruneDanglingBallSegments` — 포메이션 적용/팀 비우기 시 사라진 보유자 possessed 제거, 사라진 수신자 패스는 loose, 끊긴 afterSegment는 at 0. FormationPicker: 팀에 움직임이 있으면 **인라인 확인**("움직임 N개가 지워져요").
+- Timeline: 래퍼 높이 = 내용 측정(ResizeObserver) × 스프링 진행률; rows `clamp(120px, 26vh, 380px)`; `hasSegments`는 문서 기준(순환 시에도 빗금 블록 유지).
+- 투어 8/8: anchor 제거(카드가 🎓 옆).
+Validation: typecheck/lint/test **100**(+1)/build/harness/format PASS; headless: 보유 공 드래그 토큰=커서, 도착 시각 드롭 → 새 패스 수신자 #11, 루즈볼 fling t=0 위치 유지, 트랙 높이 123→305px(내용), 투어 8단계 PASS.
+Related: PLAN-20260820-004 R8, QA round 5. Rollback: revert.
+
+### CHG-20260820-017 — FIX — QA 루프 6라운드 수정 + 루프 종료 (PLAN-004 R9)
+
+Problem: QA 6라운드 — 5라운드 7/7 FIXED, 스윕 전부 OK. 신규 P1: 패스 삭제 시 수신자 possessed가 고아로 남아 open-ended possessed 뒤에 체인 → 순환, 이후 패스 재생 불가. P2: 공 드롭 핸드오버가 undo 2회, authored 패스가 있을 때 빈 잔디에 드롭하면 보이지 않는 상태 변경. P3: 1280×720 트랙 패널 20px 넘침, sticky 필터 바 위로 행이 비침.
+Change:
+- `removeSegment`: travel 삭제 시 그 패스가 만든 수신자 possessed도 제거; 재체인은 open-ended possessed 뒤로는 at(offset)로.
+- `giveBallToInDraft` — 드롭 핸드오버를 드래그 transaction 안에서 처리(undo 1회). authored 트랙이 있을 때 빈 잔디 드롭은 cancel(숨은 상태 변경 없음).
+- rows `max-height: clamp(100px, calc(34vh - 120px), 380px)`(720에서도 패널이 뷰포트 안), 필터 바 배경/z-index.
+Validation: typecheck/lint/test **101**(+1)/build/harness/format PASS; headless: 패스 삭제 → 배너 없음, 새 패스 재생 OK, 핸드오버 undo 1회.
+Loop result (R2~R9, QA 6라운드): 발견 P0 5 · P1 14 · P2 30+ → 설계 결정·범위 밖 제외 전부 수정. 보류 목록: ISSUE-009 리드 패스, Shift+클릭 additive(키맵 결정), 타임라인 블록 키보드 조작, 미니바가 이웃 토큰 가림, 루즈볼이 번호 가림, 스프링/플링 체감(DELEGATED).
+Related: PLAN-20260820-004 R9. Rollback: revert.
+
+### CHG-20260820-018 — FEAT/BREAKING-UX — 단일 간편 모드 전환 (ADR-0009, PLAN-004 R10)
+
+Problem: 사용자 판정 "사용법이 너무 복잡해 … 기본 하나만" — 도구 레일·인스펙터·트랙·트리거 UI가 효용을 막음. 사용자 제안 모델: 좌클릭=우리팀, 우클릭=상대팀, 더블클릭=경로, 단계 번호 1~10.
+Change:
+- **도메인(additive)**: `Segment.step?: number`. validateDocument에 step 검사.
+- `editor/stepCommands.ts`: `relayoutStepsInDraft`(단계→트리거 파생: 같은 단계 같이 시작, 다음 단계는 가장 느린 동작 끝), `addStepRun/addStepPass`(수신자=도착 시각 위치, 1 undo), `setSegmentStep/removeStepSegment/stepCounts/stepStart`. `gen-` 제외.
+- **UI 교체**: `SimplePitch`(클릭/우클릭 추가·드래그 이동·더블클릭 드로우·플링·공 고스트·단계 배지), `StepBar`(①~⑩ 칩+개수), AppShell 단순화(상단 바 + 필드 + 재생 바). 제거: 도구 레일, Inspector/SegmentInspector, HelpPanel, GettingStarted, FormationPicker, Timeline 트랙 패널, EntityMiniBar, TextEditOverlay, PitchStage, pathScrub. keymap/도움말/튜토리얼(5장) 재작성.
+- 그린 직후 선택 해제(칩 클릭이 방금 그린 것을 재배정하는 footgun 방지). 유지: 런처, ☰, ⚡, undo/redo, 테마, ?, 자동저장/JSON/PNG/SVG, 예시.
+Validation: typecheck/lint/test **90**(간편 모드 기준 재작성: stepCommands 4, AppShell 4, tour 5, a11y 3 등)/build/harness/format PASS. Playwright: 좌/우클릭 배치 → 더블클릭 런 → 핸드오버 → 단계2 패스 → 재생 → 투어 5장 완주, 콘솔 클린.
+Related: ADR-0009(Accepted), ADR-0006 부분 Superseded. Rollback: revert(구 UI는 git 히스토리에).
+
+### CHG-20260820-019 — UX — 간편 모드 v2: Ctrl 투입 · 사이드 패널 · 애니메이션 모드 토글 · 경량화 (PLAN-004 R11)
+
+Problem: 사용자 지시 — 새로고침은 완전 클린, 좌/우 상시 사이드 패널(기능/조작법), Ctrl+클릭으로만 선수 투입(일반 클릭과 구분), 공 투입 버튼, 하단 애니메이션 모드 토글(켜야 더블클릭·애니메이션 바), "마지막 작업 불러오기·PNG 저장 같은 것 싹 제거(가벼운 사이트)".
+Change:
+- `SidePanels.tsx`(ActionsPanel: 양 팀 채우기·⚽ 공 투입(placeBallCenter)·⚡ 자동 대응·새로 시작 / GuidePanel: 배치·애니메이션·재생 조작법, 모드 꺼짐 시 흐림), 3열 그리드.
+- SimplePitch: 잔디 클릭은 **Ctrl(⌘) 필수**, 더블클릭 드로우·플링은 `animMode`에서만(꺼짐 더블클릭 → 토스트). uiStore `animMode`.
+- AppShell: ☰(DocMenu) 삭제, 하단 = [🎬 애니메이션 모드] 토글 + (켜짐 시) ▶·스크럽·반복·단계 칩.
+- 경량화: 자동저장 제거(새로고침=클린), JSON/PNG/SVG/Ctrl+S/O 제거. persistence 모듈은 미노출로 잔존.
+- 튜토리얼 6장(anim-mode 단계 추가), keymap/조작법 문구 갱신.
+Validation: typecheck/lint/test **90**/build/harness/format PASS. Playwright: 일반 클릭 무반응 → Ctrl 투입 3명 → 공 투입 → 모드 꺼짐 더블클릭 차단 → 모드 켜고 런+2단계 패스 → 재생 → 투어 완주 → 새로고침 클린, 콘솔 클린.
+Related: ADR-0009 Amendment v2. Rollback: revert.
+
+### CHG-20260820-020 — UX — 마퀴 다중 선택 + 그룹 드래그 · 밝은 웜 톤 배경 (PLAN-004 R12)
+
+Problem: 사용자 지시 — 드래그로 여러 엔티티 선택; 배경을 밝게(순백은 말고).
+Change:
+- SimplePitch: 빈 잔디 드래그(Ctrl 없이) = 마퀴 박스 선택(선수+공, 재생 위치 기준), 선택된 멤버를 잡고 끌면 **그룹 이동**(1 undo). 핸드오버/플링은 단일 드래그에서만. 조작법 패널 문구 추가.
+- tokens.css: 라이트 테마를 웜 크림(#f2eee2 bg / #faf7ee surface)으로, 잔디 한 톤 밝게(#4aab6d).
+Validation: typecheck/lint/test 90/build/harness/format PASS; Playwright: 마퀴로 4명 선택 → #3 드래그 시 #5 dx=100 동반 이동, 콘솔 클린.
+Related: ADR-0009 v2. Rollback: revert.
+
+### CHG-20260820-021 — UX — 시작 런처 창 제거 (PLAN-004 R13)
+
+Problem: 사용자 지시 — "어떻게 시작할까요?" 중앙 창 제거.
+Change: `EmptyState.tsx` 삭제(예시 로드 포함). 시작 동선 = 왼쪽 패널 [양 팀 채우기] 또는 Ctrl+클릭 직접 배치. 튜토리얼 1장이 [양 팀 채우기] 버튼을 비춤. 예시 프리셋은 UI 미노출(모듈 잔존).
+Validation: typecheck/lint/test 90/build/harness/format PASS; Playwright 첫 방문 확인(창 없음, 투어 1/6 정상).
+Related: ADR-0009 v2. Rollback: revert.
+
+### CHG-20260820-022 — UX — 재생바 제거 · 단계 1~9 끝 동기화 · 라이트 고정 · 배지 흐림 (PLAN-004 R14)
+
+Problem: 사용자 지시 — 애니메이션 모드의 재생바(스크럽) 불필요; 단계는 1~9; **같은 단계는 길이가 달라도 같이 끝나야**; 배경이 아직 검정(다크 저장값); 경로 배지가 애니메이션을 방해.
+Change:
+- 하단 바 = 🎬 토글 · ▶ · ↺ · ⟳ · 단계 칩(스크럽/시간 표시 제거).
+- `MAX_STEP` 9, 숫자키 1~9. `relayoutStepsInDraft`: 단계 지속시간 = 구성원의 자연 길이(경로 길이/기본 속도) 중 최댓값, 전원 `timing.duration = stepDur` — **같이 시작·같이 끝남**(짧은 동작은 느려짐). compile 루프 제거(결정적 파생).
+- 테마 라이트 고정(uiStore 'light', dataset 'light', ☾ 토글 제거 — 저장된 다크 무시). OS 다크에서도 웜 크림 확인.
+- 경로 단계 배지 opacity 0.45(호버 시 1), 축소.
+Validation: typecheck/lint/test 90/build/harness/format PASS; Playwright(OS dark): bg rgb(242,238,226), 스크럽 없음, 두 런(짧/긴) 동시 종료 재생, 콘솔 클린. ADR-0009 v2의 "같이 시작(자연 속도)" 항목을 본 결정으로 대체.
+Related: ADR-0009. Rollback: revert.
+

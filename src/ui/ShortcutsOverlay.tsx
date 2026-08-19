@@ -49,6 +49,24 @@ export function ShortcutsOverlay() {
         aria-modal="true"
         aria-label={t('shortcuts.title')}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key !== 'Tab' || !el.current) return
+          const focusables = Array.from(
+            el.current.querySelectorAll<HTMLElement>(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+            ),
+          ).filter((n) => !n.hasAttribute('disabled'))
+          if (!focusables.length) return
+          const first = focusables[0]!
+          const last = focusables[focusables.length - 1]!
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }}
       >
         <div className={styles.inspectorHead}>
           <span>⌨ {t('shortcuts.title')}</span>
@@ -63,10 +81,17 @@ export function ShortcutsOverlay() {
             ✕
           </button>
         </div>
-        <p className={styles.muted}>
-          왼손은 키보드(Q W E R / A S D / Z X C V / Space / Alt·Ctrl·Shift), 오른손은 마우스. 모든
-          바인딩은 `src/ui/keymap.ts` 한 곳에서 바꿉니다.
-        </p>
+        <p className={styles.muted}>마우스로 그리고, 키보드는 재생·삭제·되돌리기만 씁니다.</p>
+        <button
+          type="button"
+          className={styles.btn}
+          onClick={() => {
+            setOpen(false)
+            useUiStore.getState().startTour(0)
+          }}
+        >
+          🎓 {t('tour.restart')}
+        </button>
         <div className={styles.shortcutGrid}>
           {KEYMAP_GROUPS.map((g) => (
             <div key={g.title} className={styles.card}>

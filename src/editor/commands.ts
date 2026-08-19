@@ -20,6 +20,51 @@ export const DEFAULT_TEAMS: Team[] = [
   { id: 'team-b', name: 'Away', color: 'var(--st-team-b)', side: 'right' },
 ]
 
+/** Pure: a document with the two default teams if it has none. Used at bootstrap/new so teams are never an undo step. */
+export function seedDefaultTeams(doc: TacticDocument): TacticDocument {
+  if (doc.teams.length > 0) return doc
+  return { ...doc, teams: DEFAULT_TEAMS.map((t) => ({ ...t })) }
+}
+
+/**
+ * Ball segments that referenced players who no longer exist (formation change / clear team):
+ * possessed by a gone player → removed; pass to a gone receiver → loose (no ghost passes).
+ */
+function pruneDanglingBallSegments(d: TacticDocument, alive: ReadonlySet<Id>): void {
+  for (const scene of d.scenes) {
+    for (const track of scene.timeline.tracks) {
+      if (track.entityKind !== 'ball') continue
+      track.segments = track.segments.filter(
+        (s) => !(s.kind === 'possessed' && !alive.has(s.holderId)),
+      )
+      for (const s of track.segments) {
+        if (s.kind === 'travel' && s.receiverId && !alive.has(s.receiverId)) {
+          delete s.receiverId
+          if (s.travelKind === 'pass') s.travelKind = 'loose'
+        }
+      }
+      // Re-chain: a segment that pointed at a removed one falls back to its own nominal time.
+      const ids = new Set(track.segments.map((s) => s.id))
+      for (const s of track.segments) {
+        if (s.trigger.type === 'afterSegment' && !ids.has(s.trigger.segmentId))
+          s.trigger = { type: 'at', t: 0 }
+      }
+    }
+  }
+}
+
+/** "공 투입": ball to the centre spot, loose (side-panel button). */
+export function placeBallCenter(core: EditorCore): void {
+  core.transaction('Place ball', (d) => {
+    d.ball.home = { x: d.pitch.length / 2, y: d.pitch.width / 2 }
+    delete d.ball.initialHolderId
+    const track = d.scenes[0]?.timeline.tracks.find((t) => t.entityKind === 'ball')
+    const first = track?.segments[0]
+    if (first && first.kind === 'possessed' && first.trigger.type === 'at' && first.trigger.t === 0)
+      track!.segments.shift()
+  })
+}
+
 export function ensureDefaultTeams(core: EditorCore): void {
   if (core.getDocument().teams.length > 0) return
   core.transaction('Add default teams', (d) => {
@@ -116,19 +161,27 @@ export function nudgeEntities(
 }
 
 export function setPlayerNumber(core: EditorCore, id: Id, number: number): void {
-  core.transaction('Set number', (d) => {
-    const p = d.players.find((x) => x.id === id)
-    if (p) p.number = Math.max(0, Math.min(99, Math.round(number)))
-  })
+  core.transaction(
+    'Set number',
+    (d) => {
+      const p = d.players.find((x) => x.id === id)
+      if (p) p.number = Math.max(0, Math.min(99, Math.round(number)))
+    },
+    { coalesceKey: `number:${id}` },
+  )
 }
 
 export function setPlayerLabel(core: EditorCore, id: Id, label: string): void {
-  core.transaction('Set label', (d) => {
-    const p = d.players.find((x) => x.id === id)
-    if (!p) return
-    if (label.trim()) p.label = label.trim()
-    else delete p.label
-  })
+  core.transaction(
+    'Set label',
+    (d) => {
+      const p = d.players.find((x) => x.id === id)
+      if (!p) return
+      if (label.trim()) p.label = label.trim()
+      else delete p.label
+    },
+    { coalesceKey: `label:${id}` },
+  )
 }
 
 export function setEntityPosition(core: EditorCore, id: Id, to: Vec2): void {
@@ -138,9 +191,13 @@ export function setEntityPosition(core: EditorCore, id: Id, to: Vec2): void {
 }
 
 export function setDocumentTitle(core: EditorCore, title: string): void {
-  core.transaction('Rename', (d) => {
-    d.meta.title = title
-  })
+  core.transaction(
+    'Rename',
+    (d) => {
+      d.meta.title = title
+    },
+    { coalesceKey: 'title' },
+  )
 }
 
 // ---------- formations ----------
@@ -155,28 +212,73 @@ export function applyFormation(core: EditorCore, teamId: Id, formationId: Id): b
   const doc = core.getDocument()
   const team = doc.teams.find((t) => t.id === teamId)
   if (!team) return false
-  const slots = formationSlots(f)
   core.transaction(`Apply ${f.name}`, (d) => {
-    const keepIds = new Set(d.players.filter((p) => p.teamId !== teamId).map((p) => p.id))
-    d.players = d.players.filter((p) => keepIds.has(p.id))
-    for (const s of slots) {
-      d.players.push({
-        id: newId('p'),
-        teamId,
-        number: s.number,
-        role: s.role,
-        home: fractionToPitch(s.frac, d.pitch, team.side),
-      })
-    }
-    for (const scene of d.scenes) {
-      scene.timeline.tracks = scene.timeline.tracks.filter(
-        (t) => keepIds.has(t.entityId) || t.entityKind === 'ball',
-      )
-    }
-    d.formationRefs = { ...(d.formationRefs ?? {}), [teamId]: f.id }
-    pruneDanglingHolder(d as TacticDocument)
+    applyFormationInDraft(d as TacticDocument, team, f)
   })
   return true
+}
+
+/** Several teams in one undo step (quick start). Same rules as `applyFormation`. */
+export function applyFormations(
+  core: EditorCore,
+  picks: readonly { teamId: Id; formationId: Id }[],
+): boolean {
+  const doc = core.getDocument()
+  const resolved = picks.map((p) => ({
+    team: doc.teams.find((t) => t.id === p.teamId),
+    f: getFormation(p.formationId),
+  }))
+  if (resolved.some((r) => !r.team || !r.f)) return false
+  core.transaction('Quick start', (d) => {
+    for (const r of resolved) applyFormationInDraft(d as TacticDocument, r.team!, r.f!)
+  })
+  return true
+}
+
+function applyFormationInDraft(
+  d: TacticDocument,
+  team: Pick<Team, 'id' | 'side'>,
+  f: NonNullable<ReturnType<typeof getFormation>>,
+): void {
+  const wasEmpty = d.players.length === 0
+  const slots = formationSlots(f)
+  const keepIds = new Set(d.players.filter((p) => p.teamId !== team.id).map((p) => p.id))
+  d.players = d.players.filter((p) => keepIds.has(p.id))
+  const added: Id[] = []
+  for (const s of slots) {
+    const id = newId('p')
+    added.push(id)
+    d.players.push({
+      id,
+      teamId: team.id,
+      number: s.number,
+      role: s.role,
+      home: fractionToPitch(s.frac, d.pitch, team.side),
+    })
+  }
+  for (const scene of d.scenes) {
+    scene.timeline.tracks = scene.timeline.tracks.filter(
+      (t) => keepIds.has(t.entityId) || t.entityKind === 'ball',
+    )
+  }
+  d.formationRefs = { ...(d.formationRefs ?? {}), [team.id]: f.id }
+  pruneDanglingHolder(d)
+  pruneDanglingBallSegments(d, keepIds)
+  // First fill of an empty pitch: the ball starts with this team's player nearest to it (kick-off feel),
+  // so "Alt+drag the ball = pass" works immediately. Later formation changes never reassign.
+  const ballHasSegments = d.scenes.some((sc) =>
+    sc.timeline.tracks.some((t) => t.entityKind === 'ball' && t.segments.length > 0),
+  )
+  if (wasEmpty && !d.ball.initialHolderId && !ballHasSegments && added.length > 0) {
+    const ball = d.ball.home
+    let best: { id: Id; dist: number } | undefined
+    for (const p of d.players) {
+      if (!added.includes(p.id)) continue
+      const dist = Math.hypot(p.home.x - ball.x, p.home.y - ball.y)
+      if (!best || dist < best.dist) best = { id: p.id, dist }
+    }
+    if (best) d.ball.initialHolderId = best.id
+  }
 }
 
 export function clearTeam(core: EditorCore, teamId: Id): void {
@@ -188,5 +290,6 @@ export function clearTeam(core: EditorCore, teamId: Id): void {
     }
     if (d.formationRefs) delete d.formationRefs[teamId]
     pruneDanglingHolder(d as TacticDocument)
+    pruneDanglingBallSegments(d as TacticDocument, new Set(d.players.map((p) => p.id)))
   })
 }

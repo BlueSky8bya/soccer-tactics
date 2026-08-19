@@ -31,7 +31,7 @@ export function usePlaybackController(duration: number) {
           return
         }
       }
-      st.setPlayhead(t)
+      useUiStore.setState({ playback: { ...st.playback, t } })
       raf.current = requestAnimationFrame(tick)
     }
     const unsub = useUiStore.subscribe((s, prev) => {
@@ -48,7 +48,9 @@ export function usePlaybackController(duration: number) {
 
   const play = useCallback(() => {
     const st = useUiStore.getState()
-    if (st.playback.t >= durRef.current - 1e-6) st.setPlayhead(0)
+    // After drawing a pass/fling the playhead sits at the arrival; play from where that action started.
+    if (st.playFrom !== null) st.setPlayhead(st.playFrom)
+    else if (st.playback.t >= durRef.current - 1e-6) st.setPlayhead(0)
     st.setPlaying(true)
   }, [])
   const pause = useCallback(() => useUiStore.getState().setPlaying(false), [])

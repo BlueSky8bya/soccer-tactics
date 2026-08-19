@@ -52,6 +52,28 @@ export interface UiState {
   timelineExpanded: boolean
   reducedMotion: boolean
   playback: PlaybackState
+  /** True once playback was started at least once this session (getting-started checklist). */
+  hasPlayed: boolean
+  /**
+   * When a command auto-advanced the playhead (e.g. to a pass arrival), the time the authored action
+   * started. The next Play starts from here so the user sees what they just drew. Cleared by manual seeks.
+   */
+  playFrom: number | null
+  setPlayheadAuto: (t: number, from: number) => void
+  /** Animation mode (ADR-0009 v2): double-click drawing + the animation bar only when on. */
+  animMode: boolean
+  setAnimMode: (on: boolean) => void
+  /** Simple mode (ADR-0009): step number newly drawn movements get. */
+  currentStep: number
+  setCurrentStep: (n: number) => void
+  /** Transient status line ("다운로드 시작" …), shown by DocMenu; auto-clears. */
+  toast: string | null
+  flashToast: (msg: string, ms?: number) => void
+  /** Interactive first-visit tour (src/ui/tour). `step` indexes TOUR_STEPS. */
+  tour: { active: boolean; step: number }
+  startTour: (step?: number) => void
+  setTourStep: (step: number) => void
+  endTour: () => void
   selectedSegmentId: Id | null
   /** Waypoint being dragged (segmentId + waypointId). */
   waypointDrag: { segmentId: Id; waypointId: Id } | null
@@ -104,15 +126,18 @@ export const useUiStore = create<UiState>((set) => ({
   timelineExpanded: false,
   reducedMotion: false,
   playback: { t: 0, playing: false, speed: 1, loop: false },
+  hasPlayed: false,
+  tour: { active: false, step: 0 },
+  playFrom: null,
+  toast: null,
+  currentStep: 1,
+  animMode: false,
   selectedSegmentId: null,
   waypointDrag: null,
   pathDraft: null,
   shortcutsOpen: false,
   helpOpen: typeof localStorage === 'undefined' || localStorage.getItem('st.helpOpen') !== '0',
-  theme:
-    typeof localStorage !== 'undefined' && localStorage.getItem('st.theme') === 'dark'
-      ? 'dark'
-      : 'light',
+  theme: 'light', // single bright warm theme (user decision 2026-08-20) — no dark mode
   selectedDrawingIds: [],
   drawDraft: null,
   textEdit: null,
@@ -136,8 +161,24 @@ export const useUiStore = create<UiState>((set) => ({
   setInspectorPinned: (inspectorPinned) => set({ inspectorPinned }),
   setTimelineExpanded: (timelineExpanded) => set({ timelineExpanded }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
-  setPlayhead: (t) => set((s) => ({ playback: { ...s.playback, t: Math.max(0, t) } })),
-  setPlaying: (playing) => set((s) => ({ playback: { ...s.playback, playing } })),
+  setPlayhead: (t) =>
+    set((s) => ({ playback: { ...s.playback, t: Math.max(0, t) }, playFrom: null })),
+  setPlayheadAuto: (t, from) =>
+    set((s) => ({
+      playback: { ...s.playback, t: Math.max(0, t) },
+      playFrom: Math.max(0, Math.min(from, t)),
+    })),
+  setAnimMode: (animMode) => set({ animMode }),
+  setCurrentStep: (currentStep) => set({ currentStep: Math.max(1, Math.min(10, currentStep)) }),
+  flashToast: (msg, ms = 1800) => {
+    set({ toast: msg })
+    setTimeout(() => set((s) => (s.toast === msg ? { toast: null } : {})), ms)
+  },
+  startTour: (step = 0) => set({ tour: { active: true, step } }),
+  setTourStep: (step) => set((s) => ({ tour: { ...s.tour, step } })),
+  endTour: () => set({ tour: { active: false, step: 0 } }),
+  setPlaying: (playing) =>
+    set((s) => ({ playback: { ...s.playback, playing }, hasPlayed: s.hasPlayed || playing })),
   setSpeed: (speed) => set((s) => ({ playback: { ...s.playback, speed } })),
   setLoop: (loop) => set((s) => ({ playback: { ...s.playback, loop } })),
   selectSegment: (selectedSegmentId) => set({ selectedSegmentId }),

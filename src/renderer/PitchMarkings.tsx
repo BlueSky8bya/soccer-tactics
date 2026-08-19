@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import type { Pitch } from '@/domain/types'
-import { pitchMarkings } from '@/editor/geometry'
+import { pitchMarkings } from '@/engine/geometry'
 import styles from './pitch.module.css'
 
 /** Static pitch: grass stripes + IFAB markings. Re-renders only when pitch size changes. */

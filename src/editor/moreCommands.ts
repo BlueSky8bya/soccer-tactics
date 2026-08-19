@@ -108,10 +108,14 @@ export function addText(core: EditorCore, at: Vec2, text: string, color?: string
 }
 
 export function updateDrawingText(core: EditorCore, id: Id, text: string): void {
-  core.transaction('Edit text', (d) => {
-    const dr = d.drawings.find((x) => x.id === id)
-    if (dr && dr.kind === 'text') dr.text = text
-  })
+  core.transaction(
+    'Edit text',
+    (d) => {
+      const dr = d.drawings.find((x) => x.id === id)
+      if (dr && dr.kind === 'text') dr.text = text
+    },
+    { coalesceKey: `text:${id}` },
+  )
 }
 
 export function removeDrawings(core: EditorCore, ids: readonly Id[]): void {
@@ -166,6 +170,10 @@ export function drawingAnchor(dr: Drawing): Vec2 {
 
 // ---------- document lifecycle ----------
 
+/**
+ * Replace the whole document as ONE undo step (new tactic, open JSON, load example).
+ * Ctrl+Z brings the previous work back — nothing is ever silently lost.
+ */
 export function replaceDocument(core: EditorCore, doc: TacticDocument): void {
-  core.load(doc)
+  core.transaction('Replace document', () => doc)
 }

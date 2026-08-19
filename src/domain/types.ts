@@ -144,6 +144,12 @@ export interface SegmentBase {
   trigger: Trigger
   timing: Timing
   easing?: Easing
+  /**
+   * Authoring step (1-10, simple mode / ADR-0009). Segments with the same step start together;
+   * step n+1 starts when the slowest segment of step n ends. Triggers are DERIVED from steps by
+   * `relayoutStepsInDraft`; the trigger remains the engine truth (old documents stay playable).
+   */
+  step?: number
 }
 
 export type Segment = PlayerSegment | BallSegment

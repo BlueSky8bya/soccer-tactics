@@ -11,3 +11,4 @@
 | [VDR-0001](VDR-0001-reference-tactical-board.md) | VDR | Accepted | visual | `decision-assets/VDR-0001/reference-tactical-board.png` — anti-reference + 기능 인벤토리 | 새 레퍼런스 제공 |
 | [ADR-0007](ADR-0007-reactive-opponent-autoplay.md) | ADR | Accepted (Phase 1) | opponent AI | 규칙 기반 반응 생성기(segments 산출, 결정론·편집 가능) → Phase 2 학습 정책(ONNX) | Phase 1 체감 결과 |
 | [ADR-0008](ADR-0008-attacking-transition-reaction.md) | ADR | Proposed | opponent AI | 소유 전환 후 공격 측 반응(support/run/width) — 제안만, 구현 금지 | 사용자 Phase 1 체감 후 |
+| ADR-0009 | 단일 간편 모드(클릭 배치·더블클릭 경로·단계 1~10) | Accepted | 2026-08-20 | ADR-0006 부분 대체 |

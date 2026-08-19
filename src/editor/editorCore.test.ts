@@ -174,3 +174,43 @@ describe('dangling ball holder (plan M1)', () => {
     expect(core.getDocument().ball.initialHolderId).toBeUndefined()
   })
 })
+
+describe('quick start (first-visit launcher)', () => {
+  it("first formation on an empty pitch gives the ball to that team's nearest player; later applies do not reassign", async () => {
+    const { applyFormation, ensureDefaultTeams } = await import('./commands')
+    const doc = createEmptyDocument({ id: 'd', now: '2026-08-19T00:00:00.000Z' })
+    const core = new EditorCore(doc)
+    ensureDefaultTeams(core)
+    const [home, away] = core.getDocument().teams
+    applyFormation(core, home!.id, '4-3-3')
+    const d1 = core.getDocument()
+    const holder = d1.players.find((p) => p.id === d1.ball.initialHolderId)
+    expect(holder?.teamId).toBe(home!.id)
+    // nearest to the ball (centre spot)
+    const dist = (p: { home: { x: number; y: number } }) =>
+      Math.hypot(p.home.x - d1.ball.home.x, p.home.y - d1.ball.home.y)
+    expect(Math.min(...d1.players.map(dist))).toBeCloseTo(dist(holder!), 6)
+    applyFormation(core, away!.id, '4-4-2')
+    expect(core.getDocument().ball.initialHolderId).toBe(holder!.id)
+  })
+  it('applyFormations fills both teams in one undo step', async () => {
+    const { applyFormations, ensureDefaultTeams } = await import('./commands')
+    const doc = createEmptyDocument({ id: 'd', now: '2026-08-19T00:00:00.000Z' })
+    const core = new EditorCore(doc)
+    ensureDefaultTeams(core)
+    const [home, away] = core.getDocument().teams
+    const before = core.getDocument()
+    expect(
+      applyFormations(core, [
+        { teamId: home!.id, formationId: '4-3-3' },
+        { teamId: away!.id, formationId: '4-4-2' },
+      ]),
+    ).toBe(true)
+    const d = core.getDocument()
+    expect(d.players.filter((p) => p.teamId === home!.id)).toHaveLength(11)
+    expect(d.players.filter((p) => p.teamId === away!.id)).toHaveLength(11)
+    expect(d.ball.initialHolderId).toBeDefined()
+    core.undo()
+    expect(core.getDocument().players).toHaveLength(before.players.length)
+  })
+})

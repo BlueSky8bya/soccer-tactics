@@ -4,6 +4,7 @@
  */
 import { SCHEMA_VERSION, type TacticDocument } from '@/domain/types'
 import type { EditorCore } from './editorCore'
+import { validateDocument } from './validateDocument'
 
 export const AUTOSAVE_KEY = 'st.autosave.v1'
 
@@ -28,9 +29,23 @@ export function serialize(doc: TacticDocument): string {
   return JSON.stringify(doc, null, 2)
 }
 
+export class DocumentValidationError extends Error {
+  readonly problems: string[]
+  constructor(problems: string[]) {
+    super(
+      `Not a valid Soccer Tactics document: ${problems.slice(0, 3).join('; ')}${problems.length > 3 ? ` (+${problems.length - 3})` : ''}`,
+    )
+    this.name = 'DocumentValidationError'
+    this.problems = problems
+  }
+}
+
+/** Parse + nested structural validation (schema v1). Throws DocumentValidationError with the problem list. */
 export function parseDocument(json: string): TacticDocument {
   const parsed: unknown = JSON.parse(json)
-  if (!isTacticDocument(parsed)) throw new Error('Not a Soccer Tactics document (schema mismatch)')
+  if (!isTacticDocument(parsed)) throw new DocumentValidationError(['root: schema mismatch'])
+  const problems = validateDocument(parsed)
+  if (problems.length) throw new DocumentValidationError(problems)
   return parsed
 }
 

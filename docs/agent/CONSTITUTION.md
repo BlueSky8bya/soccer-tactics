@@ -33,7 +33,7 @@ Interaction → Commands(transactional) → TacticDocument(JSON) ⇄ History
 
 ## 4. Critical invariants
 
-1. `src/engine`, `src/domain`은 순수 TS: React/DOM/spring/wall-clock import 금지. (BR-ENGINE-001, MACHINE: `npm run harness:verify`)
+1. `src/engine`, `src/domain`은 순수 TS: React/DOM/spring/wall-clock import 금지. (BR-ENGINE-001, MACHINE: `npm run harness:verify`) 예외: `domain/factories.createEmptyDocument`의 `createdAt` 기본값(주입 가능, 엔진 시간 아님)은 허용 — verify-harness 주석 참조.
 2. **두 개의 시계**: Tactical Motion은 결정론(같은 doc+t → 같은 상태, 지정 안 한 overshoot 없음). Interface Motion(spring)은 `src/ui/motion`에만.
 3. Player와 Ball은 독립 track. Ball은 possession attach/detach 모델. 공을 선수 위치에 단순 종속시키지 않는다.
 4. 시간 관계(delay/sequential/triggered)는 데이터가 표현한다. simultaneous-only 금지.

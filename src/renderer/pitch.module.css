@@ -387,3 +387,42 @@
   pointer-events: none;
   opacity: 0.9;
 }
+
+.ballGhost {
+  pointer-events: none;
+}
+
+.ballGhostLine {
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 0.18;
+  stroke-dasharray: 0.6 0.5;
+}
+
+.ballGhostDot {
+  fill: rgba(255, 255, 255, 0.85);
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 0.15;
+}
+
+.stepBadge {
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 120ms ease;
+}
+
+.stepBadge:hover {
+  opacity: 1;
+}
+
+.stepBadge circle {
+  fill: rgba(255, 255, 255, 0.75);
+  stroke: var(--st-accent, #2563eb);
+  stroke-width: 0.14;
+}
+
+.stepBadge text {
+  font-size: 1.5px;
+  font-weight: 700;
+  fill: var(--st-accent, #2563eb);
+  user-select: none;
+}
