@@ -1,0 +1,132 @@
+schema_version: "1.1"
+harness_schema_version: "1.1"
+protocol_source: "project-initializing_260712.md"
+protocol_date: "2026-07-12"
+initialized_at: "2026-08-19"
+last_harness_review: "2026-08-19"
+
+project:
+  name: "Soccer Tactics"
+  version: "0.1.0"
+  type:
+    - web
+    - frontend
+    - editor
+  status: "initializing" # M0 완료 후 "active"
+  repository: "https://github.com/BlueSky8bya/soccer-tactics.git"
+  local_folder: "soccer tactics" # 로컬 폴더명(공백) ≠ repo slug(soccer-tactics)
+
+# 실제 위험 경계만. 계정/공유 서버/개인데이터 도입 시 재평가 (docs/agent/RISK_PROFILE.md).
+risk_profiles:
+  - GENERAL
+
+# Project-Owned Evidence. 외부 조사 전에 먼저 읽는다.
+reference_roots:
+  - path: "docs/agent/decision-assets/VDR-0001/reference-tactical-board.png"
+    type: screenshot
+    role: "anti-reference + 기능 인벤토리 (VDR-0001)"
+  - path: "docs/product/PRODUCT_BRIEF.md"
+    type: spec
+    role: "사용자 확정 요구사항"
+  - path: "docs/product/UX_RESEARCH.md"
+    type: research
+    role: "HCI 근거 (ADR-0006)"
+
+entrypoints:
+  agents: "AGENTS.md"
+  claude: "CLAUDE.md"
+  constitution: "docs/agent/CONSTITUTION.md"
+  current_state: "docs/agent/CURRENT_STATE.md"
+  project_map: "docs/agent/PROJECT_MAP.md"
+  risk_profile: "docs/agent/RISK_PROFILE.md"
+  definition_of_done: "docs/agent/DEFINITION_OF_DONE.md"
+  changelog: "docs/agent/CHANGELOG_AGENT.md"
+  decision_index: "docs/agent/decisions/DECISION_INDEX.md"
+  active_plan: "docs/agent/plans/ACTIVE_PLAN.md"
+  handoffs: "docs/agent/handoffs/"
+  product_brief: "docs/product/PRODUCT_BRIEF.md"
+
+commands:
+  install: "npm install"
+  dev: "npm run dev"
+  typecheck: "npm run typecheck" # tsc -b
+  lint: "npm run lint" # oxlint src scripts
+  format_check: "npm run format:check" # prettier
+  test: "npm test" # vitest run
+  build: "npm run build" # tsc -b && vite build
+  harness_verify: "npm run harness:verify" # scripts/agent-harness/verify-harness.mjs
+  handoff: "npm run harness:handoff -- <topic>" # scripts/agent-harness/create-handoff.mjs
+
+version_policy: "semver" # 0.x during M0–M4
+
+# BLOCKING 규칙. enforcement는 MACHINE | UNENFORCED 만. 활성 확인 못 하면 UNENFORCED.
+blocking_rules:
+  - id: "BR-ENGINE-001"
+    title: "engine/domain purity — no React/DOM/spring/wall-clock in src/engine, src/domain; no spring in src/renderer"
+    source: "docs/agent/CONSTITUTION.md#critical-invariants"
+    enforcement: "MACHINE"
+    mechanism: "scripts/agent-harness/verify-harness.mjs (import grep) — run via `npm run harness:verify`"
+    trigger: "DoD before task completion; also Claude Code Stop hook (.claude/settings.json) once active"
+    activation_check: "`npm run harness:verify` exits 0/1 locally (verified 2026-08-19). Stop hook activation: observe hook output at next session start; until then hook = supplementary"
+    bypass_conditions: ["Skipping `npm run harness:verify` (manual gate still required by DoD)"]
+    manual_gate: "Done Report must cite harness:verify result"
+    owner: "Agent"
+    evidence: "harness:verify output in Done Report / Changelog"
+
+  - id: "BR-DEC-001"
+    title: "Decision write-through — material user decisions persisted in the same turn (ADR/VDR/Plan/Current State)"
+    source: "docs/agent/CONSTITUTION.md#repository-memory"
+    enforcement: "UNENFORCED"
+    mechanism: null
+    trigger: "every Decision-Bearing Turn"
+    activation_check: null
+    bypass_conditions: []
+    manual_gate: "Before ending a decision-bearing turn, list `Decision Persistence:` lines or `UNPERSISTED DECISION` block"
+    owner: "Agent"
+    evidence: "Decision Persistence section in the turn's final message; DECISION_INDEX diff"
+
+  - id: "BR-VER-001"
+    title: "No claimed validation without execution — state PASS/FAIL/NOT RUN with command"
+    source: "docs/agent/CONSTITUTION.md#verification"
+    enforcement: "UNENFORCED"
+    mechanism: null
+    trigger: "every Done Report"
+    activation_check: null
+    bypass_conditions: []
+    manual_gate: "Done Report 'Validation Executed' lists command → result; unverifiable items under 'Agent-Not-Verifiable' with executor/procedure"
+    owner: "Agent"
+    evidence: "Done Report, CURRENT_STATE 'Last Verified'"
+
+  - id: "BR-GIT-001"
+    title: "No destructive git / no auto commit / no auto push without explicit user request"
+    source: "docs/agent/CONSTITUTION.md#reversibility"
+    enforcement: "UNENFORCED" # .claude/settings.json permissions.deny 추가됨 — Claude Code 전용이며 다음 세션부터 적용. 활성 확인 후 MACHINE로 승격 검토.
+    mechanism: ".claude/settings.json permissions.deny (git push / reset --hard / clean / force) — activation unverified in current session"
+    trigger: "before any git mutation"
+    activation_check: "Next session: /permissions shows deny rules → re-audit and promote to MACHINE for Claude Code"
+    bypass_conditions: ["Other agents/tools not reading .claude/settings.json"]
+    manual_gate: "Agent asks before push/force/reset; commits only when user asks"
+    owner: "Agent"
+    evidence: "git log / reflog; Done Report"
+
+  - id: "BR-DOC-001"
+    title: "Project memory freshness — CURRENT_STATE/PROJECT_MAP/Changelog updated when a change makes them stale"
+    source: "docs/agent/CONSTITUTION.md#repository-memory"
+    enforcement: "UNENFORCED"
+    mechanism: "scripts/agent-harness/state-drift-check.mjs (warning only; Stop hook once active)"
+    trigger: "task completion; Stop hook"
+    activation_check: "Stop hook output observed at next session"
+    bypass_conditions: ["warning-only script — does not block"]
+    manual_gate: "Done Report 'Documentation Updated' section; Handoff 'Documents Possibly Stale'"
+    owner: "Agent"
+    evidence: "Done Report; git diff of docs/agent"
+
+agent_policy:
+  default_task_risk: "L1"
+  ask_before_production_dependency: true
+  ask_before_destructive_command: true
+  ask_before_public_api_break: true
+  auto_commit: false
+  auto_push: false
+  docs_language: "ko" # 코드·식별자·커밋은 영어
+  ui_language: "ko-default, i18n-ready" # Open Decision A-05 → (c)

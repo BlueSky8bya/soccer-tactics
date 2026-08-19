@@ -1,0 +1,67 @@
+/* Design tokens — single source for colour, spacing, radius, interface motion. See ADR-0006 (D2, D8). */
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces */
+  --st-bg: #f5f5f7;
+  --st-surface: #ffffff;
+  --st-surface-2: #f0f0f3;
+  --st-border: rgba(0, 0, 0, 0.08);
+  --st-text: #1d1d1f;
+  --st-text-2: #6e6e73;
+  --st-accent: #0a84ff; /* selection / playhead / primary action only */
+
+  /* Pitch */
+  --st-pitch-grass: #2f8f4e;
+  --st-pitch-grass-alt: #2a834a;
+  --st-pitch-line: rgba(255, 255, 255, 0.92);
+
+  /* Teams (defaults; documents may override) */
+  --st-team-a: #1e6ff5;
+  --st-team-b: #e5383b;
+  --st-ball: #ffffff;
+
+  /* Spacing (4pt grid) */
+  --st-space-1: 4px;
+  --st-space-2: 8px;
+  --st-space-3: 12px;
+  --st-space-4: 16px;
+  --st-space-6: 24px;
+  --st-space-8: 32px;
+
+  /* Radius */
+  --st-radius-s: 6px;
+  --st-radius-m: 10px;
+  --st-radius-l: 16px;
+  --st-radius-pill: 999px;
+
+  /* Interface motion (UI only — never tactical motion). CSS fallbacks for opacity/color. */
+  --st-motion-fast: 120ms;
+  --st-motion-base: 200ms;
+  --st-motion-slow: 320ms;
+  --st-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Hit targets (ADR-0006 D3) */
+  --st-hit-token: 28px;
+  --st-hit-handle: 16px;
+  --st-hit-edge: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --st-bg: #111113;
+    --st-surface: #1c1c1e;
+    --st-surface-2: #242426;
+    --st-border: rgba(255, 255, 255, 0.1);
+    --st-text: #f5f5f7;
+    --st-text-2: #98989d;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --st-motion-fast: 0ms;
+    --st-motion-base: 0ms;
+    --st-motion-slow: 0ms;
+  }
+}
