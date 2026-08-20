@@ -79,6 +79,34 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     }
     t = Math.round((t + stepDur) * 100) / 100
   }
+  // THROUGH BALL sync (user 2026-08-20): a pass aimed at a receiver's FUTURE spot must ARRIVE
+  // when the runner does — otherwise possession snaps to the mid-run player and a phantom ball
+  // appears. If the receiver's own movement ends where the pass ends, stretch the pass duration
+  // so both land together (never faster than the ball's natural flight).
+  for (const track of scene.timeline.tracks) {
+    if (track.entityKind !== 'ball') continue
+    for (const seg of track.segments) {
+      if (seg.kind !== 'travel' || !seg.receiverId || seg.id.startsWith(GEN_PREFIX)) continue
+      if (seg.trigger.type !== 'at' || !('duration' in seg.timing)) continue
+      const end = seg.path.waypoints[seg.path.waypoints.length - 1]?.p
+      if (!end) continue
+      const rTrack = scene.timeline.tracks.find((tr) => tr.entityId === seg.receiverId)
+      if (!rTrack) continue
+      for (const run of rTrack.segments) {
+        if (!('path' in run) || run.id.startsWith(GEN_PREFIX)) continue
+        if (run.trigger.type !== 'at' || !('duration' in run.timing)) continue
+        const rEnd = run.path.waypoints[run.path.waypoints.length - 1]?.p
+        if (!rEnd || Math.hypot(rEnd.x - end.x, rEnd.y - end.y) > 1.5) continue
+        const receiverArrives = run.trigger.t + run.timing.duration
+        const synced = receiverArrives - seg.trigger.t
+        if (synced > seg.timing.duration) {
+          seg.timing.duration = Math.round(synced * 100) / 100
+        }
+        break
+      }
+    }
+  }
+
   // Ball possessions with an absolute time: keep them at/before the pass they precede.
   for (const track of scene.timeline.tracks) {
     if (track.entityKind !== 'ball') continue
@@ -194,6 +222,8 @@ export function resolvePassReceiverInDraft(doc: TacticDocument, segmentId: Id): 
     const seg = findSegment(doc, segmentId)
     if (seg && seg.segment.kind === 'travel' && seg.segment.receiverId) break
   }
+  // Receiver just changed — re-derive timings so through-ball arrival sync sees it.
+  relayoutStepsInDraft(doc)
 }
 
 /**

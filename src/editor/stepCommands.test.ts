@@ -340,3 +340,28 @@ describe('natural speed within a step (user 2026-08-20 final)', () => {
     expect(tLong.end - tLong.start).toBeCloseTo(28 / 7, 1)
   })
 })
+
+describe('through ball sync (user 2026-08-20: 미래 지점 패스)', () => {
+  it("a pass aimed at the receiver's future spot arrives when the runner does", () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    const runner = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    const target = { x: runner.home.x + 24, y: runner.home.y } // long run (24m -> ~3.4s)
+    const runId = addStepRun(core, runner.id, makePath([runner.home, target]).waypoints, 1)
+    // pass INTO that future spot, same step (real through ball)
+    const passId = addStepPass(core, makePath([d.ball.home, target]).waypoints, 1, holder.id)
+    const cm = compile(core.getDocument())
+    expect(cm.issues.filter((i) => i.level === 'error')).toHaveLength(0)
+    const run = cm.segmentTimes[runId]!
+    const pass = cm.segmentTimes[passId]!
+    // receiver resolved to the runner via the future-spot fallback
+    const trav = core
+      .getDocument()
+      .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+      .find((s) => s.id === passId)!
+    expect(trav.kind === 'travel' && trav.receiverId).toBe(runner.id)
+    // pass ARRIVES together with the runner (never before)
+    expect(pass.end).toBeCloseTo(run.end, 1)
+  })
+})

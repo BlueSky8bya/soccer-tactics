@@ -788,64 +788,77 @@ export function SimplePitch() {
     ),
   ].sort((a, b) => a - b)
   const ghosts = doc.scenes[0]
-    ? sceneTracks(doc).flatMap((tr) => {
-        const segs = tr.segments.filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
-        return segs.flatMap((sg) => {
-          const path = (sg as { path: { waypoints: { p: Vec2 }[] } }).path
-          const end = path.waypoints[path.waypoints.length - 1]!.p
-          const rank = usedSteps.indexOf(stepOf(sg as { step?: number }))
-          const opacity = ghostOpacityForStep(rank < 0 ? 0 : rank, selection.includes(tr.entityId))
-          // A pass that lands ON a receiver: draw the ball ghost at the receiver's FEET (like a held
-          // ball), so the player centre stays grabbable for the receiver's own run.
-          const received =
-            tr.entityKind === 'ball' &&
-            sg.kind === 'travel' &&
-            !!(sg as { receiverId?: Id }).receiverId
-          // Received ball ghost sits where the engine will hold it (carry angle, 360°).
-          let pos = end
-          if (received) {
-            const tmEnd = compiled.segmentTimes[(sg as { id: Id }).id]?.end
-            const after = tmEnd !== undefined ? stateAt(compiled, doc, tmEnd + 0.05) : null
-            pos =
-              after && after.ball.holderId ? after.ball.pos : { x: end.x + 1.75, y: end.y + 1.15 }
-          }
-          const out = [
-            {
-              id: `${sg.id}-ghost`,
-              segId: (sg as { id: Id }).id,
-              entityId: tr.entityId,
-              kind: tr.entityKind,
-              pos,
-              opacity,
-              number:
-                tr.entityKind === 'player'
-                  ? doc.players.find((pl) => pl.id === tr.entityId)?.number
-                  : undefined,
-              color: tr.entityKind === 'player' ? teamColorOf(doc, tr.entityId) : '#ffffff',
-            },
-          ]
-          // The runner still HOLDS the ball at the end of this movement → the ball travels with them:
-          // show a faint ball there too, so the next pass can start from that future spot.
-          if (tr.entityKind === 'player') {
-            const tm = compiled.segmentTimes[(sg as { id: Id }).id]
-            if (tm && Number.isFinite(tm.end)) {
-              const rs = stateAt(compiled, doc, tm.end)
-              if (rs.ball.holderId === tr.entityId)
-                out.push({
-                  id: `${sg.id}-ball-ghost`,
-                  segId: (sg as { id: Id }).id,
-                  entityId: doc.ball.id,
-                  kind: 'ball' as const,
-                  pos: rs.ball.pos,
-                  opacity,
-                  number: undefined,
-                  color: '#ffffff',
-                })
+    ? sceneTracks(doc)
+        .flatMap((tr) => {
+          const segs = tr.segments.filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
+          return segs.flatMap((sg) => {
+            const path = (sg as { path: { waypoints: { p: Vec2 }[] } }).path
+            const end = path.waypoints[path.waypoints.length - 1]!.p
+            const rank = usedSteps.indexOf(stepOf(sg as { step?: number }))
+            const opacity = ghostOpacityForStep(
+              rank < 0 ? 0 : rank,
+              selection.includes(tr.entityId),
+            )
+            // A pass that lands ON a receiver: draw the ball ghost at the receiver's FEET (like a held
+            // ball), so the player centre stays grabbable for the receiver's own run.
+            const received =
+              tr.entityKind === 'ball' &&
+              sg.kind === 'travel' &&
+              !!(sg as { receiverId?: Id }).receiverId
+            // Received ball ghost sits where the engine will hold it (carry angle, 360°).
+            let pos = end
+            if (received) {
+              const tmEnd = compiled.segmentTimes[(sg as { id: Id }).id]?.end
+              const after = tmEnd !== undefined ? stateAt(compiled, doc, tmEnd + 0.05) : null
+              pos =
+                after && after.ball.holderId ? after.ball.pos : { x: end.x + 1.75, y: end.y + 1.15 }
             }
-          }
-          return out
+            const out = [
+              {
+                id: `${sg.id}-ghost`,
+                segId: (sg as { id: Id }).id,
+                entityId: tr.entityId,
+                kind: tr.entityKind,
+                pos,
+                opacity,
+                number:
+                  tr.entityKind === 'player'
+                    ? doc.players.find((pl) => pl.id === tr.entityId)?.number
+                    : undefined,
+                color: tr.entityKind === 'player' ? teamColorOf(doc, tr.entityId) : '#ffffff',
+              },
+            ]
+            // The runner still HOLDS the ball at the end of this movement → the ball travels with them:
+            // show a faint ball there too, so the next pass can start from that future spot.
+            if (tr.entityKind === 'player') {
+              const tm = compiled.segmentTimes[(sg as { id: Id }).id]
+              if (tm && Number.isFinite(tm.end)) {
+                const rs = stateAt(compiled, doc, tm.end)
+                if (rs.ball.holderId === tr.entityId)
+                  out.push({
+                    id: `${sg.id}-ball-ghost`,
+                    segId: (sg as { id: Id }).id,
+                    entityId: doc.ball.id,
+                    kind: 'ball' as const,
+                    pos: rs.ball.pos,
+                    opacity,
+                    number: undefined,
+                    color: '#ffffff',
+                  })
+              }
+            }
+            return out
+          })
         })
-      })
+        // dedupe ball ghosts that land on the same future spot (received + holder-run overlap)
+        .filter((g, i, arr) => {
+          if (g.kind !== 'ball') return true
+          return !arr
+            .slice(0, i)
+            .some(
+              (h) => h.kind === 'ball' && Math.hypot(h.pos.x - g.pos.x, h.pos.y - g.pos.y) < 0.8,
+            )
+        })
     : []
 
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
