@@ -174,14 +174,66 @@ export function SimplePitch() {
   const flingKeyRef = useRef(0)
   /** Player under the DRAGGED ball (≤2.6m) — lights up so "give" vs "ground" is obvious. */
   const [dropTargetId, setDropTargetId] = useState<Id | null>(null)
-  /** Net bulge FX queue — one per netting contact, oriented along the mesh surface normal. */
+  /** Goal-net cloth FX (benchmark: FIFA-style nets are ANCHORED at the frame and bulge at the
+   *  impact, oscillating back — the stretch starts at the goal's edges, never floats inside). */
   const [netFx, setNetFx] = useState<{
-    pos: Vec2
-    angleDeg: number
+    side: 'left' | 'right'
+    wall: 'back' | 'top' | 'bot'
+    ix: number
+    iy: number
     strength: number
     key: number
   } | null>(null)
-  const netFxQueueRef = useRef<{ t: number; pos: Vec2; angleDeg: number; strength: number }[]>([])
+  /** Damped-oscillation amplitude (rAF-driven): e^(−4.2t)·sin(8.5t), ~0.95s. */
+  const [netAmp, setNetAmp] = useState(0)
+  const netFxQueueRef = useRef<{ t: number; pos: Vec2; normal: Vec2; speed: number }[]>([])
+  const fireNetImpact = (imp: { pos: Vec2; normal: Vec2; speed: number }) => {
+    const L2 = doc.pitch.length
+    const gTop = doc.pitch.width / 2 - 3.66
+    const gBot = doc.pitch.width / 2 + 3.66
+    const side: 'left' | 'right' = imp.pos.x < L2 / 2 ? 'left' : 'right'
+    const backX = side === 'left' ? -1.85 : L2 + 1.85
+    const wall: 'back' | 'top' | 'bot' =
+      Math.abs(imp.normal.x) >= Math.abs(imp.normal.y) ? 'back' : imp.normal.y < 0 ? 'top' : 'bot'
+    const clampNum = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
+    const ix =
+      wall === 'back'
+        ? backX
+        : side === 'left'
+          ? clampNum(imp.pos.x, backX + 0.3, -0.3)
+          : clampNum(imp.pos.x, L2 + 0.3, backX - 0.3)
+    const iy =
+      wall === 'back' ? clampNum(imp.pos.y, gTop + 0.5, gBot - 0.5) : wall === 'top' ? gTop : gBot
+    setNetFx({
+      side,
+      wall,
+      ix,
+      iy,
+      strength: Math.max(0.7, Math.min(1.35, imp.speed / 16)),
+      key: (flingKeyRef.current += 1),
+    })
+    pulseKey.current++
+    setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
+  }
+  // cloth oscillation driver
+  useEffect(() => {
+    if (!netFx) return
+    const t0 = performance.now()
+    let raf = 0
+    const tick = () => {
+      const t2 = (performance.now() - t0) / 1000
+      if (t2 >= 0.95) {
+        setNetAmp(0)
+        setNetFx(null)
+        return
+      }
+      setNetAmp(Math.exp(-4.2 * t2) * Math.sin(8.5 * t2))
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [netFx?.key])
   /** In-place 1-9 picker opened by clicking a step badge (faster than the action bar). */
   const [stepPicker, setStepPicker] = useState<{ segId: Id; at: Vec2 } | null>(null)
   /** One-shot expanding ring when the ball ATTACHES to a player (immersion feedback). */
@@ -504,8 +556,8 @@ export function SimplePitch() {
           ? fling.goal.impacts.map((imp) => ({
               t: imp.t,
               pos: imp.pos,
-              angleDeg: (Math.atan2(imp.normal.y, imp.normal.x) * 180) / Math.PI,
-              strength: Math.max(0.55, Math.min(1.35, imp.speed / 18)),
+              normal: imp.normal,
+              speed: imp.speed,
             }))
           : []
         flingDoneRef.current = settleAndAttach
@@ -538,10 +590,7 @@ export function SimplePitch() {
         const pending = netFxQueueRef.current[0]
         if (pending) {
           netFxQueueRef.current = []
-          setNetFx({ ...pending, key: (flingKeyRef.current += 1) })
-          pulseKey.current++
-          setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
-          window.setTimeout(() => setNetFx(null), 800)
+          fireNetImpact(pending)
         }
         setFlingPos(null)
         setFlingAnim(null)
@@ -554,11 +603,7 @@ export function SimplePitch() {
       const nf = netFxQueueRef.current[0]
       if (nf && el >= nf.t) {
         netFxQueueRef.current = netFxQueueRef.current.slice(1)
-        setNetFx({ ...nf, key: (flingKeyRef.current += 1) })
-        // the ball itself pops as the mesh takes it — part of the 촤르륵
-        pulseKey.current++
-        setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
-        window.setTimeout(() => setNetFx(null), 800)
+        fireNetImpact(nf)
       }
       const a = pts[idx]!
       const b = pts[Math.min(idx + 1, pts.length - 1)]!
@@ -1085,6 +1130,47 @@ export function SimplePitch() {
   const selection = ui.selection
   const isPlaying = ui.playback.playing
 
+  // Consecutive passes RELAYED by one player: the incoming arrow is END-TRIMMED 1.15m at the
+  // token, which visually breaks the flow — bridge from the visible TIP to the next pass start
+  // with an arc bowing around the holder (user 2026-08-21: 원 테두리 일부처럼 이어지게).
+  const passLinks = (() => {
+    const out: { d: string }[] = []
+    const bt = sceneTracks(doc).find((tr) => tr.entityId === doc.ball.id)
+    if (!bt) return out
+    const travels = bt.segments.filter(
+      (sg): sg is Extract<typeof sg, { kind: 'travel' }> =>
+        sg.kind === 'travel' && !sg.id.startsWith('gen-'),
+    )
+    for (let i = 0; i < travels.length - 1; i++) {
+      const A = travels[i]!
+      const B = travels[i + 1]!
+      const startB = B.path.waypoints[0]?.p
+      if (!startB) continue
+      const tm = compiled.segmentTimes[B.id]
+      if (!tm) continue
+      const holderId = A.receiverId
+      if (!holderId) continue
+      const hp = stateAt(compiled, doc, Math.max(0, tm.start - 0.05)).players[holderId]?.pos
+      if (!hp) continue
+      const lutA = buildPathLUT(A.path)
+      const tipIn = pointAtDistance(lutA, Math.max(0, lutA.length - 1.15)) // visible arrow tip
+      const d1 = Math.hypot(tipIn.x - hp.x, tipIn.y - hp.y)
+      const d2 = Math.hypot(startB.x - hp.x, startB.y - hp.y)
+      // tip sits carry(≤2.6m) + trim(1.15m) out — allow up to 4.2m on the incoming side
+      if (d1 > 4.2 || d2 > 3.4 || d1 < 0.3 || d2 < 0.3) continue
+      const chord = Math.hypot(startB.x - tipIn.x, startB.y - tipIn.y)
+      if (chord < 0.35) continue // already touching
+      const r = Math.max((d1 + d2) / 2, chord / 2 + 0.05)
+      // bow AWAY from the holder (outside the token): sweep from the cross product sign
+      const cross = (tipIn.x - hp.x) * (startB.y - hp.y) - (tipIn.y - hp.y) * (startB.x - hp.x)
+      const sweep = cross > 0 ? 1 : 0
+      out.push({
+        d: `M ${tipIn.x} ${tipIn.y} A ${r} ${r} 0 0 ${sweep} ${startB.x} ${startB.y}`,
+      })
+    }
+    return out
+  })()
+
   // GOAL during PLAYBACK (user 2026-08-21): an authored pass/shot whose path ENDS inside a goal
   // fires the same net-catch ripple as the fling. Precomputed per document+timings.
   const goalArrivals = (() => {
@@ -1092,7 +1178,7 @@ export function SimplePitch() {
     const gw = 7.32 / 2
     const top = doc.pitch.width / 2 - gw
     const bot = doc.pitch.width / 2 + gw
-    const out: { segId: Id; t: number; pos: Vec2; angleDeg: number; strength: number }[] = []
+    const out: { segId: Id; t: number; pos: Vec2; normal: Vec2; speed: number }[] = []
     const ballTrack = sceneTracks(doc).find((tr) => tr.entityId === doc.ball.id)
     if (!ballTrack) return out
     for (const sg of ballTrack.segments) {
@@ -1116,16 +1202,9 @@ export function SimplePitch() {
           : { x: 0, y: Math.sign(dy) || 1 }
       const lut = buildPathLUT(sg.path)
       const dur = Math.max(0.05, tm.end - tm.start)
-      const speed = lut.length / dur
-      out.push({
-        segId: sg.id,
-        t: tm.end,
-        pos: end,
-        angleDeg: (Math.atan2(normal.y, normal.x) * 180) / Math.PI,
-        // authored shots can only be drawn up to the net, so path speed under-reports the
-        // shot's power — playback goals always ripple at full punch (user 2026-08-21)
-        strength: Math.max(1.05, Math.min(1.35, speed / 14)),
-      })
+      // authored shots stop AT the net — path speed under-reports; floor at full punch
+      const speed = Math.max(18, lut.length / dur)
+      out.push({ segId: sg.id, t: tm.end, pos: end, normal, speed })
     }
     return out
   })()
@@ -1141,15 +1220,7 @@ export function SimplePitch() {
     for (const g of goalArrivals) {
       if (prevT < g.t && t2 >= g.t && !firedGoalFx.current.has(g.segId)) {
         firedGoalFx.current.add(g.segId)
-        setNetFx({
-          pos: g.pos,
-          angleDeg: g.angleDeg,
-          strength: g.strength,
-          key: (flingKeyRef.current += 1),
-        })
-        pulseKey.current++
-        setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
-        window.setTimeout(() => setNetFx(null), 800)
+        fireNetImpact(g)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1390,46 +1461,69 @@ export function SimplePitch() {
     >
       <PitchMarkings pitch={doc.pitch} />
       <defs>
-        {/* the ripple lives INSIDE the netting only (user 2026-08-21: 밖으로 새면 어색) */}
+        {/* the cloth lives INSIDE the netting area (plus stretch room), never on the field */}
         <clipPath id="net-clip-left">
-          <rect x={-2} y={W / 2 - 3.66} width={2.2} height={7.32} />
+          <rect x={-3.6} y={W / 2 - 3.66 - 1.6} width={3.8} height={7.32 + 3.2} />
         </clipPath>
         <clipPath id="net-clip-right">
-          <rect x={L - 0.2} y={W / 2 - 3.66} width={2.2} height={7.32} />
+          <rect x={L - 0.2} y={W / 2 - 3.66 - 1.6} width={3.8} height={7.32 + 3.2} />
         </clipPath>
       </defs>
-      {netFx && (
-        <g clipPath={netFx.pos.x < L / 2 ? 'url(#net-clip-left)' : 'url(#net-clip-right)'}>
-          <g
-            key={netFx.key}
-            className={styles.netFx}
-            transform={`translate(${netFx.pos.x} ${netFx.pos.y}) rotate(${netFx.angleDeg}) scale(${netFx.strength})`}
-          >
-            {/* pocket: the mesh wraps the ball, stretches past, snaps back (elastic) */}
-            <path d="M 0 -1.1 Q 1.9 0 0 1.1 Q 0.5 0 0 -1.1 Z" className={styles.netFxPocket} />
+      {netFx &&
+        (() => {
+          const gTop = W / 2 - 3.66
+          const gBot = W / 2 + 3.66
+          const backX = netFx.side === 'left' ? -1.85 : L + 1.85
+          const postX = netFx.side === 'left' ? 0 : L
+          const bulge = netAmp * netFx.strength * 1.5
+          const outX = netFx.side === 'left' ? -bulge : bulge
+          // anchors sit ON the goal frame (posts / back stanchions) — the cloth is pinned there
+          let a: Vec2
+          let b: Vec2
+          let cx: number
+          let cy: number
+          if (netFx.wall === 'back') {
+            a = { x: backX, y: gTop }
+            b = { x: backX, y: gBot }
+            cx = backX + outX
+            cy = netFx.iy
+          } else if (netFx.wall === 'top') {
+            a = { x: postX, y: gTop }
+            b = { x: backX, y: gTop }
+            cx = netFx.ix
+            cy = gTop - bulge
+          } else {
+            a = { x: postX, y: gBot }
+            b = { x: backX, y: gBot }
+            cx = netFx.ix
+            cy = gBot + bulge
+          }
+          const line = (f: number, k: string) => (
             <path
-              d="M 0 -0.9 Q 1.3 0 0 0.9"
-              className={styles.netFxArc}
-              style={{ animationDelay: '0s' }}
+              key={k}
+              className={styles.netCloth}
+              d={`M ${a.x} ${a.y} Q ${a.x + (cx - a.x) * f} ${a.y + (cy - a.y) * f} ${(a.x + b.x) / 2 + (cx - (a.x + b.x) / 2) * f} ${(a.y + b.y) / 2 + (cy - (a.y + b.y) / 2) * f} T ${b.x} ${b.y}`}
             />
-            <path
-              d="M 0 -1.4 Q 1.9 0 0 1.4"
-              className={styles.netFxArc}
-              style={{ animationDelay: '0.05s' }}
-            />
-            <path
-              d="M 0 -1.9 Q 2.4 0 0 1.9"
-              className={styles.netFxArc}
-              style={{ animationDelay: '0.1s' }}
-            />
-            <path
-              d="M 0 -2.4 Q 2.9 0 0 2.4"
-              className={styles.netFxArc}
-              style={{ animationDelay: '0.16s' }}
-            />
-          </g>
-        </g>
-      )}
+          )
+          return (
+            <g
+              clipPath={netFx.side === 'left' ? 'url(#net-clip-left)' : 'url(#net-clip-right)'}
+              opacity={Math.max(0, Math.min(0.95, Math.abs(netAmp) * 4 + 0.35))}
+            >
+              <rect
+                key={`flash-${netFx.key}`}
+                className={styles.netFlash}
+                x={netFx.side === 'left' ? -2 : L - 0.2}
+                y={gTop}
+                width={2.2}
+                height={7.32}
+              />
+              {line(1, 'c1')}
+              {line(0.66, 'c2')}
+              {line(0.38, 'c3')}
+            </g>
+          )
+        })()}
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />
       {annotDraft && (
         <g pointerEvents="none">
@@ -1463,6 +1557,10 @@ export function SimplePitch() {
           stepMuted={stepMuted}
           hoverSegmentId={hoverKey?.startsWith('segment:') ? hoverKey.slice(8) : null}
         />
+        {/* relay arcs: the dashed flow continues around the holder instead of breaking */}
+        {passLinks.map((l, i) => (
+          <path key={i} d={l.d} className={styles.passLink} />
+        ))}
       </g>
       {/* step badges - kept mounted, faded out while viewing a frame (D-02) */}
       <g className={viewingFrame ? styles.decorHidden : styles.decorShown}>

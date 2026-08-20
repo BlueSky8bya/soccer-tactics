@@ -57,4 +57,55 @@ describe('dribbling carries the ball AHEAD of the run (user 2026-08-21)', () => 
     const ar = after.players[runner.id]!
     expect(after.ball.pos.x - ar.pos.x).toBeLessThan(0) // resting on the LEFT again
   })
+
+  it('CHAINED runs keep the ball out front through the step boundary (no side-dip)', () => {
+    const core = new EditorCore(
+      seedDefaultTeams(createEmptyDocument({ id: 'd2', now: '2026-08-21T00:00:00.000Z' })),
+    )
+    const [home, away] = core.getDocument().teams
+    applyFormations(core, [
+      { teamId: home!.id, formationId: '4-3-3' },
+      { teamId: away!.id, formationId: '4-4-2' },
+    ])
+    const d = core.getDocument()
+    const runner = d.players[3]!
+    core.transaction('give', (dd) =>
+      moveBallStartInDraft(
+        dd as TacticDocument,
+        { x: runner.home.x - 2.2, y: runner.home.y },
+        runner.id,
+      ),
+    )
+    // step 1: 20m right, step 2: 20m further right — one continuous dribble
+    addStepRun(
+      core,
+      runner.id,
+      makePath([runner.home, { x: runner.home.x + 20, y: runner.home.y }]).waypoints,
+      1,
+    )
+    addStepRun(
+      core,
+      runner.id,
+      makePath([
+        { x: runner.home.x + 20, y: runner.home.y },
+        { x: runner.home.x + 40, y: runner.home.y },
+      ]).waypoints,
+      2,
+    )
+    const doc = core.getDocument()
+    const cm = compile(doc)
+    const step1Dur = 20 / 10
+    // sample densely around the boundary: the ball must STAY ahead (+x) the whole way
+    for (const t of [step1Dur - 0.2, step1Dur - 0.05, step1Dur, step1Dur + 0.05, step1Dur + 0.2]) {
+      const rs = stateAt(cm, doc, t)
+      const pr = rs.players[runner.id]!
+      expect(rs.ball.status).toBe('possessed')
+      expect(rs.ball.pos.x - pr.pos.x).toBeGreaterThan(DRIBBLE_AHEAD_M - 0.35)
+      expect(Math.abs(rs.ball.pos.y - pr.pos.y)).toBeLessThan(0.2)
+    }
+    // the TRUE end of the chain still settles back to the side spot
+    const done = stateAt(cm, doc, step1Dur * 2 + 0.6)
+    const pr = done.players[runner.id]!
+    expect(done.ball.pos.x - pr.pos.x).toBeLessThan(0)
+  })
 })

@@ -65,75 +65,46 @@
   opacity: 0.95;
 }
 
+/* relay arc: joins a trimmed incoming pass arrow to the outgoing one around the holder */
+.passLink {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.8);
+  stroke-width: 2.5px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 6 5;
+  stroke-linecap: round;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 /* goal-net catch bulge (fling FX): mesh arcs punch outward along the shot, then relax */
 .netFx {
   pointer-events: none;
 }
 
-.netFxPocket {
-  fill: rgba(255, 255, 255, 0.22);
-  stroke: rgba(255, 255, 255, 0.9);
-  stroke-width: 0.16;
-  transform-origin: 0 0;
-  animation: netPocket 0.72s var(--st-ease-pop) forwards;
+/* whole-net flash at the catch — reads big even inside the clipped box */
+.netFlash {
+  fill: rgba(255, 255, 255, 0.6);
+  animation: netFlash 0.5s var(--st-ease-out) forwards;
+  pointer-events: none;
 }
 
-.netFxArc {
+@keyframes netFlash {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.netCloth {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.85);
-  stroke-width: 0.15;
-  stroke-dasharray: 0.32 0.26; /* mesh weave */
-  transform-origin: 0 0;
-  opacity: 0;
-  animation: netRipple 0.68s var(--st-ease-out) forwards;
-}
-
-/* the pocket stretches deep with the ball, overshoots, then snaps back — 촤르륵 */
-@keyframes netPocket {
-  0% {
-    transform: scaleX(0.1);
-    opacity: 0.95;
-  }
-  38% {
-    transform: scaleX(1.45);
-    opacity: 0.95;
-  }
-  58% {
-    transform: scaleX(0.82);
-  }
-  76% {
-    transform: scaleX(1.12);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scaleX(0.96);
-    opacity: 0;
-  }
-}
-
-/* mesh rings ripple outward one after another (staggered delays inline) */
-@keyframes netRipple {
-  0% {
-    transform: scaleX(0.2);
-    opacity: 0;
-  }
-  12% {
-    opacity: 0.9;
-  }
-  40% {
-    transform: scaleX(1.28);
-  }
-  62% {
-    transform: scaleX(0.88);
-  }
-  82% {
-    transform: scaleX(1.06);
-    opacity: 0.55;
-  }
-  100% {
-    transform: scaleX(0.97);
-    opacity: 0;
-  }
+  stroke: #ffffff;
+  stroke-width: 0.24;
+  stroke-dasharray: 0.34 0.26; /* mesh weave */
+  stroke-linecap: round;
+  pointer-events: none;
 }
 
 /* ---------- tokens ---------- */

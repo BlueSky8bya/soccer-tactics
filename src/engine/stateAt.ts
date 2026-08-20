@@ -19,15 +19,17 @@ export interface ResolvedPlayer {
   heading?: number
   moving: boolean
   segmentId?: Id
-  /** Local time inside the current move and its duration — dribble blend ramp input. */
-  moveT?: number
-  moveDur?: number
+  /** Dribble carry: when set, the possessed ball rides ahead by ramp∈[0,1] along `heading`. */
+  carryAhead?: { heading: number; ramp: number }
 }
 
 /** Dribbling: the ball rides AHEAD of the run (a touch in front of the feet), not on the hip. */
 export const DRIBBLE_AHEAD_M = 1.9
-/** Seconds to blend side-carry ↔ ahead at the start/end of a run (deterministic ramp). */
+/** Seconds to blend side-carry ↔ ahead at the start/end of a dribble CHAIN (deterministic). */
 const DRIBBLE_RAMP_S = 0.35
+/** Runs separated by at most this gap count as ONE continuous dribble — no side-dip between
+ *  steps (user 2026-08-21: 같은 방향으로 이어 달리면 공은 계속 정면에). */
+const DRIBBLE_CHAIN_GAP_S = 0.8
 
 export type BallStatus = 'possessed' | 'travel' | 'loose'
 
@@ -94,26 +96,56 @@ export function stateAt(compiled: CompiledTimeline, doc: TacticDocument, t: numb
 
 function resolvePlayer(segs: CompiledSegment[], home: Vec2, t: number): ResolvedPlayer {
   const { seg, lastEnded } = findSegment(segs, t)
+  const moves = segs.filter(
+    (x): x is Extract<CompiledSegment, { kind: 'move' }> => x.kind === 'move',
+  )
   if (seg) {
     if (seg.kind === 'move') {
       const lt = t - seg.start
+      const dur = scheduleDuration(seg.schedule)
       const pos = schedulePosAt(seg.schedule, lt)
       const s = distanceAlong(seg, lt)
+      const i = moves.findIndex((m) => m.id === seg.id)
+      const prevM = moves[i - 1]
+      const nextM = moves[i + 1]
+      // CHAIN RULES: a run that continues from / into another run keeps the ball out front
+      // through the boundary — the side-dip only happens at the TRUE start and end of a dribble.
+      const chainIn = !!prevM && seg.start - prevM.end <= DRIBBLE_CHAIN_GAP_S
+      const chainOut = !!nextM && nextM.start - seg.end <= DRIBBLE_CHAIN_GAP_S
+      const edge = Math.min(chainIn ? Infinity : lt, chainOut ? Infinity : dur - lt)
+      const heading = headingAtDistance(seg.schedule.lut, s)
       return {
         pos,
         moving: true,
-        heading: headingAtDistance(seg.schedule.lut, s),
+        heading,
         segmentId: seg.id,
-        moveT: lt,
-        moveDur: scheduleDuration(seg.schedule),
+        carryAhead: { heading, ramp: Math.max(0, Math.min(1, edge / DRIBBLE_RAMP_S)) },
       }
     }
     // hold: stay where the previous segment ended
     const base = lastEnded ? endPos(lastEnded, home) : home
-    return { pos: base, moving: false, segmentId: seg.id }
+    return { pos: base, moving: false, segmentId: seg.id, ...standingCarry(moves, t) }
   }
-  if (lastEnded) return { pos: endPos(lastEnded, home), moving: false }
+  if (lastEnded) return { pos: endPos(lastEnded, home), moving: false, ...standingCarry(moves, t) }
   return { pos: home, moving: false }
+}
+
+/** Standing INSIDE a dribble chain (short wait between two runs): the ball stays out front,
+ *  facing where the previous run pointed — it must not swing to the hip and back. */
+function standingCarry(
+  moves: Extract<CompiledSegment, { kind: 'move' }>[],
+  t: number,
+): { carryAhead?: { heading: number; ramp: number } } {
+  let prevM: (typeof moves)[number] | undefined
+  let nextM: (typeof moves)[number] | undefined
+  for (const m of moves) {
+    if (m.end <= t + 1e-6) prevM = m
+    if (!nextM && m.start >= t - 1e-6) nextM = m
+  }
+  if (!prevM || !nextM) return {}
+  if (nextM.start - prevM.end > DRIBBLE_CHAIN_GAP_S) return {}
+  const heading = headingAtDistance(prevM.schedule.lut, prevM.schedule.lut.length)
+  return { carryAhead: { heading, ramp: 1 } }
 }
 
 function distanceAlong(
@@ -147,11 +179,10 @@ function resolveBall(
     // DRIBBLE (user 2026-08-21): while the holder RUNS, the ball rides ahead of them in the
     // movement direction — like a real touch-and-go — blending back to the side-carry spot at
     // the start/end of the run so authored anchors (ghosts, pass origins) stay consistent.
-    if (p.moving && p.heading !== undefined && p.moveT !== undefined && p.moveDur) {
-      const edge = Math.min(p.moveT, p.moveDur - p.moveT)
-      const r = Math.max(0, Math.min(1, edge / DRIBBLE_RAMP_S))
-      const ax = Math.cos(p.heading) * DRIBBLE_AHEAD_M
-      const ay = Math.sin(p.heading) * DRIBBLE_AHEAD_M
+    if (p.carryAhead) {
+      const r = p.carryAhead.ramp
+      const ax = Math.cos(p.carryAhead.heading) * DRIBBLE_AHEAD_M
+      const ay = Math.sin(p.carryAhead.heading) * DRIBBLE_AHEAD_M
       return {
         x: p.pos.x + offset.x * (1 - r) + ax * r,
         y: p.pos.y + offset.y * (1 - r) + ay * r,
