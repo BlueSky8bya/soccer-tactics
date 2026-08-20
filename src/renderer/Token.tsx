@@ -81,8 +81,6 @@ export const Token = memo(function Token(p: TokenProps) {
           />
         )}
         <circle r={r} className={styles.tokenBody} style={{ fill: p.color }} />
-        {/* glossy cap (shared gradient def lives in SimplePitch) */}
-        <circle r={r} fill="url(#tokGloss)" pointerEvents="none" />
         <text className={styles.tokenNumber}>{p.number}</text>
         {p.label && (
           <text className={styles.tokenLabel} y={r + 1.6}>

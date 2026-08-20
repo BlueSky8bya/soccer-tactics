@@ -282,7 +282,7 @@ describe('compile + stateAt', () => {
     const c = compile(doc)
     const s = stateAt(c, doc, 0.5)
     // holder at x=45 at t=0.5 → ball starts at 45+offset
-    expect(s.ball.pos.x).toBeCloseTo(45 + 1.45, 3)
+    expect(s.ball.pos.x).toBeCloseTo(45 + 1.75, 3)
     expect(s.ball.status).toBe('travel')
   })
 })

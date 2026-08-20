@@ -425,6 +425,7 @@ key binding 의미는 바꾸지 않는다. 필요 시 `keymap.ts`만 source of t
 | Date | Decision | Owner | Evidence |
 | --- | --- | --- | --- |
 | 2026-08-20 | 계획 승인. A-01 (a) warm ivory, A-02 (a) away 안쪽 키라인, A-04 (a) footer/popover만 translucent, A-05 (a) 전부 유지+계층 감쇠, A-06 (a) 원칙만 차용 | 사용자 | 대화 승인 ("어 승인할게" — Claude 추천안 수용) |
+| 2026-08-20 | M3a 선결정: 토큰 rest는 gloss 없이 **단색**(그라데이션 제거), 보유 공 거리 [2.0, 2.6]m로 확대 | 사용자 | 대화 지시 |
 | 2026-08-20 | A-03 절충: run bob 현행 강도 유지하되 동시에 움직이는 선수 수가 많으면 자동 감쇠 (Claude 제안 수용) | 사용자 | CHG-054에서 사용자가 직접 요청한 기능이므로 약화 대신 조건부 감쇠 |
 
 ## Done Report Template for Execution Owner

@@ -259,10 +259,10 @@ describe('partial clears (PLAN-005 M2, A-06)', () => {
 })
 
 describe('360-degree carry direction (user 2026-08-20)', () => {
-  it('carryOffset keeps the direction and clamps the distance to the foot range [1.6, 2.1]m', () => {
-    expect(carryOffset({ x: -3, y: 0 })).toEqual({ x: -2.1, y: 0 })
-    expect(carryOffset({ x: 0, y: 0.2 })).toEqual({ x: 0, y: 1.6 })
-    expect(carryOffset({ x: 0, y: 0 })).toEqual({ x: 1.45, y: 0.95 }) // degenerate -> classic
+  it('carryOffset keeps the direction and clamps the distance to [2.0, 2.6]m', () => {
+    expect(carryOffset({ x: -3, y: 0 })).toEqual({ x: -2.6, y: 0 })
+    expect(carryOffset({ x: 0, y: 0.2 })).toEqual({ x: 0, y: 2 })
+    expect(carryOffset({ x: 0, y: 0 })).toEqual({ x: 1.75, y: 1.15 }) // degenerate -> classic
   })
 
   it('dropping the ball LEFT of a player holds it on the left, not hardcoded right', async () => {

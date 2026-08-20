@@ -664,3 +664,9 @@ Change:
 - 테스트: 랜드마크·핵심 액션 존재 + 레거시 크롬(스크럽/모드 토글/range) 부재 단언 1건 추가.
 Validation: typecheck/lint/test 127(+1)/build/harness/format PASS; 스크린샷 육안(아이콘·계층), 콘솔 클린.
 
+### CHG-20260820-058 — UX — 보유 공 간격 확대·토큰 단색 (사용자 지시)
+
+Problem: 보유 공이 아직 선수와 붙어 보이고, 토큰 그라데이션이 취향에 안 맞음.
+Change: carryOffset [1.6,2.1]→**[2.0,2.6]m**(기본 1.75,1.15 — 관련 상수·테스트 일괄 갱신), 토큰 gloss 그라데이션 제거 → **단색**+지면 그림자만(M3a 선결정으로 계획 Decision Log 기록).
+Validation: typecheck/lint/test 127/build/harness/format PASS; Playwright: 간격 확대·gradient 요소 0, 스크린샷 육안(플랫 단색), 콘솔 클린.
+

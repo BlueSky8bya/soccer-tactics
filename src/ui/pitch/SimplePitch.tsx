@@ -742,7 +742,7 @@ export function SimplePitch() {
             const tmEnd = compiled.segmentTimes[(sg as { id: Id }).id]?.end
             const after = tmEnd !== undefined ? stateAt(compiled, doc, tmEnd + 0.05) : null
             pos =
-              after && after.ball.holderId ? after.ball.pos : { x: end.x + 1.45, y: end.y + 0.95 }
+              after && after.ball.holderId ? after.ball.pos : { x: end.x + 1.75, y: end.y + 1.15 }
           }
           const out = [
             {
@@ -819,14 +819,6 @@ export function SimplePitch() {
       onPointerCancel={() => endGestureRef.current(false)}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <defs>
-        {/* glossy token cap: light from top-left, gentle falloff (Apple-style depth) */}
-        <radialGradient id="tokGloss" cx="35%" cy="28%" r="80%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.38" />
-          <stop offset="55%" stopColor="#ffffff" stopOpacity="0.06" />
-          <stop offset="100%" stopColor="#000000" stopOpacity="0.14" />
-        </radialGradient>
-      </defs>
       <PitchMarkings pitch={doc.pitch} />
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />
       {/* Routes hidden while the animation runs (user 2026-08-20): the moving tokens ARE the play. */}
