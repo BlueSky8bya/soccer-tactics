@@ -75,6 +75,8 @@ export function ActionsPanel() {
         >
           ● {t('panel.ball')}
         </button>
+        <div className={styles.panelHintLine}>{t('panel.hintHome')}</div>
+        <div className={styles.panelHintLine}>{t('panel.hintAway')}</div>
       </div>
 
       <div className={styles.panelCard}>

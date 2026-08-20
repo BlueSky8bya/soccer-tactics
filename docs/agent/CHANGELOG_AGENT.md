@@ -605,3 +605,12 @@ Change:
 - 보유 중 상시 표시: 공에 홀더 팀색 **holderRing**(0.28m 스트로크) — 루즈볼과 즉시 구분.
 Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 왼쪽 부착 후 단일 드래그·마퀴 그룹 드래그 모두 상대 오프셋 동일(-13.1,-0.3 유지), 토스트·링 확인, 스크린샷 육안, 콘솔 클린.
 
+### CHG-20260820-052 — UX — 헤더 중앙 정렬(브랜드+전술안)·버전 배지·Ctrl 안내 사이드바 이동 (사용자 지시)
+
+Problem: 전술안 A/B/C와 "전술 보드"가 작게 흩어져 있고, 배포 버전 확인 수단이 없고, Ctrl 안내가 헤더에 낑겨 있음.
+Change:
+- 헤더를 3열 그리드로: 중앙에 **⚽ 전술 보드(17px)** + **A/B/C 세그먼트(칩 34px)** 나란히, 우측 undo/redo/?.
+- 좌상단 **버전 배지**: `v0.1.0 (커밋해시)` — vite define(__APP_VERSION__, package.json+git rev-parse), 흐릿(opacity .55)·호버 선명·클릭 시 클립보드 복사+토스트.
+- 헤더의 Ctrl+클릭/우클릭 안내 제거 → 좌측 팀 구성 카드 하단에 두 줄 들여쓰기(panelHintLine).
+Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 배지 "v0.1.0 (844bab3)"·클릭 복사 토스트, 사이드바 안내 2줄, 스크린샷 육안(중앙 정렬), 콘솔 클린.
+

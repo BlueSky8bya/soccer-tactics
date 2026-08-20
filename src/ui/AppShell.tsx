@@ -68,39 +68,49 @@ export function AppShell() {
   return (
     <div className={styles.shell} data-simple="true">
       <header className={styles.top}>
-        <span className={styles.brand}>{t('app.brand')}</span>
-        <span className={styles.hintInline}>{t('simple.topHint')}</span>
-        <span className={styles.spacer} />
-        {variants && (
-          <span className={styles.variantBar} role="group" aria-label={t('variant.label')}>
-            <span className={styles.variantLabel}>{t('variant.label')}</span>
-            {(['A', 'B', 'C'] as const).map((v) =>
-              variants.has(v) ? (
-                <button
-                  key={v}
-                  type="button"
-                  className={`${styles.btn} ${styles.variantChip} ${variants.activeId === v ? styles.btnActive : ''}`}
-                  onClick={() => switchVariant(v)}
-                  aria-pressed={variants.activeId === v}
-                  title={t('variant.switchTo', { v })}
-                >
-                  {v}
-                </button>
-              ) : (
-                <button
-                  key={v}
-                  type="button"
-                  className={`${styles.btn} ${styles.variantChip} ${styles.variantEmpty}`}
-                  onClick={() => cloneInto(v)}
-                  title={t('variant.cloneInto', { v })}
-                >
-                  {v}
-                  <span className={styles.variantPlus}>+</span>
-                </button>
-              ),
-            )}
-          </span>
-        )}
+        <button
+          type="button"
+          className={styles.versionBadge}
+          onClick={() => {
+            navigator.clipboard?.writeText(__APP_VERSION__).catch(() => {})
+            ui.flashToast(t('app.versionCopied', { v: __APP_VERSION__ }))
+          }}
+          title={t('app.versionCopy')}
+        >
+          {__APP_VERSION__}
+        </button>
+        <span className={styles.headerCenter}>
+          <span className={styles.brand}>{t('app.brand')}</span>
+          {variants && (
+            <span className={styles.variantBar} role="group" aria-label={t('variant.label')}>
+              {(['A', 'B', 'C'] as const).map((v) =>
+                variants.has(v) ? (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`${styles.btn} ${styles.variantChip} ${variants.activeId === v ? styles.btnActive : ''}`}
+                    onClick={() => switchVariant(v)}
+                    aria-pressed={variants.activeId === v}
+                    title={t('variant.switchTo', { v })}
+                  >
+                    {v}
+                  </button>
+                ) : (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`${styles.btn} ${styles.variantChip} ${styles.variantEmpty}`}
+                    onClick={() => cloneInto(v)}
+                    title={t('variant.cloneInto', { v })}
+                  >
+                    {v}
+                    <span className={styles.variantPlus}>+</span>
+                  </button>
+                ),
+              )}
+            </span>
+          )}
+        </span>
         <span className={styles.group}>
           <button
             type="button"

@@ -19,7 +19,8 @@
 
 .top {
   grid-area: top;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--st-space-3);
   padding: 0 var(--st-space-4);
@@ -30,16 +31,48 @@
 }
 
 .brand {
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: 800;
+  font-size: 17px;
   letter-spacing: -0.01em;
   white-space: nowrap;
+}
+
+/* header is a 3-column grid so the brand + variants sit dead centre */
+.headerCenter {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  justify-self: center;
+}
+
+.versionBadge {
+  appearance: none;
+  justify-self: start;
+  font: inherit;
+  font-size: 10.5px;
+  color: var(--st-text-3);
+  background: transparent;
+  border: 1px solid var(--st-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  opacity: 0.55;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 120ms ease;
+}
+
+.versionBadge:hover {
+  opacity: 1;
 }
 
 .group {
   display: flex;
   align-items: center;
   gap: var(--st-space-1);
+}
+
+.top > .group {
+  justify-self: end;
 }
 
 .spacer {
@@ -1368,12 +1401,13 @@
 }
 
 .variantChip {
-  width: 30px;
-  min-width: 30px;
-  height: 26px;
+  width: 34px;
+  min-width: 34px;
+  height: 30px;
   padding: 0;
   border-radius: 999px;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 14px;
 }
 
 .variantEmpty {
@@ -1402,4 +1436,11 @@
   border-radius: 50%;
   flex: none;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12) inset;
+}
+
+.panelHintLine {
+  padding-left: 10px;
+  font-size: 11.5px;
+  color: var(--st-text-3);
+  white-space: nowrap;
 }
