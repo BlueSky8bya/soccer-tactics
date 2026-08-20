@@ -867,3 +867,8 @@ Change:
 - PitchMarkings: GoalNet 컴포넌트 — IFAB 실측(입구 7.32m, 깊이 2m) 위에 포스트 2개(r 0.3m)·골라인 크로스바(3.5px)·뒤로 0.8m씩 좁아지는 골망 사다리꼴 + 0.4m 대각 메시 패턴(pattern#goal-net, 미터 단위라 줌과 함께 스케일).
 - GIF: 캔버스에 GIF_PAD_M(3m) 서라운드 추가(translate) — 경기장 밖 골망이 프레임에 들어옴. 같은 사다리꼴·메시·포스트를 canvas로 동일 렌더.
 Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright: net fill 2·frame 2·post 4·crossbar 2·pattern 존재, 스크린샷 양쪽 골대 확인, 콘솔 클린.
+
+### CHG-20260821-084 — FIX — 골망 사다리꼴 → 직사각형 (사용자 지시)
+
+Change: GoalNet(보드)·GIF 골대의 0.8m 테이퍼 제거 — 골라인에서 뒤 2m까지 직각 상자. 메시·포스트·크로스바 불변.
+Validation: typecheck/test 152 PASS, Playwright 골대 요소 카운트 동일 + 확대 스크린샷 직사각 확인.

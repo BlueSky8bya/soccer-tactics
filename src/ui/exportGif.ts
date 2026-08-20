@@ -69,15 +69,14 @@ function drawPitch(ctx: CanvasRenderingContext2D, doc: TacticDocument, k: number
   // goals: net trapezoid with a diagonal mesh + crossbar + posts (same look as the board)
   const goalTop = cy - m.goalWidth / 2
   const goalBot = cy + m.goalWidth / 2
-  const inset = 0.8
   for (const dir of [-1, 1] as const) {
     const x = dir === -1 ? 0 : L
     const back = x + dir * m.goalDepth
     ctx.save()
     ctx.beginPath()
     ctx.moveTo(x * k, goalTop * k)
-    ctx.lineTo(back * k, (goalTop + inset) * k)
-    ctx.lineTo(back * k, (goalBot - inset) * k)
+    ctx.lineTo(back * k, goalTop * k)
+    ctx.lineTo(back * k, goalBot * k)
     ctx.lineTo(x * k, goalBot * k)
     ctx.closePath()
     ctx.clip()
@@ -99,8 +98,8 @@ function drawPitch(ctx: CanvasRenderingContext2D, doc: TacticDocument, k: number
     ctx.lineWidth = Math.max(1, 0.2 * k)
     ctx.beginPath()
     ctx.moveTo(x * k, goalTop * k)
-    ctx.lineTo(back * k, (goalTop + inset) * k)
-    ctx.lineTo(back * k, (goalBot - inset) * k)
+    ctx.lineTo(back * k, goalTop * k)
+    ctx.lineTo(back * k, goalBot * k)
     ctx.lineTo(x * k, goalBot * k)
     ctx.stroke()
     // crossbar + posts on the goal line

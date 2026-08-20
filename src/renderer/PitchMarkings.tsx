@@ -101,14 +101,14 @@ export const PitchMarkings = memo(function PitchMarkings({ pitch }: { pitch: Pit
         d={`M ${L} ${W - m.cornerR} A ${m.cornerR} ${m.cornerR} 0 0 0 ${L - m.cornerR} ${W}`}
         className={line}
       />
-      {/* goals: posts + crossbar + tapered net box (top-down, IFAB 7.32m mouth, 2m deep) */}
+      {/* goals: posts + crossbar + rectangular net box (top-down, IFAB 7.32m mouth, 2m deep) */}
       <GoalNet x={0} dir={-1} top={goalTop} w={m.goalWidth} d={m.goalDepth} />
       <GoalNet x={L} dir={1} top={goalTop} w={m.goalWidth} d={m.goalDepth} />
     </g>
   )
 })
 
-/** One goal seen from above: net trapezoid (meshed), side/back frame, crossbar, two posts. */
+/** One goal seen from above: meshed net box, side/back frame, crossbar, two posts. */
 function GoalNet({
   x,
   dir,
@@ -124,8 +124,8 @@ function GoalNet({
 }) {
   const bot = top + w
   const back = x + dir * d
-  const inset = 0.8 // net box tapers toward the back stanchions
-  const outline = `M ${x} ${top} L ${back} ${top + inset} L ${back} ${bot - inset} L ${x} ${bot}`
+  // straight rectangular net box (user 2026-08-21: 사다리꼴 X)
+  const outline = `M ${x} ${top} L ${back} ${top} L ${back} ${bot} L ${x} ${bot}`
   return (
     <g>
       <path d={`${outline} Z`} fill="url(#goal-net)" stroke="none" />
