@@ -46,7 +46,11 @@ export function AppShell() {
             ui.flashToast(t('gif.progress', { p: Math.round((d / n) * 100) }), 90000)
         },
       })
-      downloadBlob(blob, `tactic-${new Date().toISOString().slice(0, 10)}.gif`)
+      // A안_YYMMDD_HHMM.gif (user 2026-08-20)
+      const now = new Date()
+      const p2 = (n: number) => String(n).padStart(2, '0')
+      const stamp = `${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}_${p2(now.getHours())}${p2(now.getMinutes())}`
+      downloadBlob(blob, `${variants?.activeId ?? 'A'}안_${stamp}.gif`)
       ui.flashToast(t('gif.done'))
     } catch {
       ui.flashToast(t('gif.fail'))

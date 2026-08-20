@@ -786,3 +786,8 @@ Problem: 팀 색이 var(--st-team-a) 형태라 캔버스 fillStyle이 무시 —
 Change: exportGif에 resolveColor — var()면 documentElement 계산값(폴백: var 기본값 → VISUAL.teamHome/Away)으로 해석.
 Validation: typecheck/lint/test 136/build/harness/format PASS; 실제 GIF 추출 육안 확인(파랑/빨강+번호+away 키라인), 콘솔 클린.
 
+### CHG-20260820-074 — UX — GIF 파일명 {안}안_YYMMDD_HHMM.gif (사용자 지시)
+
+Change: tactic-날짜.gif → 활성 전술안 접두(예: B안_260820_1714.gif) — 어떤 안의 장면인지 파일명만으로 식별.
+Validation: typecheck/lint/test 136/build/harness/format PASS; Playwright: B안 활성 상태에서 내보내기 → 'B안_260820_1714.gif' 확인.
+
