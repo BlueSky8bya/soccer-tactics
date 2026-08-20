@@ -36,10 +36,7 @@ beforeEach(() => {
   resetTourSeen()
   useUiStore.setState({
     tour: { active: false, step: 0, set: 'main' as const },
-    animMode: false,
     hasPlayed: false,
-    timelineExpanded: false,
-    autoReactOpen: false,
     selection: [],
     tool: 'select',
   })
@@ -79,9 +76,6 @@ describe('tourSteps', () => {
       doc,
       entry: doc,
       hasPlayed: true,
-      timelineExpanded: false,
-      autoReactOpen: false,
-      animMode: true,
       playScope: 'all' as const,
     }
     // players empty -> step 0 (place) pending
@@ -152,9 +146,6 @@ describe('opt-in mini tour (PLAN-005 M6, C-04)', () => {
       doc,
       entry: doc,
       hasPlayed: true,
-      timelineExpanded: false,
-      autoReactOpen: false,
-      animMode: false,
     }
     const replay = MINI_TOUR_STEPS[1]!
     expect(replay.done({ ...base, playScope: 'all' })).toBe(false)

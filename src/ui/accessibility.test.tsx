@@ -36,14 +36,12 @@ afterEach(() => {
     selectedSegmentId: null,
     shortcutsOpen: false,
     tour: { active: false, step: 0, set: 'main' as const },
-    animMode: false,
     playback: { t: 0, playing: false, speed: 1, loop: false },
   })
 })
 
 function setup() {
   markTourSeen()
-  useUiStore.setState({ animMode: true })
   const core = new EditorCore(
     seedDefaultTeams(createEmptyDocument({ id: 'd', now: '2026-08-19T00:00:00.000Z' })),
   )

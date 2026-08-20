@@ -20,14 +20,17 @@ Related: ADR-0001, ADR-0003, ADR-0005
 ## Considered Options
 
 ### A. React 19 + TypeScript + Vite (추천)
+
 장점: 사용자 친숙, 생태계, SVG를 선언적으로 다루기 쉬움, Vitest 통합.
 단점: playback 60fps에서 React 리렌더 비용 → 재생 중에는 rAF + ref 기반 imperative 업데이트로 우회 (ADR-0003).
 
 ### B. Svelte/SolidKit
+
 장점: fine-grained reactivity, playback에 유리.
 단점: 사용자 이전 경험과 불일치, 생태계 좁음.
 
 ### C. Vanilla TS + 자체 미니 프레임워크
+
 장점: 의존성 0.
 단점: 에디터 UI 규모에서 생산성 저하.
 

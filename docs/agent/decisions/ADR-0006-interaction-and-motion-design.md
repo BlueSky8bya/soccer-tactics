@@ -14,26 +14,30 @@ Supersedes: —
 ## Decision
 
 ### D1. 두 개의 시계 (Two Clocks)
+
 - **UI Clock**: spring/ease, 120–400ms, 언제든 중단·재타깃, `prefers-reduced-motion` + 앱 토글로 끔. 대상: 패널·툴·선택 링·핸들·토큰 pickup/drop·타임라인 블록 스냅·토스트.
 - **Tactical Clock**: 실초(s), 선형 또는 사용자가 고른 easing만, 물리 속도 preset, 재생/scrub에 spring 영향 0. reduce-motion에도 유지(WCAG 2.3.3 essential).
 - 코드 경계: `src/ui/motion/`만 spring 사용. `src/engine/`·`src/renderer/`의 위치 계산에 spring 금지 (verify-harness가 `src/engine`, `src/renderer`에서 `spring`/`motion/react` import 검사).
 
 ### D2. Spring 파라미터 (WWDC23 duration+bounce 모델)
-| 용도 | duration | bounce | 비고 |
-|---|---|---|---|
-| 선택 링 등장 / hover 확대 | 0.18s | 0 | 빈번 → flourish 금지 |
-| 툴 전환 하이라이트 | 0.2s | 0 | |
-| 토큰 pickup (scale 1→1.06, shadow) | 0.22s | 0.1 | 1:1 추적, 지연 0 |
-| 토큰 drop / 스냅(formation slot, 그리드, 가이드) | 0.35s | 0.25 | **"탁 달라붙음"** |
-| 타임라인 블록 스냅(이웃 끝, playhead) | 0.3s | 0.2 | |
-| Inspector 슬라이드 인 / 아웃 | 0.3s / 0.22s | 0.1 / 0 | 등장>퇴장 |
-| 타임라인 펼침(⌃ tracks) | 0.32s | 0.15 | |
-| 컨텍스트 미니바 등장 | 0.24s | 0.15 | 선택 근처에서 scale+fade |
-| 토스트/완성 피드백 | 0.4s | 0.3 | Completion Delight, 1회성이라 bounce 허용 |
-| reduce-motion | 0 또는 ≤100ms fade | 0 | |
+
+| 용도                                             | duration           | bounce  | 비고                                      |
+| ------------------------------------------------ | ------------------ | ------- | ----------------------------------------- |
+| 선택 링 등장 / hover 확대                        | 0.18s              | 0       | 빈번 → flourish 금지                      |
+| 툴 전환 하이라이트                               | 0.2s               | 0       |                                           |
+| 토큰 pickup (scale 1→1.06, shadow)               | 0.22s              | 0.1     | 1:1 추적, 지연 0                          |
+| 토큰 drop / 스냅(formation slot, 그리드, 가이드) | 0.35s              | 0.25    | **"탁 달라붙음"**                         |
+| 타임라인 블록 스냅(이웃 끝, playhead)            | 0.3s               | 0.2     |                                           |
+| Inspector 슬라이드 인 / 아웃                     | 0.3s / 0.22s       | 0.1 / 0 | 등장>퇴장                                 |
+| 타임라인 펼침(⌃ tracks)                          | 0.32s              | 0.15    |                                           |
+| 컨텍스트 미니바 등장                             | 0.24s              | 0.15    | 선택 근처에서 scale+fade                  |
+| 토스트/완성 피드백                               | 0.4s               | 0.3     | Completion Delight, 1회성이라 bounce 허용 |
+| reduce-motion                                    | 0 또는 ≤100ms fade | 0       |                                           |
+
 - 구현: 순수 TS `spring(duration, bounce)` → stiffness/damping 변환, rAF 기반, 재타깃 시 현재 속도 계승. CSS transition은 단순 opacity/color만(`--st-motion-*` 토큰). 라이브러리(`motion/react`) 도입은 M4에서 자체 헬퍼로 부족할 때만(ADR-0002).
 
 ### D3. 직접 조작 규칙 (Fluid Interfaces + Fitts)
+
 - 드래그 = 커서에 지연 0 고정. 드래그 중 문서 즉시 갱신(transaction, ADR-0005). Esc = cancel 복원.
 - hit 영역: 토큰 ≥ 28px, waypoint/handle/playhead ≥ 16px(시각 8–10px, hover 시 spring 확대), 타임라인 블록 edge-resize ≥ 8px. 불가시 패딩 + hover 시각화 둘 다.
 - 가장자리 도킹: 좌 툴 레일, 하단 재생바(Fitts 무한 타깃). 상단바 얇게.
@@ -42,6 +46,7 @@ Supersedes: —
 - 투사(momentum): 토큰 fling 시 투사 거리로 착지 → 가장 가까운 스냅 후보에 spring 정착. pitch 밖으로는 못 나감(clamp + rubber-band).
 
 ### D4. 시그니처 인터랙션 (novice authoring 근거)
+
 1. **Path-scrub** (DimP): 경로가 있는 선수/공을 경로 따라 드래그하면 전역 playhead가 그 시각으로 이동, 다른 엔티티 동기. 교차 시 현재 playhead에 가까운 시각. ghost 마커.
 2. **Record 모드** (K-Sketch): 도구 `Record` 선택 → 선수 드래그하는 동안 실시간 녹화 → 경로(간소화 polyline→스무딩 bezier)+타이밍 동시 생성. 이후 waypoint/속도로 정제. v1 M3 후보, M2엔 데이터 구조 준비.
 3. **Path 위 on-canvas 컨트롤** (Draco): 선택된 경로 끝에 "속도 pill"(walk/jog/run/sprint, 드래그로 미세), 시작 시각 pill("0.4s 후" / "A 도착 시"). Inspector 안 열어도 됨.
@@ -49,17 +54,21 @@ Supersedes: —
 5. **Phase 복제** (Magic Move): Scene 복제 → 선수 재배치 → 자동 move segment 생성. Scene 모델(ADR-0003) 활용, M3+.
 
 ### D5. Progressive Disclosure (2단계 한정)
+
 - L1 기본 화면: 툴 레일(선택·이동 / 선수 추가 / 공 / 경로 / 구역 / 텍스트, 6개 + more), 상단바(제목·Formation·Undo/Redo·Play), 하단 1줄 재생바(Play/Pause/Restart/Scrubber/Speed/⌃).
 - L2: ⌃ → entity tracks(팀 밴드, segment 블록 drag/resize, 마커). Inspector(선택 시 슬라이드).
 - L3 없음. 고급 옵션은 L2 안 섹션 접기.
 
 ### D6. 레이아웃 = Option 3 Focused Hybrid (UX_LAYOUT_PROPOSAL)
+
 Pitch ≥ 65% 폭 / ≥ 55% 높이 유지. 미선택 시 빈 패널 없음. 모든 패널 spring 슬라이드, 레이아웃 점프 없음(Continuity).
 
 ### D7. 키보드 1급 (PC)
+
 Space 재생/정지 · ←/→ 0.1s step(Shift 1s) · Home/End · V 선택 · P 경로 · B 공 · Z 구역 · T 텍스트 · R record · Ctrl/Cmd+Z/Shift+Z · Delete · Esc cancel · 화살표 nudge 0.5m(Shift 2m, 500ms 내 병합) · Alt 스냅 해제 · Tab 다음 엔티티. 모든 단축키는 tooltip/컨텍스트 메뉴에 표기(인식>회상).
 
 ### D8. 시각 언어 (Visual Harmony)
+
 - 색: 중립 surface(light/dark 자동) + 팀색 2 + accent 1(선택/재생). 도구 버튼에 다색 금지(VDR-0001 anti-pattern).
 - 경로 인코딩: 이동 = 실선+arrowhead, 패스 = 점선, 로빙 = 점선+호 표시, 슛 = 굵은 실선, 선택 경로 = accent glow + waypoint 노출, 비선택 = 60% opacity.
 - 토큰: 팀색 원 + 흰 테두리 + 번호. 보유 시 공이 토큰 가장자리에 붙음. 선택 = accent 링(bounce 0).
@@ -67,17 +76,18 @@ Space 재생/정지 · ←/→ 0.1s step(Shift 1s) · Home/End · V 선택 · P 
 - 다크/라이트 둘 다 토큰으로.
 
 ### D9. Harmony/Immersion/Fun 매핑 (주요 결정이 어느 칸을 개선하는지)
-| 결정 | Harmony | Immersion | Fun |
-|---|---|---|---|
-| D1 두 시계 | Functional | Control | — |
-| D2 spring 표 | Visual | — | Response |
-| D3 hit/스냅/rubber-band | Functional | Control | Response |
-| D4 path-scrub·record·on-canvas pill | Contextual | Continuity, Focus | Discovery |
-| D5 2단계 disclosure | Contextual | Focus | Discovery |
-| D6 레이아웃 | Visual | Focus, Continuity | — |
-| D7 키보드 | Functional | Control | — |
-| D8 시각 언어 | Visual | Focus | — |
-| 완성 피드백(재생 시 패널 접힘 옵션+토스트) | — | — | Completion |
+
+| 결정                                       | Harmony    | Immersion         | Fun        |
+| ------------------------------------------ | ---------- | ----------------- | ---------- |
+| D1 두 시계                                 | Functional | Control           | —          |
+| D2 spring 표                               | Visual     | —                 | Response   |
+| D3 hit/스냅/rubber-band                    | Functional | Control           | Response   |
+| D4 path-scrub·record·on-canvas pill        | Contextual | Continuity, Focus | Discovery  |
+| D5 2단계 disclosure                        | Contextual | Focus             | Discovery  |
+| D6 레이아웃                                | Visual     | Focus, Continuity | —          |
+| D7 키보드                                  | Functional | Control           | —          |
+| D8 시각 언어                               | Visual     | Focus             | —          |
+| 완성 피드백(재생 시 패널 접힘 옵션+토스트) | —          | —                 | Completion |
 
 ## Amendment 2026-08-20 (사용자 피드백 라운드 3)
 

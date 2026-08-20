@@ -1,7 +1,7 @@
 # Active ExecPlan
 
 Plan ID: PLAN-20260821-005  
-Status: In Progress (승인 2026-08-20, 사용자 구두 승인 — "A-04 보류, 나머지는 계획대로")  
+Status: Completed (승인·구현 2026-08-20 — M1~M7 AGENT-VERIFIED, 사용자 브라우저 체감 확인 대기)  
 Task Risk: L2  
 Created: 2026-08-21  
 Updated: 2026-08-20  
@@ -27,7 +27,7 @@ Execution Owner: Claude (Fable 5)
 
 ## Evidence Read
 
-- 문서: `CONSTITUTION.md`, `CURRENT_STATE.md`의 PLAN-004 R1~R27와 Known Issues, ADR-0009 본문·Amendment v2/v3, `CHANGELOG_AGENT.md` CHG-20260820-018~035.
+- 문서: `CONSTITUTION.md`, `CURRENT_STATE.md`의 PLAN-004 R1~~R27와 Known Issues, ADR-0009 본문·Amendment v2/v3, `CHANGELOG_AGENT.md` CHG-20260820-018~~035.
 - 코드: `AppShell`, `SimplePitch`, `StepBar`, `SidePanels`, `PlayerCard`, `tour/*`, `stepCommands`, `ui/motion/*`, `keymap`, `useEditorKeyboard`, `usePlayback`, `uiStore`, `PathLayer`, 관련 CSS와 EditorCore/EditorContext 연결부.
 - 테스트: `stepCommands.test.ts`, `AppShell.test.tsx`, `accessibility.test.tsx`, `tour.test.tsx`, `motion/spring.test.ts`, `pitch/pathPresentation.test.ts` 및 관련 엔진/에디터 테스트.
 - 판단 기준은 기능 수가 아니라 반복 실험 한 회의 클릭/대기 비용, 결과 확인 가능성, 오조작 복구, 22명 상태의 판독성이다.
@@ -44,45 +44,45 @@ Execution Owner: Claude (Fable 5)
 
 ### Documentation–Code Mismatches
 
-| ID | 문서와 코드가 다른 곳 | 근거 | 계획상 처리 |
-|---|---|---|---|
-| DOC-01 | `CURRENT_STATE` 머리말의 최신 라운드/검증 수와 본문 R27 및 CHANGELOG가 맞지 않는다. | 머리말은 R15·90 tests 계열 설명, CHG-035는 R27·86 tests를 기록한다. | M7에서 실제 최종 명령 출력만 기록한다. |
-| DOC-02 | ADR-0009 초기안의 더블클릭·1~10·애니메이션 토글과 v2/v3 및 코드가 공존한다. | 현 코드는 Shift+드래그, 1~9, 단일 모드다. | 원 ADR은 보존하고 Amendment 우선순위를 현재 상태/가이드에 명시한다. |
-| DOC-03 | 제거된 모드의 state/style/test setup이 남아 있다. | `animMode`, `timelineExpanded`, `autoReactOpen`, `theme`; scrub/time/anim-toggle 및 path-scrub CSS가 잔존한다. | M7에서 참조가 실제로 0인 것만 별도 정리한다. |
-| DOC-04 | 단계 상한이 한 곳에서 10으로 남았다. | `MAX_STEP`/StepBar는 9지만 `uiStore.setCurrentStep`은 10까지 clamp하고 키보드 주석은 `1-0`이다. | M2에서 exported 상수 하나로 통일한다. |
-| DOC-05 | 가이드 그룹명이 제거된 모드를 암시한다. | `keymap.ts` 주석/그룹이 여전히 “애니메이션 모드”를 전제로 한다. | M6에서 “경로 만들기/다듬기/재생” 작업 언어로 교체한다. |
+| ID     | 문서와 코드가 다른 곳                                                               | 근거                                                                                                           | 계획상 처리                                                         |
+| ------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| DOC-01 | `CURRENT_STATE` 머리말의 최신 라운드/검증 수와 본문 R27 및 CHANGELOG가 맞지 않는다. | 머리말은 R15·90 tests 계열 설명, CHG-035는 R27·86 tests를 기록한다.                                            | M7에서 실제 최종 명령 출력만 기록한다.                              |
+| DOC-02 | ADR-0009 초기안의 더블클릭·1~10·애니메이션 토글과 v2/v3 및 코드가 공존한다.         | 현 코드는 Shift+드래그, 1~9, 단일 모드다.                                                                      | 원 ADR은 보존하고 Amendment 우선순위를 현재 상태/가이드에 명시한다. |
+| DOC-03 | 제거된 모드의 state/style/test setup이 남아 있다.                                   | `animMode`, `timelineExpanded`, `autoReactOpen`, `theme`; scrub/time/anim-toggle 및 path-scrub CSS가 잔존한다. | M7에서 참조가 실제로 0인 것만 별도 정리한다.                        |
+| DOC-04 | 단계 상한이 한 곳에서 10으로 남았다.                                                | `MAX_STEP`/StepBar는 9지만 `uiStore.setCurrentStep`은 10까지 clamp하고 키보드 주석은 `1-0`이다.                | M2에서 exported 상수 하나로 통일한다.                               |
+| DOC-05 | 가이드 그룹명이 제거된 모드를 암시한다.                                             | `keymap.ts` 주석/그룹이 여전히 “애니메이션 모드”를 전제로 한다.                                                | M6에서 “경로 만들기/다듬기/재생” 작업 언어로 교체한다.              |
 
 ### Rule-Violation and Regression Risks
 
-| ID | 가능성 | 근거 | 방지책 |
-|---|---|---|---|
-| RULE-01 | 단계 재생을 엔진 시간 특수 규칙으로 넣을 위험 | 현재 `compile → stateAt(t)`는 결정론적이고 구간 재생은 UI clock 문제다. | M1 범위/종료 시각은 UI/editor helper에서 계산하고 engine/domain은 변경하지 않는다. |
-| RULE-02 | 부분 삭제나 A/B 전환이 transaction을 우회할 위험 | 현재 문서 편집은 command 경계를 사용하고 `replaceDocument`도 한 undo entry다. | M2는 단일 transaction command, M5는 독립 EditorCore를 쓴다. |
-| RULE-03 | 단축키 동작이 다시 갈라질 위험 | 표시 정의는 `keymap.ts`, 실제 분기는 `useEditorKeyboard`, 버튼 재생은 `usePlayback`에 있다. | 바인딩은 `keymap.ts`, 실행은 공용 action으로 모아 버튼/키보드가 같은 함수를 호출한다. |
-| RULE-04 | 모션 폴리시가 전술 시간에 spring을 섞을 위험 | tactical playback은 선형 rAF이고 spring은 token UI 피드백에만 있다. | 좌표는 계속 `stateAt`; cross-fade·pickup/drop만 `ui/motion`에서 처리한다. |
-| RULE-05 | A/B가 저장 기능의 우회 재도입이 될 위험 | 새로고침 시 빈 판이라는 제품 결정이 있다. | M5 기본안은 메모리 세션 한정 2개 슬롯이며 JSON/schema/localStorage에 저장하지 않는다. |
+| ID      | 가능성                                           | 근거                                                                                        | 방지책                                                                                |
+| ------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| RULE-01 | 단계 재생을 엔진 시간 특수 규칙으로 넣을 위험    | 현재 `compile → stateAt(t)`는 결정론적이고 구간 재생은 UI clock 문제다.                     | M1 범위/종료 시각은 UI/editor helper에서 계산하고 engine/domain은 변경하지 않는다.    |
+| RULE-02 | 부분 삭제나 A/B 전환이 transaction을 우회할 위험 | 현재 문서 편집은 command 경계를 사용하고 `replaceDocument`도 한 undo entry다.               | M2는 단일 transaction command, M5는 독립 EditorCore를 쓴다.                           |
+| RULE-03 | 단축키 동작이 다시 갈라질 위험                   | 표시 정의는 `keymap.ts`, 실제 분기는 `useEditorKeyboard`, 버튼 재생은 `usePlayback`에 있다. | 바인딩은 `keymap.ts`, 실행은 공용 action으로 모아 버튼/키보드가 같은 함수를 호출한다. |
+| RULE-04 | 모션 폴리시가 전술 시간에 spring을 섞을 위험     | tactical playback은 선형 rAF이고 spring은 token UI 피드백에만 있다.                         | 좌표는 계속 `stateAt`; cross-fade·pickup/drop만 `ui/motion`에서 처리한다.             |
+| RULE-05 | A/B가 저장 기능의 우회 재도입이 될 위험          | 새로고침 시 빈 판이라는 제품 결정이 있다.                                                   | M5 기본안은 메모리 세션 한정 2개 슬롯이며 JSON/schema/localStorage에 저장하지 않는다. |
 
 ### Duplicate or Fragile Code
 
-| ID | 문제 | 근거 | 정리 방향 |
-|---|---|---|---|
-| FRAG-01 | 재생 시작/정지 조건 중복 | `usePlaybackController`와 `useEditorKeyboard`가 각각 `playFrom`, duration, reset을 다룬다. | M1에서 공용 controller action으로 합친다. |
-| FRAG-02 | `SimplePitch`의 거대 포인터 상태 머신 | 배치·선택·마키·작성·굽힘·고스트·그룹 이동·스냅이 target/modifier 분기에 얽혀 있다. | M3에서 DOM 없는 intent 판정 helper를 먼저 추출한다. |
-| FRAG-03 | path drag의 숨은 이중 의미 | owner가 선택돼 있으면 전체 translate, 아니면 bend다. | path drag=항상 bend, 그룹 이동=live token drag로 고정한다. |
-| FRAG-04 | 고스트 우선순위가 전역 단계와 무관 | 각 entity의 첫 고스트가 모두 비교적 진해 22명일 때 계층이 무너진다. | M4에서 global step/selection/active 상태로 presentation을 계산한다. |
-| FRAG-05 | 제거된 UI의 dead state/CSS | DOC-03의 필드와 스타일이 유지보수 표면을 키운다. | M7에서 기능 변경과 분리해 제거한다. |
+| ID      | 문제                                  | 근거                                                                                       | 정리 방향                                                           |
+| ------- | ------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| FRAG-01 | 재생 시작/정지 조건 중복              | `usePlaybackController`와 `useEditorKeyboard`가 각각 `playFrom`, duration, reset을 다룬다. | M1에서 공용 controller action으로 합친다.                           |
+| FRAG-02 | `SimplePitch`의 거대 포인터 상태 머신 | 배치·선택·마키·작성·굽힘·고스트·그룹 이동·스냅이 target/modifier 분기에 얽혀 있다.         | M3에서 DOM 없는 intent 판정 helper를 먼저 추출한다.                 |
+| FRAG-03 | path drag의 숨은 이중 의미            | owner가 선택돼 있으면 전체 translate, 아니면 bend다.                                       | path drag=항상 bend, 그룹 이동=live token drag로 고정한다.          |
+| FRAG-04 | 고스트 우선순위가 전역 단계와 무관    | 각 entity의 첫 고스트가 모두 비교적 진해 22명일 때 계층이 무너진다.                        | M4에서 global step/selection/active 상태로 presentation을 계산한다. |
+| FRAG-05 | 제거된 UI의 dead state/CSS            | DOC-03의 필드와 스타일이 유지보수 표면을 키운다.                                           | M7에서 기능 변경과 분리해 제거한다.                                 |
 
 ### User-Feedback Regression Hotspots
 
-| 피드백 이력 | 현재 회귀 위험 | 보호 기준 |
-|---|---|---|
-| 같은 단계 동시 시작, 다음 단계는 가장 늦은 종료 뒤 시작 | 구간 재생/삭제 relayout이 병렬 규칙을 깨뜨릴 수 있다. | M1/M2에서 동일 t0, max-duration 경계, undo timing을 단언한다. |
-| 재생바·시간 표시·모드 토글 제거 | 단계 미리보기가 작은 타임라인으로 팽창할 수 있다. | 시각적 시간축·초 표시는 금지하고 1~9 칩과 문맥 action만 사용한다. |
-| Shift 연속 지그재그 | modifier 부담 개선 중 숙련자 체인을 깨뜨릴 수 있다. | Shift는 accelerator로 보존하고 무수정자 route handle을 추가한다. |
-| 고스트 끝점 미세 조정 | 이어 그리기 handle과 plain drag가 충돌할 수 있다. | ghost body=끝점 조정, 별도 handle=새 경로로 hit target을 분리한다. |
-| 그룹 이동 시 홈과 전체 경로 함께 이동 | path drag 단순화 중 그룹 이동이 사라질 수 있다. | 다중 선택 후 live token drag는 기존 translate를 유지한다. |
-| 패스 시작점의 보유자 부착/잠금 | presentation 변경이 marker/hit-test를 되돌릴 수 있다. | `deriveAttachedPathStart`와 시작점 non-draggable 테스트를 유지한다. |
-| 재생 중 고스트/배지 숨김 | active 강조 중 편집 장식이 재등장할 수 있다. | playback 동안 handle/ghost/badge는 숨기고 active path만 강조한다. |
+| 피드백 이력                                             | 현재 회귀 위험                                        | 보호 기준                                                           |
+| ------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- |
+| 같은 단계 동시 시작, 다음 단계는 가장 늦은 종료 뒤 시작 | 구간 재생/삭제 relayout이 병렬 규칙을 깨뜨릴 수 있다. | M1/M2에서 동일 t0, max-duration 경계, undo timing을 단언한다.       |
+| 재생바·시간 표시·모드 토글 제거                         | 단계 미리보기가 작은 타임라인으로 팽창할 수 있다.     | 시각적 시간축·초 표시는 금지하고 1~9 칩과 문맥 action만 사용한다.   |
+| Shift 연속 지그재그                                     | modifier 부담 개선 중 숙련자 체인을 깨뜨릴 수 있다.   | Shift는 accelerator로 보존하고 무수정자 route handle을 추가한다.    |
+| 고스트 끝점 미세 조정                                   | 이어 그리기 handle과 plain drag가 충돌할 수 있다.     | ghost body=끝점 조정, 별도 handle=새 경로로 hit target을 분리한다.  |
+| 그룹 이동 시 홈과 전체 경로 함께 이동                   | path drag 단순화 중 그룹 이동이 사라질 수 있다.       | 다중 선택 후 live token drag는 기존 translate를 유지한다.           |
+| 패스 시작점의 보유자 부착/잠금                          | presentation 변경이 marker/hit-test를 되돌릴 수 있다. | `deriveAttachedPathStart`와 시작점 non-draggable 테스트를 유지한다. |
+| 재생 중 고스트/배지 숨김                                | active 강조 중 편집 장식이 재등장할 수 있다.          | playback 동안 handle/ghost/badge는 숨기고 active path만 강조한다.   |
 
 ### Improvement Candidates Found
 
@@ -100,46 +100,46 @@ Execution Owner: Claude (Fable 5)
 
 ## Product Audit A — Experimentation Loop
 
-| ID | 문제 | 근거 | 제안 | 난이도 | 우선순위 |
-|---|---|---|---|---|---|
-| A-01 | 만든 플레이의 일부만 곧바로 재생할 수 없다. | Play는 전체 duration만 재생하고 StepBar는 작성 단계 선택/재배정만 한다. | chip 선택 시 시작 장면 preview, `현재 단계만`, `여기부터`, `전체` action 제공. | M | P0 |
-| A-02 | 결과를 보자마자 시작 위치로 튄다. | 자연 종료와 `setPlaying(false)`가 모두 t=0으로 만든다. | 종료/일시정지는 현재 frame 유지, 편집 시작 또는 Home에서만 authoring start로 복귀. | M | P0 |
-| A-03 | 단계 chip 클릭이 상황에 따라 문서를 수정한다. | 경로 선택 중에는 `setSegmentStep`, 아니면 current step 변경이다. | chip은 단계 선택/preview 전용; 재배정은 선택 action의 명시적 1~9 picker. | S | P0 |
-| A-04 | 경로 작성 시 Shift 유지 부담이 크다. | live token/ghost chain 진입이 Shift에 의존한다. | 선택/hover token과 ghost에 route handle; Shift는 accelerator로 유지. | M | P0 |
-| A-05 | 9단계 연속 체인이 조용히 같은 단계에 누적될 수 있다. | auto-advance가 9로 clamp된다. | chain overflow는 생성 전 차단하고 이유/해결 toast. 명시적 병렬 step 9는 허용. | S | P0 |
-| A-06 | 일부 삭제 단위가 경로 하나 또는 전체 판뿐이다. | current step/entity/all authored motion clear command가 없다. | `이 동작/이 단계/선택 선수/움직임 전체` 삭제를 각각 1 transaction으로 추가. | M | P1 |
-| A-07 | A안을 복제해 B안과 빠르게 비교할 수 없다. | 단일 EditorCore/document만 있다. | 세션 한정 A/B 독립 core/history와 빠른 toggle. | L | P1 |
+| ID   | 문제                                                 | 근거                                                                    | 제안                                                                               | 난이도 | 우선순위 |
+| ---- | ---------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------ | -------- |
+| A-01 | 만든 플레이의 일부만 곧바로 재생할 수 없다.          | Play는 전체 duration만 재생하고 StepBar는 작성 단계 선택/재배정만 한다. | chip 선택 시 시작 장면 preview, `현재 단계만`, `여기부터`, `전체` action 제공.     | M      | P0       |
+| A-02 | 결과를 보자마자 시작 위치로 튄다.                    | 자연 종료와 `setPlaying(false)`가 모두 t=0으로 만든다.                  | 종료/일시정지는 현재 frame 유지, 편집 시작 또는 Home에서만 authoring start로 복귀. | M      | P0       |
+| A-03 | 단계 chip 클릭이 상황에 따라 문서를 수정한다.        | 경로 선택 중에는 `setSegmentStep`, 아니면 current step 변경이다.        | chip은 단계 선택/preview 전용; 재배정은 선택 action의 명시적 1~9 picker.           | S      | P0       |
+| A-04 | 경로 작성 시 Shift 유지 부담이 크다.                 | live token/ghost chain 진입이 Shift에 의존한다.                         | 선택/hover token과 ghost에 route handle; Shift는 accelerator로 유지.               | M      | P0       |
+| A-05 | 9단계 연속 체인이 조용히 같은 단계에 누적될 수 있다. | auto-advance가 9로 clamp된다.                                           | chain overflow는 생성 전 차단하고 이유/해결 toast. 명시적 병렬 step 9는 허용.      | S      | P0       |
+| A-06 | 일부 삭제 단위가 경로 하나 또는 전체 판뿐이다.       | current step/entity/all authored motion clear command가 없다.           | `이 동작/이 단계/선택 선수/움직임 전체` 삭제를 각각 1 transaction으로 추가.        | M      | P1       |
+| A-07 | A안을 복제해 B안과 빠르게 비교할 수 없다.            | 단일 EditorCore/document만 있다.                                        | 세션 한정 A/B 독립 core/history와 빠른 toggle.                                     | L      | P1       |
 
 ## Product Audit B — Readability at 22 Players
 
-| ID | 문제 | 근거 | 제안 | 난이도 | 우선순위 |
-|---|---|---|---|---|---|
-| B-01 | 재생 중 현재 경로를 찾기 어렵다. | `dimOthers`는 selection만 보며 active segment를 모른다. selection이 없으면 모두 같은 dim이다. | compiled t0/t1로 active IDs를 UI에서 파생해 active path/token 강조, past/future 차등 dim. | M | P0 |
-| B-02 | 여러 선수의 고스트 우선순위가 비슷하다. | opacity가 global step이 아니라 entity별 index다. | 선택 단계/entity/hover 우선, 먼 step 자동 감쇠, 최소 opacity 유지. | M | P1 |
-| B-03 | 배지가 경로·토큰·배지와 겹친다. | 모든 badge가 path midpoint 고정이며 collision pass가 없다. | deterministic offset 후보를 적용하고 미해결 묶음은 hover/selection 때 펼친다. | M | P1 |
-| B-04 | 공 경로와 얇은 팀 경로가 피치 선에서 약하다. | ball은 흰 dashed, move는 2.5px 단일 stroke다. | 반투명 casing 아래 팀색/공 본선을 그려 대비 유지. | S | P1 |
-| B-05 | 경로 작성 뒤 focus lens가 사라질 수 있다. | 작성 완료 시 segment selection을 해제하는 흐름이 있다. | 마지막 편집 segment/step의 UI-only focus를 Delete 대상 selection과 분리해 유지. | M | P1 |
+| ID   | 문제                                         | 근거                                                                                          | 제안                                                                                      | 난이도 | 우선순위 |
+| ---- | -------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | -------- |
+| B-01 | 재생 중 현재 경로를 찾기 어렵다.             | `dimOthers`는 selection만 보며 active segment를 모른다. selection이 없으면 모두 같은 dim이다. | compiled t0/t1로 active IDs를 UI에서 파생해 active path/token 강조, past/future 차등 dim. | M      | P0       |
+| B-02 | 여러 선수의 고스트 우선순위가 비슷하다.      | opacity가 global step이 아니라 entity별 index다.                                              | 선택 단계/entity/hover 우선, 먼 step 자동 감쇠, 최소 opacity 유지.                        | M      | P1       |
+| B-03 | 배지가 경로·토큰·배지와 겹친다.              | 모든 badge가 path midpoint 고정이며 collision pass가 없다.                                    | deterministic offset 후보를 적용하고 미해결 묶음은 hover/selection 때 펼친다.             | M      | P1       |
+| B-04 | 공 경로와 얇은 팀 경로가 피치 선에서 약하다. | ball은 흰 dashed, move는 2.5px 단일 stroke다.                                                 | 반투명 casing 아래 팀색/공 본선을 그려 대비 유지.                                         | S      | P1       |
+| B-05 | 경로 작성 뒤 focus lens가 사라질 수 있다.    | 작성 완료 시 segment selection을 해제하는 흐름이 있다.                                        | 마지막 편집 segment/step의 UI-only focus를 Delete 대상 selection과 분리해 유지.           | M      | P1       |
 
 ## Product Audit C — Convenience and Friendliness
 
-| ID | 문제 | 근거 | 제안 | 난이도 | 우선순위 |
-|---|---|---|---|---|---|
-| C-01 | 같은 path drag가 bend 또는 translate가 된다. | owner selection이라는 숨은 상태가 intent를 바꾼다. | path drag=항상 bend, live token drag=선택 그룹 translate. | S | P0 |
-| C-02 | badge 오클릭이 단계 변경이며 역방향 수정이 번거롭다. | pointerdown이 즉시 step+1 순환한다. | badge는 select만, 정확한 단계는 접근 가능한 picker로 지정. | S | P0 |
-| C-03 | 짧은 경로/9단계/target 실패가 조용하거나 generic하다. | threshold 미달은 no-op, compile error UI는 cycle 한 문구다. | reason code별 “왜/다음 행동” toast. | S | P1 |
-| C-04 | 첫 방문 tour가 만들기까지만 가르친다. | 배치→run→pass→play 중심이고 수정/부분 재생/undo가 없다. | 기본 tour는 짧게 유지하고 opt-in “조금 바꿔 다시 보기” mini tour. | S | P1 |
-| C-05 | 제거된 모드 언어가 안내와 state에 남았다. | keymap group/comment와 legacy fields. | 실제 gesture/작업 언어로 갱신하고 dead state 분리 정리. | S | P1 |
-| C-06 | SVG badge/ghost를 keyboard로 직접 다루기 어렵다. | 안정적인 tab/focus/action 경로가 없다. | SVG tab stop 증식 대신 native selection action bar로 단계/삭제/재생 제공. | M | P0 |
+| ID   | 문제                                                  | 근거                                                        | 제안                                                                      | 난이도 | 우선순위 |
+| ---- | ----------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- | ------ | -------- |
+| C-01 | 같은 path drag가 bend 또는 translate가 된다.          | owner selection이라는 숨은 상태가 intent를 바꾼다.          | path drag=항상 bend, live token drag=선택 그룹 translate.                 | S      | P0       |
+| C-02 | badge 오클릭이 단계 변경이며 역방향 수정이 번거롭다.  | pointerdown이 즉시 step+1 순환한다.                         | badge는 select만, 정확한 단계는 접근 가능한 picker로 지정.                | S      | P0       |
+| C-03 | 짧은 경로/9단계/target 실패가 조용하거나 generic하다. | threshold 미달은 no-op, compile error UI는 cycle 한 문구다. | reason code별 “왜/다음 행동” toast.                                       | S      | P1       |
+| C-04 | 첫 방문 tour가 만들기까지만 가르친다.                 | 배치→run→pass→play 중심이고 수정/부분 재생/undo가 없다.     | 기본 tour는 짧게 유지하고 opt-in “조금 바꿔 다시 보기” mini tour.         | S      | P1       |
+| C-05 | 제거된 모드 언어가 안내와 state에 남았다.             | keymap group/comment와 legacy fields.                       | 실제 gesture/작업 언어로 갱신하고 dead state 분리 정리.                   | S      | P1       |
+| C-06 | SVG badge/ghost를 keyboard로 직접 다루기 어렵다.      | 안정적인 tab/focus/action 경로가 없다.                      | SVG tab stop 증식 대신 native selection action bar로 단계/삭제/재생 제공. | M      | P0       |
 
 ## Product Audit D — Animation and Motion Polish
 
-| ID | 문제 | 근거 | 제안 | 난이도 | 우선순위 |
-|---|---|---|---|---|---|
-| D-01 | 재생 종료→원위치 전환이 즉각적이다. | 자연 종료가 같은 frame에 t=0/playing=false를 쓴다. | 종료 위치 유지와 `결과 보는 중` 상태; 편집/Home에서만 복귀. | M | P0 |
-| D-02 | playback 경계에서 ghost/badge가 한 frame에 전환된다. | `isPlaying` boolean으로 visibility가 즉시 갈린다. | 120~180ms UI opacity transition, reduced-motion은 즉시. | S | P1 |
-| D-03 | drop spring이 실제 pitch drop에 연결되지 않는다. | `AnimatedToken` 지원에 비해 SimplePitch `dropFrom` 전달이 없다. | document 좌표는 즉시 확정하고 UI offset만 spring으로 0에 수렴. | M | P1 |
-| D-04 | 공 spin/height와 kick pulse는 있으나 체감 검증이 없다. | 코드/ISSUE 기록은 있으나 pulse 강도·ground bounce 브라우저 검증이 없다. | 기존 효과를 먼저 체감 검증하고 bounce 추가는 P2로 판단. | S | P2 |
-| D-05 | reduce-motion이 모든 simple-mode CSS transition을 포괄하지 않는다. | tour/spring 중심이고 path opacity 정책이 분산돼 있다. | media query/data-reduced로 route/ghost/action transition을 일괄 정지. | S | P1 |
+| ID   | 문제                                                               | 근거                                                                    | 제안                                                                  | 난이도 | 우선순위 |
+| ---- | ------------------------------------------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------------- | ------ | -------- |
+| D-01 | 재생 종료→원위치 전환이 즉각적이다.                                | 자연 종료가 같은 frame에 t=0/playing=false를 쓴다.                      | 종료 위치 유지와 `결과 보는 중` 상태; 편집/Home에서만 복귀.           | M      | P0       |
+| D-02 | playback 경계에서 ghost/badge가 한 frame에 전환된다.               | `isPlaying` boolean으로 visibility가 즉시 갈린다.                       | 120~180ms UI opacity transition, reduced-motion은 즉시.               | S      | P1       |
+| D-03 | drop spring이 실제 pitch drop에 연결되지 않는다.                   | `AnimatedToken` 지원에 비해 SimplePitch `dropFrom` 전달이 없다.         | document 좌표는 즉시 확정하고 UI offset만 spring으로 0에 수렴.        | M      | P1       |
+| D-04 | 공 spin/height와 kick pulse는 있으나 체감 검증이 없다.             | 코드/ISSUE 기록은 있으나 pulse 강도·ground bounce 브라우저 검증이 없다. | 기존 효과를 먼저 체감 검증하고 bounce 추가는 P2로 판단.               | S      | P2       |
+| D-05 | reduce-motion이 모든 simple-mode CSS transition을 포괄하지 않는다. | tour/spring 중심이고 path opacity 정책이 분산돼 있다.                   | media query/data-reduced로 route/ghost/action transition을 일괄 정지. | S      | P1       |
 
 ## Target Interaction Contract
 
@@ -393,40 +393,40 @@ Execution Owner: Claude (Fable 5)
 
 ## Plan Reversal Log
 
-| ID | Previous Plan / Assumption | New Evidence | Invalidated Scope | Replacement Plan | Preserved Work |
-|---|---|---|---|---|---|
+| ID     | Previous Plan / Assumption                                                                          | New Evidence                                                                                             | Invalidated Scope                                           | Replacement Plan                                                                  | Preserved Work                                                                                         |
+| ------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | REV-01 | PLAN-20260820-004의 후속 후보는 schema 정합화, 자동 대응, Record/Scene 같은 구조 확장이 중심이었다. | ADR-0009 v3 이후 제품은 단일 간편 모드로 수렴했고, 최신 목표는 전술 실험의 작성→재생→수정 반복 비용이다. | 고급 모드·트랙·시간축·자동 대응·Record/Scene 확장 우선순위. | PLAN-20260821-005의 P0 반복 재생/명시적 편집/예측 가능한 gesture를 먼저 수행한다. | R1~R27의 간편 모드, step timing, ghost/bend/group move, possession, attached pass start와 회귀 테스트. |
-| REV-02 | 일시정지/종료 시 t=0 복귀가 authoring 가독성에 유리하다는 가정. | 결과를 보자마자 원위치로 튀어 수정 전 비교가 끊긴다. | `setPlaying(false)`의 암묵적 reset 계약. | 결과 frame 유지 후 Home 또는 실제 편집 시작에서 명시적으로 authoring start 복귀. | 전술 시간의 선형성, Home restart, 재생 중 편집 장식 숨김. |
-| REV-03 | Shift가 단일 모드 경로 작성의 유일한 진입점이라는 가정. | 22명 반복 작성에서 modifier 유지 부담이 크고 ghost body의 fine-adjust와 학습 충돌이 있다. | Shift-only 기본 조작. | route handle을 기본 경로로 추가하고 Shift chain은 accelerator로 보존. | 기존 Shift chain command와 step auto-advance 의미. |
+| REV-02 | 일시정지/종료 시 t=0 복귀가 authoring 가독성에 유리하다는 가정.                                     | 결과를 보자마자 원위치로 튀어 수정 전 비교가 끊긴다.                                                     | `setPlaying(false)`의 암묵적 reset 계약.                    | 결과 frame 유지 후 Home 또는 실제 편집 시작에서 명시적으로 authoring start 복귀.  | 전술 시간의 선형성, Home restart, 재생 중 편집 장식 숨김.                                              |
+| REV-03 | Shift가 단일 모드 경로 작성의 유일한 진입점이라는 가정.                                             | 22명 반복 작성에서 modifier 유지 부담이 크고 ghost body의 fine-adjust와 학습 충돌이 있다.                | Shift-only 기본 조작.                                       | route handle을 기본 경로로 추가하고 Shift chain은 accelerator로 보존.             | 기존 Shift chain command와 step auto-advance 의미.                                                     |
 
 ## Ambiguity Register
 
-| ID | 질문 | 선택지 | 추천 | 영향 | 상태 |
-|---|---|---|---|---|---|
-| A-01 | Step chip 클릭만으로 해당 step 시작을 preview할 것인가? | (a) 즉시 preview (b) 별도 preview 버튼 | **(a)** 문서 mutation 없이 반복 클릭 수가 최소다. | M1 UI/a11y 계약 | **Approved (a)** 2026-08-20 |
-| A-02 | 종료/일시정지 뒤 화면은? | (a) 마지막 frame 유지, 편집/Home에서 복귀 (b) 짧은 dwell 뒤 자동 복귀 | **(a)** 결과 검토 시간을 사용자가 통제한다. | playback store/편집 진입 | **Approved (a)** 2026-08-20 |
-| A-03 | A/B를 이번 범위에 포함할 것인가? | (a) 세션 한정 독립 core (b) P2로 미룸 (c) scenes에 영구 모델링 | **(a)** 비교를 충족하고 schema/save를 재도입하지 않는다. | L 규모, Provider/history 검증 | **Approved (a)** 2026-08-20 — M5 진행 |
-| A-04 | Shift 부담을 줄이는 기본 gesture는? | (a) route handle+Shift accelerator (b) sticky toggle (c) plain token drag=draw | **(a)** 단일 모드와 token move를 보존한다. | M3 hit target/가이드 | **Deferred (사용자 보류)** 2026-08-20 — Shift 유지, handle 미구현 |
-| A-05 | 비선택 ghost를 얼마나 감출 것인가? | (a) step 거리 감쇠+최소 opacity (b) 완전 숨김 (c) 동일 표시 | **(a)** 맥락과 집중의 균형. | M4 browser calibration | **Approved (a)** 2026-08-20, 수치는 브라우저 확인 |
-| A-06 | 전체 reset 확인창이 필요한가? | (a) 확인 없음+Undo/toast (b) 매번 확인 | **(a)** 반복 속도와 현재 undoable replace 활용. | M2 copy/undo 노출 | **Approved (a)** 2026-08-20 |
+| ID   | 질문                                                    | 선택지                                                                         | 추천                                                     | 영향                          | 상태                                                              |
+| ---- | ------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------- |
+| A-01 | Step chip 클릭만으로 해당 step 시작을 preview할 것인가? | (a) 즉시 preview (b) 별도 preview 버튼                                         | **(a)** 문서 mutation 없이 반복 클릭 수가 최소다.        | M1 UI/a11y 계약               | **Approved (a)** 2026-08-20                                       |
+| A-02 | 종료/일시정지 뒤 화면은?                                | (a) 마지막 frame 유지, 편집/Home에서 복귀 (b) 짧은 dwell 뒤 자동 복귀          | **(a)** 결과 검토 시간을 사용자가 통제한다.              | playback store/편집 진입      | **Approved (a)** 2026-08-20                                       |
+| A-03 | A/B를 이번 범위에 포함할 것인가?                        | (a) 세션 한정 독립 core (b) P2로 미룸 (c) scenes에 영구 모델링                 | **(a)** 비교를 충족하고 schema/save를 재도입하지 않는다. | L 규모, Provider/history 검증 | **Approved (a)** 2026-08-20 — M5 진행                             |
+| A-04 | Shift 부담을 줄이는 기본 gesture는?                     | (a) route handle+Shift accelerator (b) sticky toggle (c) plain token drag=draw | **(a)** 단일 모드와 token move를 보존한다.               | M3 hit target/가이드          | **Deferred (사용자 보류)** 2026-08-20 — Shift 유지, handle 미구현 |
+| A-05 | 비선택 ghost를 얼마나 감출 것인가?                      | (a) step 거리 감쇠+최소 opacity (b) 완전 숨김 (c) 동일 표시                    | **(a)** 맥락과 집중의 균형.                              | M4 browser calibration        | **Approved (a)** 2026-08-20, 수치는 브라우저 확인                 |
+| A-06 | 전체 reset 확인창이 필요한가?                           | (a) 확인 없음+Undo/toast (b) 매번 확인                                         | **(a)** 반복 속도와 현재 undoable replace 활용.          | M2 copy/undo 노출             | **Approved (a)** 2026-08-20                                       |
 
 ## Schema and Migration Assessment
 
-- M1~M4, M6~M7은 document schema 변경 없음. 새 필드는 UI-only/editor helper type이며 `SCHEMA_VERSION`과 migration 영향이 없다.
+- M1~~M4, M6~~M7은 document schema 변경 없음. 새 필드는 UI-only/editor helper type이며 `SCHEMA_VERSION`과 migration 영향이 없다.
 - M5 기본안도 session-owned EditorCore 두 개이므로 schema/JSON/localStorage 영향이 없다.
 - A-03에서 scenes 기반 영구 variant를 선택하면 이 계획으로 바로 구현하지 않는다. scene 의미, compile scene index, import/export, migration을 다루는 Proposed ADR과 별도 L3 plan을 먼저 작성한다.
 
 ## Global Verification Matrix
 
-| 검증 | 방법 | 통과 조건 |
-|---|---|---|
-| Engine/domain purity | harness verify와 import 검색 | React/DOM/spring/wall-clock import 0, PASS |
-| Determinism | 같은 doc/scope/t helper 테스트 반복 | deep-equal, wall-clock 비의존 |
-| Transaction integrity | revision/history/undo 단언 | gesture/clear/renumber마다 의도한 1 entry, 완전 복원 |
-| Simple-mode integrity | DOM smoke와 `rg` | track/timeline/scrubber/mode toggle UI 없음 |
-| Accessibility | jsdom role/name/tab order와 수동 keyboard | positive tabindex 0, 핵심 action 모두 native focus 가능 |
-| Lightweight | dependency/build 비교 | dependency diff 0, build PASS, 동시 pitch render 없음 |
-| Full gate | milestone마다 전체 명령 | typecheck/lint/test/build/harness 모두 PASS |
+| 검증                  | 방법                                      | 통과 조건                                               |
+| --------------------- | ----------------------------------------- | ------------------------------------------------------- |
+| Engine/domain purity  | harness verify와 import 검색              | React/DOM/spring/wall-clock import 0, PASS              |
+| Determinism           | 같은 doc/scope/t helper 테스트 반복       | deep-equal, wall-clock 비의존                           |
+| Transaction integrity | revision/history/undo 단언                | gesture/clear/renumber마다 의도한 1 entry, 완전 복원    |
+| Simple-mode integrity | DOM smoke와 `rg`                          | track/timeline/scrubber/mode toggle UI 없음             |
+| Accessibility         | jsdom role/name/tab order와 수동 keyboard | positive tabindex 0, 핵심 action 모두 native focus 가능 |
+| Lightweight           | dependency/build 비교                     | dependency diff 0, build PASS, 동시 pitch render 없음   |
+| Full gate             | milestone마다 전체 명령                   | typecheck/lint/test/build/harness 모두 PASS             |
 
 ## Browser Validation Checklist (User-Owned)
 

@@ -1,16 +1,30 @@
 # Current State
 
-Last Updated: 2026-08-20 (세션 12, PLAN-005 M1~M6 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제. 커밋됨, 사용자 브라우저 확인 대기)
+Last Updated: 2026-08-20 (세션 12, PLAN-005 M1~M7 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제·intent resolver·active 강조·세션 A/B·미니 투어·dead state 정리. 게이트 116 tests PASS, 사용자 브라우저 체감 확인 대기)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 
 ## Current Objective
 
-PLAN-003(Codex 계획·Claude 구현) 완료 → 사용자 브라우저 리뷰 → PLAN-004 목표 확정.
+PLAN-20260821-005 (Codex 계획·Claude 구현, 승인 2026-08-20 "A-04 보류, 나머지는 계획대로") **M1~M7 전부 구현·AGENT-VERIFIED**. 다음: 사용자 브라우저 체감 확인(아래 체크리스트) → 피드백 반영.
+
+### PLAN-005 요약 (2026-08-20, 커밋 d246f43…)
+
+- M1: 단계 칩=시작 장면 preview(문서 불변) · `▶ 이 단계만`/`▶ 여기부터` · 일시정지/종료=frame 유지("결과 화면"), Home/편집 시작 시 복귀 · Space/버튼 공용 action.
+- M2: 배지 클릭=선택만 · SelectionActionBar(단계 picker·재생·삭제) · `움직임 전체 지우기`(1 undo) · clearStep/clearEntity/clearAll · 단계 상한 9 통일.
+- M3: `gestureIntent.ts` 순수 intent 판정 · **경로 드래그=항상 휘기**(그룹 이동은 토큰 드래그) · 체인 9단계 초과 차단+토스트 · toast 렌더러 추가.
+- M4: 재생 중 active 경로 강조(casing)·past/future 후퇴 · 고스트 전역 단계 감쇠 · 배지 충돌 회피 · chip aria-current.
+- M5: 세션 A/B 변형(독립 EditorCore/undo, 메모리 한정, 새로고침 소멸).
+- M6: 짧은 드래그 이유 토스트 · 옵트인 미니 투어(굽히기→단계 재생→undo) · 고스트/배지 160ms 페이드(reduced-motion 즉시) · 공 드롭 스프링 배선.
+- M7: dead state(animMode·timelineExpanded·autoReactOpen·theme)·dead CSS·dead i18n 제거, ADR-0009 Amendment v4, 문서 정합화.
+- 검증: `npm run typecheck && npm run lint && npm test`(116) `&& npm run build && npm run harness:verify && npm run format:check` 전부 PASS + Playwright 헤드리스 probe(m1~m6) PASS.
+- **EXTERNAL-VERIFICATION-PENDING(사용자)**: 결과 유지/복귀 체감, 경로 드래그=휘기 적응, A/B 흐름, 고스트 감쇠 수치(A-05), 드롭 스프링·페이드 체감, 미니 투어 문구.
+- A-04(route handle) 보류 — Shift 유지. 재론 시 ADR-0009 Amendment로.
 
 ## Current Status
 
 **동작하는 전체 플로우** (`npm run dev`):
+
 - ☰ 문서 메뉴: 새 전술 · **예시 불러오기(2v2 패스&압박 / 원투&침투)** · JSON 열기/저장 · PNG/SVG 내보내기 · 자동 저장(브라우저, 새로고침 복원).
 - 배치: 포메이션 12종 · 선수 추가(W) · drag/스냅/그룹 드래그/마퀴/Ctrl 클릭/Ctrl+A · 공 주기(드롭 또는 버튼).
 - 움직임: Alt+드래그 / 더블클릭 / E → 드래그 = 이동 경로(시작=재생 위치) · 공 선택 후 드래그 = 패스(수신자 자동, 패스 후 재생 위치=도착) · waypoint 편집 · 세그먼트 인스펙터(시작 조건 5종·속도·길이·easing·종류·궤적·수신자·경유지 대기) · 트랙 블록 드래그/리사이즈.
@@ -60,11 +74,17 @@ PLAN-003(Codex 계획·Claude 구현) 완료 → 사용자 브라우저 리뷰 �
 ## Known Issues
 
 ### ISSUE-002 — Claude hooks/deny 활성 미확인 — Open(다음 세션 확인)
+
 ### ISSUE-003 — node 22.14 engine 경고 — Open, 무해
+
 ### ISSUE-004 — spring/pulse 강도 체감 미판정 — Open (공 1.45×, 선수 1.18×, drop b0.25)
+
 ### ISSUE-006 — 패스 경로 시작점 시각화 — Resolved (PLAN-003 M1, 잠긴 마커)
+
 ### ISSUE-008 — fling 상수 — minCursorSpeed 22→**45** + stale 100ms(R2, 일반 드래그 오인 수정). ball gain 0.35/decel 4, player gain 0.22 체감 미튜닝 — Open(체감)
+
 ### ISSUE-009 — 리드 패스: 달리는 팀원에게 패스하면 도착 시 그 자리에 없어 루즈볼 — Open(L2, 다음 계획 후보)
+
 ### ISSUE-007 — 자동 대응 품질 — 연속성/coalesce/anti-shuttle 테스트로 고정(PLAN-003 M4), 트랙 팀 필터(M2). 체감 확인만 남음 → Open(체감)
 
 ## Locked / Stable Areas
@@ -78,8 +98,8 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 ## Next Exact Steps
 
 1. (사용자) `npm run dev` → 라운드 6 체크리스트(첫 방문 + 튜토리얼 + 체감). **커밋 권장**(R1~R9 uncommitted).
-1a. Codex 다음 계획 후보: ISSUE-009 리드 패스(달리는 수신자), 타임라인 블록 키보드 조작, 미니바 가장자리 flip, Record 모드, Scene/Phase, ADR-0008.
-1b. Codex에 다음 계획 요청 시 `docs/agent/CODEX_BRIEF.md` + `plans/completed/PLAN-20260820-003-review-round.md` "추가 개선 후보" 참조.
+   1a. Codex 다음 계획 후보: ISSUE-009 리드 패스(달리는 수신자), 타임라인 블록 키보드 조작, 미니바 가장자리 flip, Record 모드, Scene/Phase, ADR-0008.
+   1b. Codex에 다음 계획 요청 시 `docs/agent/CODEX_BRIEF.md` + `plans/completed/PLAN-20260820-003-review-round.md` "추가 개선 후보" 참조.
 2. 피드백 → ISSUE 등록 → PLAN-003 R2 반영.
 3. 다음 세션 hook 출력 확인 → ISSUE-002.
 

@@ -13,19 +13,23 @@ Project-Owned Evidence: `../../../../football-marl-lab` (사용자 이전 프로
 ## Considered Options
 
 ### A. 규칙 기반 반응 생성기 (추천 — Phase 1)
+
 상대 팀 선수별 역할 배정(ball-nearest → press, 2nd → cover, 나머지 → shape 복귀/마킹) + 스티어링(목표점 = 공 위치 예측, 패스 레인 차단, 라인 유지). 사용자 팀의 compiled timeline을 입력으로 **이벤트 시각마다(ball.released/received, 0.5s tick)** 상대 선수의 move segment를 **생성해 문서에 기록**한다.
+
 - (+) 결정론 유지(같은 입력 → 같은 segments). 생성물이 일반 segment이므로 **사용자가 곧바로 편집 가능**(ADR-0001 원칙 "Formation은 preset" 과 같은 정신: 생성은 preset, 구속 아님).
 - (+) 의존성 0, 브라우저에서 즉시. football-marl-lab 로직 이식 가능(순수 TS).
 - (+) 압박 강도/라인 높이 슬라이더로 "스타일" 조절(profiles.ts STYLES 재사용).
 - (−) "진짜 AI"처럼 창발적이진 않음. 상대 공격(역습)까지 생성하려면 규칙이 커짐 → v1은 수비 반응(압박·마킹·커버)만.
 
 ### B. 학습 정책 (Phase 2 후보)
+
 - Google Research Football(GRF) / Light-MALib 정책 — Python·C++ 엔진, 브라우저 실행 불가, 관측 공간 불일치 → 직접 이식 불가. 개념(Football Academy 커리큘럼)만 참고.
 - DeepMind×Liverpool **TacticAI**(2024, 코너킥 GNN) — 공개 모델 없음, 세트피스 한정.
 - Pitch control / EPV(Spearman 2018, Fernández & Bornn) — 모델이 아니라 **평가 함수**. A의 목표점 선택(어디로 뛰어야 공간을 닫나)에 쓰기 좋음. 추천: A에 pitch-control 근사(거리/속도 기반 Voronoi)를 목표점 heuristic으로 채택.
 - 자체 학습(football-marl-lab): 사용자 보고서대로 scripted baseline(=A)이 선행 조건. 학습 후 **소형 정책 → ONNX → onnxruntime-web**로 브라우저 추론 가능(M6+).
 
 ### C. 물리 시뮬 풀게임
+
 non-goal(ADR-0001 §13). 제외.
 
 ## Decision (Proposed)

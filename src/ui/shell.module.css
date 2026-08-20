@@ -1009,11 +1009,6 @@
   opacity: 0.55;
 }
 
-.animToggle {
-  border: 1.5px solid var(--st-border-strong);
-  font-weight: 700;
-}
-
 .pitchAreaSimple {
   grid-area: pitch;
   position: relative;

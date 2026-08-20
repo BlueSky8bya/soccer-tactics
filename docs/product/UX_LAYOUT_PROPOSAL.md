@@ -16,6 +16,7 @@
 │ Timeline (tracks always visible)             │
 └──────────────────────────────────────────────┘
 ```
+
 Harmony 4 · Immersion 2 · Fun 2 · Pitch 2 · Beginner 2 · Advanced 5
 장점: 고급 사용자 익숙(영상편집 멘탈모델). 단점: 상시 패널이 pitch를 잠식, 초보에게 "관리자 패널" 인상, 빈 인스펙터가 주의 분산.
 
@@ -31,6 +32,7 @@ Harmony 4 · Immersion 2 · Fun 2 · Pitch 2 · Beginner 2 · Advanced 5
 │   ╭ ▶ ❚❚ ↺  ━━━●━━━━━━━  1.0× ⌃ ╮           │  ← 하단 floating 재생 바, ⌃로 확장
 └──────────────────────────────────────────────┘
 ```
+
 Harmony 4 · Immersion 5 · Fun 5 · Pitch 5 · Beginner 5 · Advanced 2
 장점: 몰입·Apple-like 최상, 초보 최상. 단점: 다중 track 편집·길어진 timeline을 popover/overlay로 감당하기 어려움, 고급 편집 시 화면 겹침.
 
@@ -53,6 +55,7 @@ Harmony 4 · Immersion 5 · Fun 5 · Pitch 5 · Beginner 5 · Advanced 2
 │ └ Red 2   ░░░░░░░▓▓▓▓░░░  ┘                         │
 └──────────────────────────────────────────────────────┘
 ```
+
 - 좌측: 아이콘 전용 슬림 tool rail (≈48px). 라벨은 hover/tooltip.
 - 우측 Inspector: 선택이 있을 때만 슬라이드 인(spring). 미선택 시 pitch가 그 폭을 차지. 고정(pin) 가능.
 - 하단 Timeline: 기본 1줄(Play/Pause/Restart/Scrubber/Speed). `⌃`로 entity tracks 펼침(progressive disclosure). 펼쳐도 pitch 높이 ≥ 55%.
@@ -61,6 +64,7 @@ Harmony 4 · Immersion 5 · Fun 5 · Pitch 5 · Beginner 5 · Advanced 2
 Harmony 5 · Immersion 4 · Fun 4 · Pitch 4 · Beginner 4 · Advanced 4
 
 ### 9-criteria 매핑
+
 - Visual Harmony: 단일 토큰 체계, 패널 radius/spacing 통일.
 - Functional Harmony: pitch 위 미니바와 Inspector의 같은 행동은 같은 command.
 - Contextual Harmony: 선택 → Inspector+track 하이라이트 동시(선택 링 색 = track 색).

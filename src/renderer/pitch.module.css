@@ -377,18 +377,6 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* ---------- path-scrub ghost (UI-only) ---------- */
-
-.scrubGhost {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 2px;
-  vector-effect: non-scaling-stroke;
-  stroke-dasharray: 2 2;
-  pointer-events: none;
-  opacity: 0.9;
-}
-
 .ballGhost {
   pointer-events: none;
 }

@@ -5,9 +5,6 @@ export interface TourContext {
   doc: TacticDocument
   entry: TacticDocument
   hasPlayed: boolean
-  timelineExpanded: boolean
-  autoReactOpen: boolean
-  animMode: boolean
   /** Playback scope of the last started playback (mini tour: '이 단계만'). */
   playScope: 'all' | 'step' | 'from-step'
 }

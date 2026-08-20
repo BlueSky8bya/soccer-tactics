@@ -36,6 +36,7 @@ Playback Controller (clock: play/pause/seek/speed/loop, rAF)  →  Pitch Rendere
 ```
 
 원칙:
+
 - `engine/`은 순수 TS. DOM·React·시계 의존 없음. 입력: document + t. 출력: 값.
 - Renderer는 ResolvedState만 읽는다. Renderer가 위치를 "가지지" 않음.
 - Playback clock은 UI 계층. `t`를 엔진에 전달할 뿐.
@@ -97,7 +98,7 @@ EventRef  = { kind: "ball.released"|"ball.received"|"segment.start"|"segment.end
 3. Trigger 의존 그래프 구성 → 위상 정렬 → 절대 start/end 계산. 순환이면 compile error(UI에 표시, 재생 불가).
 4. Ball track 검증: possessed↔travel 전이에서 파생 이벤트 테이블 생성. travel 시작 위치 = 직전 holder 위치(compile 시 stateAt으로 고정) — 즉 ball path의 첫 waypoint는 "holder에 붙음" 모드 허용.
 5. 전체 duration = max(end).
-결과 `CompiledTimeline`은 불변, 순수 값.
+   결과 `CompiledTimeline`은 불변, 순수 값.
 
 ## stateAt(compiled, t)
 
@@ -115,6 +116,7 @@ Red1.track:   move{trigger afterSegment(Blue2.move,start,+0.2)}
 Ball.track:   possessed{Blue1} → travel{pass, receiverId Blue2, trigger at 1.2} → possessed{Blue2}
 Red2.track:   move{press, trigger onEvent(ball.received(Ball.travel#1), +0.0)}
 ```
+
 → 단위테스트: stateAt(0.3) Blue2 미이동, stateAt(1.2) ball detach 직후, stateAt(1.8) receive, Red2 start=receive 시각.
 
 ## Amendment 2026-08-20 (Timing.decel, PLAN-003 M6 정합화)

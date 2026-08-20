@@ -36,9 +36,6 @@ function TourStepView({ stepIndex, stepSet }: { stepIndex: number; stepSet: 'mai
   const core = useEditor()
   const { doc } = useEditorSnapshot()
   const hasPlayed = useUiStore((s) => s.hasPlayed)
-  const timelineExpanded = useUiStore((s) => s.timelineExpanded)
-  const autoReactOpen = useUiStore((s) => s.autoReactOpen)
-  const animMode = useUiStore((s) => s.animMode)
   const playScope = useUiStore((s) => s.playScope)
   const reducedMotion = useUiStore((s) => s.reducedMotion)
   const setTourStep = useUiStore((s) => s.setTourStep)
@@ -47,15 +44,7 @@ function TourStepView({ stepIndex, stepSet }: { stepIndex: number; stepSet: 'mai
   const step = STEPS[stepIndex] ?? STEPS[STEPS.length - 1]!
   // Document when this step became active — "done" means "changed since you got here".
   const [entry] = useState(doc)
-  const ctx: TourContext = {
-    doc,
-    entry,
-    hasPlayed,
-    timelineExpanded,
-    autoReactOpen,
-    animMode,
-    playScope,
-  }
+  const ctx: TourContext = { doc, entry, hasPlayed, playScope }
   const done = !step.terminal && step.done(ctx)
 
   const ctxRef = useRef(ctx)
@@ -66,15 +55,7 @@ function TourStepView({ stepIndex, stepSet }: { stepIndex: number; stepSet: 'mai
   const advance = useCallback(() => {
     const d = core.getDocument()
     const u = useUiStore.getState()
-    const next: TourContext = {
-      playScope: u.playScope,
-      doc: d,
-      entry: d,
-      hasPlayed: u.hasPlayed,
-      timelineExpanded: u.timelineExpanded,
-      autoReactOpen: u.autoReactOpen,
-      animMode: u.animMode,
-    }
+    const next: TourContext = { playScope: u.playScope, doc: d, entry: d, hasPlayed: u.hasPlayed }
     setTourStep(nextPendingStep(stepIndex + 1, next, STEPS))
   }, [core, setTourStep, stepIndex, STEPS])
 

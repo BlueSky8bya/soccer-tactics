@@ -27,6 +27,7 @@ localStorage 자동저장(M5)은 사용자 본인 기기의 전술 문서만 —
 ## Re-evaluation Triggers
 
 다음 도입 시 재평가:
+
 - 계정/로그인 → AUTH, SECURITY, PRIVACY
 - 서버 저장/공유 링크 → SECURITY, PRIVACY
 - 결제/구독 → PAYMENTS, FINANCE

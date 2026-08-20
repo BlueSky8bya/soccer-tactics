@@ -20,6 +20,7 @@ uiStore         selection, activeTool, hover, panels, playback {t, playing, spee
 ```
 
 Command/Transaction 규약:
+
 - 모든 document 변경은 `dispatch(command)` 또는 `transaction(label, draft => …)` 경유. 컴포넌트가 doc을 직접 set 금지.
 - `immer.produceWithPatches`로 patch/inversePatch 수집. 히스토리 Entry = patch 묶음.
 - **Transaction 경계 = 사용자 의미 단위**: `beginTransaction("선수 이동")` → 드래그 중 `update()` 여러 번(같은 entry에 병합, 화면은 즉시 반영) → `commit()` / `cancel()`(Esc → inverse 적용). 즉 drag start~end가 한 step.
@@ -36,7 +37,7 @@ compile memo: `compiledFor(revision)` — revision 단위 캐시 1개.
 - Redux Toolkit + redux-undo: 보일러플레이트 큼, redux-undo는 action 단위라 drag 병합에 별도 처리 필요.
 - zundo(zustand temporal): 스냅샷 기반 → 큰 doc에서 메모리 비효율, transaction 병합 세밀 제어 부족.
 - useReducer+Context: 성능·selector 부족.
-→ Zustand + immer patches 자체 history (코드 ~150줄) 선택.
+  → Zustand + immer patches 자체 history (코드 ~150줄) 선택.
 
 ## Amendment 2026-08-19 (M1 구현)
 

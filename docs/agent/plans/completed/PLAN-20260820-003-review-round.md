@@ -18,18 +18,18 @@ Execution Owner: Claude Code (계획 작성: Codex)
 
 ### 1. 문서와 코드가 다른 곳
 
-| 우선순위 | 문서의 약속 | 실제 코드 | 계획상 처리 |
-|---|---|---|---|
-| P0 | ADR-0003의 `Timing`은 `{duration}` 또는 `{speed}`이고 직렬화 형태 변경 시 버전 정책을 기록 | `Timing`에 `{speed, decel}`이 이미 추가됐지만 ADR-0003 Amendment·마이그레이션 메모 없이 `SCHEMA_VERSION = 1` 유지 | 이번 기능은 스키마를 더 바꾸지 않는다. M6에서 기존 불일치를 명시하고 별도 ADR-0003 정합화 후보로 남긴다. |
-| P0 | ADR-0007은 `meta.generated=true`, `lineHeight`, 패스 레인/0.5s tick을 기술 | 구현은 `gen-` ID prefix, team/intensity/delay/lookAhead만 사용하고 release/receive 이벤트에만 반응 | M4는 현행 Phase 1 품질만 보정한다. 메타 필드는 schema 결정이므로 별도 질문으로 남긴다. |
-| P0 | ADR-0003 compile 결과가 화면 경로의 진실이고 travel 시작은 보유자 위치에 붙음 | `compile.ts`의 LUT만 첫 점을 보정하고 `PathLayer`는 원문 `seg.path`를 그림 | M1에서 UI가 compiled 시작점을 presentation data로 만들고 순수 renderer에 전달한다. |
-| P1 | ADR-0002/0004는 재생 중 token을 ref로 직접 갱신해 React 60fps 재렌더를 피함 | `playback.t`→`useResolvedState`→`PitchStage` 전체 React 렌더 경로 | 범위 밖 성능 후보. 11v11+자동 대응 브라우저 프로파일링 후 별도 처리한다. |
-| P1 | ADR-0003은 trigger 위상 정렬, track 탐색 O(log segments)를 기술 | `compile`은 최대 1000회 반복 해석, `stateAt.findSegment`는 선형 탐색 | 현재 규모에서는 동작하나 복잡도 약속과 다르다. 성능 측정 없이 이번에 리팩터링하지 않는다. |
-| P1 | ADR-0005는 Inspector 텍스트/숫자를 blur/Enter 단위 한 history entry로 기록 | 제목·등번호·라벨·좌표·segment 숫자가 대부분 `onChange`마다 transaction | 범위 밖 history 품질 후보로 등록한다. |
-| P1 | `PROJECT_MAP`은 renderer를 순수 SVG 계층으로 설명 | `PitchMarkings`가 `editor/geometry`를 역방향 import하고 Timeline이 `PitchStage.teamColorOf`를 import | 동작 순수성은 유지되지만 계층 결합이 취약하다. 이번 helper는 `src/ui/pitch`/timeline 내부에 둔다. |
-| P1 | `keymap.ts`가 바인딩의 단일 소스 | key 값은 읽지만 pointer modifier·fling threshold는 `PitchStage`에도 하드코딩 | M3에서 mouse gesture predicate/표시 정책을 `keymap.ts`로 모은다. 물리 상수 통합은 별도 후보다. |
-| P2 | ADR-0004 viewBox는 pitch 자체 `0 0 L W` | 실제 `PitchStage`는 편집 여백 때문에 `-5 -5 L+10 W+10` 사용 | 의도적 UI 확장이지만 ADR 메모가 없다. 문서 정합화 후보로 기록한다. |
-| P2 | UI 로컬 지침은 `src/ui/inspector/`를 라우팅 위치로 지칭 | Inspector 파일은 `src/ui/Inspector.tsx`, `SegmentInspector.tsx` | 문서만 낡았다. 이번에 폴더 이동은 하지 않는다. |
+| 우선순위 | 문서의 약속                                                                                | 실제 코드                                                                                                         | 계획상 처리                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| P0       | ADR-0003의 `Timing`은 `{duration}` 또는 `{speed}`이고 직렬화 형태 변경 시 버전 정책을 기록 | `Timing`에 `{speed, decel}`이 이미 추가됐지만 ADR-0003 Amendment·마이그레이션 메모 없이 `SCHEMA_VERSION = 1` 유지 | 이번 기능은 스키마를 더 바꾸지 않는다. M6에서 기존 불일치를 명시하고 별도 ADR-0003 정합화 후보로 남긴다. |
+| P0       | ADR-0007은 `meta.generated=true`, `lineHeight`, 패스 레인/0.5s tick을 기술                 | 구현은 `gen-` ID prefix, team/intensity/delay/lookAhead만 사용하고 release/receive 이벤트에만 반응                | M4는 현행 Phase 1 품질만 보정한다. 메타 필드는 schema 결정이므로 별도 질문으로 남긴다.                   |
+| P0       | ADR-0003 compile 결과가 화면 경로의 진실이고 travel 시작은 보유자 위치에 붙음              | `compile.ts`의 LUT만 첫 점을 보정하고 `PathLayer`는 원문 `seg.path`를 그림                                        | M1에서 UI가 compiled 시작점을 presentation data로 만들고 순수 renderer에 전달한다.                       |
+| P1       | ADR-0002/0004는 재생 중 token을 ref로 직접 갱신해 React 60fps 재렌더를 피함                | `playback.t`→`useResolvedState`→`PitchStage` 전체 React 렌더 경로                                                 | 범위 밖 성능 후보. 11v11+자동 대응 브라우저 프로파일링 후 별도 처리한다.                                 |
+| P1       | ADR-0003은 trigger 위상 정렬, track 탐색 O(log segments)를 기술                            | `compile`은 최대 1000회 반복 해석, `stateAt.findSegment`는 선형 탐색                                              | 현재 규모에서는 동작하나 복잡도 약속과 다르다. 성능 측정 없이 이번에 리팩터링하지 않는다.                |
+| P1       | ADR-0005는 Inspector 텍스트/숫자를 blur/Enter 단위 한 history entry로 기록                 | 제목·등번호·라벨·좌표·segment 숫자가 대부분 `onChange`마다 transaction                                            | 범위 밖 history 품질 후보로 등록한다.                                                                    |
+| P1       | `PROJECT_MAP`은 renderer를 순수 SVG 계층으로 설명                                          | `PitchMarkings`가 `editor/geometry`를 역방향 import하고 Timeline이 `PitchStage.teamColorOf`를 import              | 동작 순수성은 유지되지만 계층 결합이 취약하다. 이번 helper는 `src/ui/pitch`/timeline 내부에 둔다.        |
+| P1       | `keymap.ts`가 바인딩의 단일 소스                                                           | key 값은 읽지만 pointer modifier·fling threshold는 `PitchStage`에도 하드코딩                                      | M3에서 mouse gesture predicate/표시 정책을 `keymap.ts`로 모은다. 물리 상수 통합은 별도 후보다.           |
+| P2       | ADR-0004 viewBox는 pitch 자체 `0 0 L W`                                                    | 실제 `PitchStage`는 편집 여백 때문에 `-5 -5 L+10 W+10` 사용                                                       | 의도적 UI 확장이지만 ADR 메모가 없다. 문서 정합화 후보로 기록한다.                                       |
+| P2       | UI 로컬 지침은 `src/ui/inspector/`를 라우팅 위치로 지칭                                    | Inspector 파일은 `src/ui/Inspector.tsx`, `SegmentInspector.tsx`                                                   | 문서만 낡았다. 이번에 폴더 이동은 하지 않는다.                                                           |
 
 ### 2. 규칙 위반 가능성
 
@@ -52,33 +52,33 @@ Execution Owner: Claude Code (계획 작성: Codex)
 
 ### 4. 사용자 피드백 이력 기준 회귀 위험
 
-| 피드백 | 회귀 위험 | 방어책 |
-|---|---|---|
-| keymap 단일 소스·왼손 조작 | M3 Shift가 선택 토글/직선/타원/step/nudge와 충돌 | select-tool token만 Shift scrub, Ctrl/Cmd만 additive selection으로 명시하고 conflict matrix 테스트 |
-| 좌표보다 “할 수 있는 것” 우선 | M5에서 Inspector 구조가 재배치될 위험 | DOM 의미/aria만 최소 변경, action-first와 좌표 details 유지 |
-| 패스 후 playhead=도착 시각 | M1/M3이 `finishDraw` arrival seek를 덮을 위험 | path 생성과 scrub gesture를 분리하고 arrival seek 회귀 테스트 유지 |
-| 공 패턴·회전·높이·잔상·pulse | M1 path 변경이 token render를 건드릴 위험 | `PathLayer` props/CSS만 수정, `Token`/`AnimatedToken` 불변 |
-| 라이트 기본·우측 단일 컬럼 | M2/M5가 새 패널/모달을 만들 위험 | timeline L2 내부 compact controls만 추가 |
-| 경로 beautify와 tail 편집 | M3 scrub이 waypoint/tail/fling을 가로챌 위험 | 명시적 gesture priority와 modifier 조합 테스트 |
-| 던지기 물리 결정론 | scrub을 engine 또는 spring으로 구현할 위험 | `stateAt` 읽기 전용 UI helper, document/engine/spring 변경 없음 |
-| 자동 대응은 editable segment | 품질 보정이 실시간 AI/숨은 state를 도입할 위험 | 계속 일반 `PlayerSegment[]`, 한 transaction으로 document 기록 |
+| 피드백                        | 회귀 위험                                        | 방어책                                                                                             |
+| ----------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| keymap 단일 소스·왼손 조작    | M3 Shift가 선택 토글/직선/타원/step/nudge와 충돌 | select-tool token만 Shift scrub, Ctrl/Cmd만 additive selection으로 명시하고 conflict matrix 테스트 |
+| 좌표보다 “할 수 있는 것” 우선 | M5에서 Inspector 구조가 재배치될 위험            | DOM 의미/aria만 최소 변경, action-first와 좌표 details 유지                                        |
+| 패스 후 playhead=도착 시각    | M1/M3이 `finishDraw` arrival seek를 덮을 위험    | path 생성과 scrub gesture를 분리하고 arrival seek 회귀 테스트 유지                                 |
+| 공 패턴·회전·높이·잔상·pulse  | M1 path 변경이 token render를 건드릴 위험        | `PathLayer` props/CSS만 수정, `Token`/`AnimatedToken` 불변                                         |
+| 라이트 기본·우측 단일 컬럼    | M2/M5가 새 패널/모달을 만들 위험                 | timeline L2 내부 compact controls만 추가                                                           |
+| 경로 beautify와 tail 편집     | M3 scrub이 waypoint/tail/fling을 가로챌 위험     | 명시적 gesture priority와 modifier 조합 테스트                                                     |
+| 던지기 물리 결정론            | scrub을 engine 또는 spring으로 구현할 위험       | `stateAt` 읽기 전용 UI helper, document/engine/spring 변경 없음                                    |
+| 자동 대응은 editable segment  | 품질 보정이 실시간 AI/숨은 state를 도입할 위험   | 계속 일반 `PlayerSegment[]`, 한 transaction으로 document 기록                                      |
 
 ### 5. 추가 개선 후보
 
-| 우선순위 | 후보 | 근거 | 이번 범위 |
-|---|---|---|---|
-| P0 | schema/ADR 정합화와 import migration 강화 | `decel` shape가 ADR/guard보다 앞섰고 nested document 검증이 얕음 | 범위 밖 L2/L3 |
-| P0 | dangling possession 정리 | formation/clear 후 삭제 선수 holder 가능 | 범위 밖 bugfix |
-| P0 | 닫힌 popover/overlay tab 차단 | 보이지 않는 control로 focus 이동 가능 | M5 포함 |
-| P1 | playback React render 프로파일링 | ADR 성능 설계와 실제가 다르고 11v11에서 영향 증가 | 범위 밖; 측정만 M2 checklist |
-| P1 | Inspector transaction coalescing | ADR-0005 불일치, undo 오염 | 범위 밖 |
-| P1 | generated provenance metadata | prefix 충돌 없이 제거/재생성하려면 schema 정책 필요 | M4 질문, 별도 ADR |
-| P1 | command 경계 통합 | UI inline mutation이 테스트·재사용을 어렵게 함 | 범위 밖 |
-| P1 | persistence nested validation/migration registry | malformed segment를 현재 guard가 통과 가능 | 범위 밖 |
-| P2 | geometry/team color 공용 pure 모듈 | renderer→editor, timeline→pitch 결합 | 범위 밖 구조 변경 |
-| P2 | Scenario fixture 공유 | 엔진/프리셋 중복 회귀 | 범위 밖 |
-| P2 | 실제 schedule distance 기반 heading | ease/hold/decel 방향 cue 정확도 | 범위 밖 |
-| P2 | 자동 대응 공격 전환 | 사용자 요청상 구현 범위 밖 | Proposed ADR만 M4 |
+| 우선순위 | 후보                                             | 근거                                                             | 이번 범위                    |
+| -------- | ------------------------------------------------ | ---------------------------------------------------------------- | ---------------------------- |
+| P0       | schema/ADR 정합화와 import migration 강화        | `decel` shape가 ADR/guard보다 앞섰고 nested document 검증이 얕음 | 범위 밖 L2/L3                |
+| P0       | dangling possession 정리                         | formation/clear 후 삭제 선수 holder 가능                         | 범위 밖 bugfix               |
+| P0       | 닫힌 popover/overlay tab 차단                    | 보이지 않는 control로 focus 이동 가능                            | M5 포함                      |
+| P1       | playback React render 프로파일링                 | ADR 성능 설계와 실제가 다르고 11v11에서 영향 증가                | 범위 밖; 측정만 M2 checklist |
+| P1       | Inspector transaction coalescing                 | ADR-0005 불일치, undo 오염                                       | 범위 밖                      |
+| P1       | generated provenance metadata                    | prefix 충돌 없이 제거/재생성하려면 schema 정책 필요              | M4 질문, 별도 ADR            |
+| P1       | command 경계 통합                                | UI inline mutation이 테스트·재사용을 어렵게 함                   | 범위 밖                      |
+| P1       | persistence nested validation/migration registry | malformed segment를 현재 guard가 통과 가능                       | 범위 밖                      |
+| P2       | geometry/team color 공용 pure 모듈               | renderer→editor, timeline→pitch 결합                             | 범위 밖 구조 변경            |
+| P2       | Scenario fixture 공유                            | 엔진/프리셋 중복 회귀                                            | 범위 밖                      |
+| P2       | 실제 schedule distance 기반 heading              | ease/hold/decel 방향 cue 정확도                                  | 범위 밖                      |
+| P2       | 자동 대응 공격 전환                              | 사용자 요청상 구현 범위 밖                                       | Proposed ADR만 M4            |
 
 ## Objective
 
@@ -516,32 +516,32 @@ M1~M5 검증 증거→Current State/Changelog/Plan→handoff 생성/검토→최
 
 각 milestone 직후 아래 전체 명령을 실행한다. 하나라도 실패하면 원인을 고친 뒤 같은 행 전체를 재실행하고, 그 전에는 다음 milestone으로 넘어가지 않는다.
 
-| Milestone | Command | Required | Current |
-|---|---|---|---|
-| M1 | `npm run typecheck && npm run lint && npm test && npm run build && npm run harness:verify` | all PASS | PASS (58 tests) |
-| M2 | same | all PASS | PASS (63 tests) |
-| M3 | same | all PASS | PASS (68 tests) |
-| M4 | same | all PASS | PASS (74 tests) |
-| M5 | same | all PASS | PASS (78 tests) |
-| M6 | same | all PASS | PASS (78 tests, 문서만) |
+| Milestone | Command                                                                                    | Required | Current                 |
+| --------- | ------------------------------------------------------------------------------------------ | -------- | ----------------------- |
+| M1        | `npm run typecheck && npm run lint && npm test && npm run build && npm run harness:verify` | all PASS | PASS (58 tests)         |
+| M2        | same                                                                                       | all PASS | PASS (63 tests)         |
+| M3        | same                                                                                       | all PASS | PASS (68 tests)         |
+| M4        | same                                                                                       | all PASS | PASS (74 tests)         |
+| M5        | same                                                                                       | all PASS | PASS (78 tests)         |
+| M6        | same                                                                                       | all PASS | PASS (78 tests, 문서만) |
 
 ## Ambiguity Register
 
-| ID | 질문 | 선택지 | 추천 | 영향 | 상태 |
-|---|---|---|---|---|---|
-| A-01 | 팀 필터는 단일 선택인가, 다중 toggle인가? Ball도 필터 대상인가? | (a) 전체/팀 하나, ball 항상 (b) 팀 다중+ball toggle | (a). 2팀 제품과 L2 한 줄에 단순 | M2 state/control/test matrix | Resolved: (a) |
-| A-02 | filtered/collapsed 팀의 선택 row 표현은? | (a) 팀 전체 강제 펼침 (b) group 안 선택 row만 예외 (c) 별도 pinned band | (b). 맥락 유지+11 row 폭증 방지 | M2 DOM/aria/밀도 | Resolved: (b) |
-| A-03 | Path-scrub을 어디서 시작? | (a) select tool의 path-bearing token만 (b) token+선택 path stroke | (a). path 선택/waypoint 충돌 최소 | 발견성 vs 충돌 | Resolved: (a) |
-| A-04 | Path 밖 scrub 정책/tolerance는? | (a) 12px 상당 또는 1.2m 내만 seek, 밖은 마지막 시각 (b) 항상 최근접 seek | (a). 먼 branch jump 방지 | M3 체감/hit 테스트 | Resolved: (a) 1.2m |
-| A-05 | “과도한 왕복” 정량 기준은? | (a) leg≥5m, cosine≤-0.8, overlap이면 coalesce (b) detour/direct≤1.5 (c) 수치 없이 체감 | (a)+(b), 승인 후 수치 고정 | M4 수/적극성/test 기준 | Resolved: (a)+(b): leg≥5m & cos≤-0.8 → coalesce; detour/direct≤1.5 |
-| A-06 | 정확한 focus 순서는? | (a) topbar→rail→pitch→Inspector/help→timeline (b) rail→pitch→timeline→Inspector | (a). positive tabindex 없이 현재 DOM과 일치 | M5 DOM 이동 위험 | Resolved: (a) |
-| A-07 | generated provenance를 이번에 metadata로 바꿀까? | (a) `gen-` 유지+위험 기록 (b) metadata+schema/migration | (a). 품질 범위와 L2 유지 | (b)는 L3/ADR 필요 | Resolved: (a) gen- 유지 |
-| A-08 | Attached marker 시각 언어는? | (a) accent ring+link notch (b) 자물쇠 glyph (c) 고정점만 | (a). 경로를 덜 가리고 붙음 표현 | M1 CSS/browser 기준 | Resolved: (a) |
+| ID   | 질문                                                            | 선택지                                                                                 | 추천                                        | 영향                         | 상태                                                               |
+| ---- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------- | ---------------------------- | ------------------------------------------------------------------ |
+| A-01 | 팀 필터는 단일 선택인가, 다중 toggle인가? Ball도 필터 대상인가? | (a) 전체/팀 하나, ball 항상 (b) 팀 다중+ball toggle                                    | (a). 2팀 제품과 L2 한 줄에 단순             | M2 state/control/test matrix | Resolved: (a)                                                      |
+| A-02 | filtered/collapsed 팀의 선택 row 표현은?                        | (a) 팀 전체 강제 펼침 (b) group 안 선택 row만 예외 (c) 별도 pinned band                | (b). 맥락 유지+11 row 폭증 방지             | M2 DOM/aria/밀도             | Resolved: (b)                                                      |
+| A-03 | Path-scrub을 어디서 시작?                                       | (a) select tool의 path-bearing token만 (b) token+선택 path stroke                      | (a). path 선택/waypoint 충돌 최소           | 발견성 vs 충돌               | Resolved: (a)                                                      |
+| A-04 | Path 밖 scrub 정책/tolerance는?                                 | (a) 12px 상당 또는 1.2m 내만 seek, 밖은 마지막 시각 (b) 항상 최근접 seek               | (a). 먼 branch jump 방지                    | M3 체감/hit 테스트           | Resolved: (a) 1.2m                                                 |
+| A-05 | “과도한 왕복” 정량 기준은?                                      | (a) leg≥5m, cosine≤-0.8, overlap이면 coalesce (b) detour/direct≤1.5 (c) 수치 없이 체감 | (a)+(b), 승인 후 수치 고정                  | M4 수/적극성/test 기준       | Resolved: (a)+(b): leg≥5m & cos≤-0.8 → coalesce; detour/direct≤1.5 |
+| A-06 | 정확한 focus 순서는?                                            | (a) topbar→rail→pitch→Inspector/help→timeline (b) rail→pitch→timeline→Inspector        | (a). positive tabindex 없이 현재 DOM과 일치 | M5 DOM 이동 위험             | Resolved: (a)                                                      |
+| A-07 | generated provenance를 이번에 metadata로 바꿀까?                | (a) `gen-` 유지+위험 기록 (b) metadata+schema/migration                                | (a). 품질 범위와 L2 유지                    | (b)는 L3/ADR 필요            | Resolved: (a) gen- 유지                                            |
+| A-08 | Attached marker 시각 언어는?                                    | (a) accent ring+link notch (b) 자물쇠 glyph (c) 고정점만                               | (a). 경로를 덜 가리고 붙음 표현             | M1 CSS/browser 기준          | Resolved: (a)                                                      |
 
 ## Plan Reversal Log
 
-| ID | Previous Plan / Assumption | New Evidence | Invalidated Scope | Replacement Plan | Preserved Work |
-|---|---|---|---|---|---|
+| ID    | Previous Plan / Assumption                                                    | New Evidence                                                                                   | Invalidated Scope                               | Replacement Plan                                                                             | Preserved Work                                        |
+| ----- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | PR-01 | 초기 skeleton은 바로 구현할 수 있는 `Ready` 상태이며 Execution Owner가 지정됨 | 사용자가 Codex의 역할을 전체 조사 기반 계획 작성으로 한정하고 실행자는 추후 직접 정한다고 명시 | `Ready`, 지정된 owner, 근거 없는 milestone 뼈대 | `Draft (awaiting approval)`, 빈 Execution Owner, Harness Audit+상세 M1~M6+Ambiguity Register | 기존 Plan ID, 목표 우선순위, 독립 milestone/gate 요구 |
 
 ## Rollback Strategy
@@ -564,10 +564,12 @@ M1~M5 검증 증거→Current State/Changelog/Plan→handoff 생성/검토→최
 - 구현 코드 변경 없음. 사용자 승인과 Ambiguity Register 결정 대기.
 
 ### 2026-08-20 — 승인·구현 시작
+
 - 사용자: "계획은 Codex, 구현은 Claude Code". A-01~A-08 전부 추천안 채택. 범위 추가 2건(M1 dangling holder, M6 ADR-0003 Amendment).
-- 구현 전 커밋은 사용자 지시 없어 보류(롤백은 마일스톤 단위 diff). 
+- 구현 전 커밋은 사용자 지시 없어 보류(롤백은 마일스톤 단위 diff).
 
 ### 2026-08-20 — 구현 완료 (Claude Code)
+
 - M1~M6 순차 구현, 각 게이트 PASS. 세부는 CHG-20260820-008.
 - 계획 대비 차이: M3 PitchStage jsdom 제스처 테스트는 getScreenCTM 부재로 순수 helper 테스트(pathScrub.test)로 대체. M5 jsdom에서 multi-mount 간섭 → 테스트 cleanup 추가.
 - 남은 DELEGATED: 브라우저 체크리스트(CURRENT_STATE). Plan → completed/.

@@ -21,13 +21,13 @@ Project Version: 0.1.0
 
 ## Files Touched
 
-| File | Change | Change ID |
-|---|---|---|
+| File                 | Change | Change ID        |
+| -------------------- | ------ | ---------------- |
 | (위 전체, 초기 생성) | create | CHG-20260819-001 |
 
 ## Decisions Made
 
-- ADR-0001~0006, VDR-0001 (Accepted). A-01~A-06 Resolved (`plans/completed/PLAN-20260819-001-m0-initialization.md` Ambiguity Register).
+- ADR-0001~~0006, VDR-0001 (Accepted). A-01~~A-06 Resolved (`plans/completed/PLAN-20260819-001-m0-initialization.md` Ambiguity Register).
 
 ## Decision Persistence
 
@@ -53,15 +53,17 @@ Project Version: 0.1.0
 ## Failed Attempts
 
 ### Attempt 1 — 단일 bash heredoc 배치로 다수 파일 쓰기
+
 Hypothesis: 한 번에 쓰면 빠름. Result: bash 파싱 오류로 아무것도 안 써짐(CSS 2개 누락 → build 실패로 발견). Why abandoned: Write 툴/소분할로 전환. 교훈: 대량 heredoc 후 `ls`로 확인.
 
 ### Attempt 2 — jsdom 30, vitest `environmentMatchGlobs`, tsconfig `baseUrl`
+
 Result: node 22.14 engine 경고 / vitest 4에서 옵션 제거됨 / TS 6 deprecated. Fix: jsdom ^27, 옵션 삭제(UI 테스트는 파일 상단 `// @vitest-environment jsdom`), `paths` 상대경로.
 
 ## Plan Reversals
 
-| ID | New Evidence | Previous Plan | Replacement Plan |
-|---|---|---|---|
+| ID                                | New Evidence                           | Previous Plan               | Replacement Plan                                                                             |
+| --------------------------------- | -------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------- |
 | — (Plan Reversal 아님, 증거 갱신) | 사용자가 저장한 png ≠ 채팅 첨부 이미지 | VDR-0001 = 채팅 이미지 해석 | VDR-0001 canonical = 저장된 png(anti-reference), 채팅 이미지는 비canonical 기록, M-01 ledger |
 
 ## Open Questions

@@ -14,10 +14,10 @@
 
 ## 2. Primary Users
 
-| 사용자 | 특징 | 요구 |
-|---|---|---|
-| 초보 (전술 설명하고 싶은 일반 팬·스트리머·FC 유저) | Timeline 개념 모름 | 몇 번 클릭으로 장면 완성 |
-| 고급 (코치·분석가·콘텐츠 제작자) | 세밀한 타이밍·경로 통제 원함 | 개별 track·delay·curve·trigger 편집 |
+| 사용자                                             | 특징                         | 요구                                |
+| -------------------------------------------------- | ---------------------------- | ----------------------------------- |
+| 초보 (전술 설명하고 싶은 일반 팬·스트리머·FC 유저) | Timeline 개념 모름           | 몇 번 클릭으로 장면 완성            |
+| 고급 (코치·분석가·콘텐츠 제작자)                   | 세밀한 타이밍·경로 통제 원함 | 개별 track·delay·curve·trigger 편집 |
 
 원칙: **Simple by default, powerful when needed.**
 
@@ -57,10 +57,13 @@ Formation 선택 → 선수 이동 → 공 배치 → 선수 A 경로 → 선수
 - 같은 Document + 같은 설정 재생 = 같은 결과.
 
 ### Acceptance Scenario A — 2 vs 2
+
 Blue1(공 보유), Blue2, Red1, Red2, Ball 임의 배치.
+
 1. Blue1 공 보유 시작. 2. Blue2 0.4s 대기. 3. Blue2 측면으로 이동 시작. 4. Red1은 Blue2 움직임 이후 반응. 5. Blue1 t=1.2s 패스. 6. Ball detach. 7. Ball 별도 path로 Blue2에게. 8. Blue2 receive. 9. Red2는 receive 이벤트 이후 압박 시작.
 
 ### Playback 필수 UX
+
 Play / Pause / Restart / Scrub / Replay / Speed / 재생 후 편집 / 편집 후 재실행.
 
 ## 7. Path Editor 요구
@@ -79,12 +82,14 @@ Play / Pause / Restart / Scrub / Replay / Speed / 재생 후 편집 / 편집 후
 - Serializable Domain Model (JSON) — Save/Load/Duplicate/Share/Export/Preset/Versioning/Undo/Scenario Library 기반.
 
 ### Harmony / Immersion / Fun (3×3 평가 틀)
+
 - Harmony: Visual / Functional / Contextual
 - Immersion: Attention Focus / Continuity / Sense of Control
 - Fun: Response Delight / Discovery Delight / Completion Delight
-주요 UX 결정은 이 9개 중 무엇을 개선하는지 설명 가능해야 함.
+  주요 UX 결정은 이 9개 중 무엇을 개선하는지 설명 가능해야 함.
 
 ### Apple-like
+
 시각 복제 아님. visual hierarchy, whitespace, progressive disclosure, direct manipulation, contextual controls, 즉각 feedback, spatial continuity, spring interaction, typography, 최소 상시 컨트롤, predictable, polish, accessibility, reduced-motion. glass/blur 남발 금지. **Interaction quality > 장식.**
 
 ## 9. Non-goals (v1)
@@ -97,6 +102,7 @@ Play / Pause / Restart / Scrub / Replay / Speed / 재생 후 편집 / 편집 후
 > 이 기능이 사용자가 축구 상황을 더 쉽고 정확하고 즐겁게 설명하도록 도와주는가?
 
 Animation 설계 시:
+
 > "이 선수는 먼저, 이 선수는 그 다음, 그 순간 공이, 이후 다른 선수가 반응한다"는 장면을 거의 그대로 Timeline 위에 표현할 수 있는가?
 
 ## 11. Project-Owned Evidence

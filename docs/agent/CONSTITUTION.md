@@ -8,6 +8,7 @@
 = Tactical Board + Motion Path Editor + Timeline Sequencer + Scenario Player. ([ADR-0001](decisions/ADR-0001-product-identity-and-core-principles.md), [Product Brief](../product/PRODUCT_BRIEF.md))
 
 판단 기준 두 가지:
+
 - 이 기능이 사용자가 축구 상황을 더 쉽고·정확하고·즐겁게 설명하게 하는가?
 - "먼저·다음·그 순간 공이·이후 반응"이라는 머릿속 장면을 Timeline에 거의 그대로 표현할 수 있는가?
 
@@ -26,6 +27,7 @@
 Interaction → Commands(transactional) → TacticDocument(JSON) ⇄ History
            → compile(doc) → CompiledTimeline → stateAt(t) → ResolvedState → Renderer(SVG) / Timeline UI / Inspector
 ```
+
 - Document = 의도의 진실. Engine = 시간 해석. Renderer = 표시. Renderer는 위치를 소유하지 않는다. ([ADR-0003](decisions/ADR-0003-animation-engine-and-domain-model.md))
 - React-managed SVG, 도메인 좌표 = 미터(105×68, viewBox). pixel 종속 금지. ([ADR-0004](decisions/ADR-0004-rendering-and-coordinates.md))
 - 3 store(document/history/ui), immer patches transaction. drag = 1 undo step. ([ADR-0005](decisions/ADR-0005-editor-state-and-history.md))

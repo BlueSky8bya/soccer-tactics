@@ -201,9 +201,6 @@ export const ko = {
   'start.react': '상대 반응이 필요하면 상단 ⚡ 자동 대응',
   'start.done': '기본 요소가 다 갖춰졌어요. 선수나 공을 선택하면 여기서 정밀 조정할 수 있어요.',
   'simple.steps': '단계',
-  'simple.needAnim': '아래 [🎬 애니메이션 모드]를 켜면 경로를 그릴 수 있어요',
-  'simple.animMode': '애니메이션 모드',
-  'simple.animOff': '배치 모드',
   'player.card': '선수 정보',
   'player.number': '번호',
   'player.name': '이름',
@@ -216,7 +213,6 @@ export const ko = {
   'panel.guide': '조작법',
   'panel.place': '배치',
   'panel.anim': '경로 그리기·다듬기',
-  'panel.animOffNote': '아래 [🎬 애니메이션 모드]를 켜면:',
   'simple.stepPick':
     '{n}단계 — 지금부터 그리는 움직임이 이 단계에 들어가요. 이미 쓰인 단계면 시작 장면 미리보기 (움직임 {c}개)',
   'simple.stepAssign': '선택한 움직임을 {n}단계로',

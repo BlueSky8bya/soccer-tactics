@@ -5,11 +5,12 @@ Date: 2026-08-19 (artifact 저장·재해석 2026-08-19 세션 2)
 Decision Owners: User / Agent-assisted 해석
 Canonical Artifact: `docs/agent/decision-assets/VDR-0001/reference-tactical-board.png` (1906×811 PNG, 사용자 저장)
 Source References:
+
 - 2026-08-19 초기화 프롬프트 첨부 이미지 (채팅 attachment — **canonical artifact와 다른 그림**, 아래 ledger M-01)
 - 사용자 지시 (2026-08-19 세션 2): "절대로 이대로 하지 말고 … HCI적으로 PC에서 편리하고 몰입·재미·조화 … 애플처럼 통통 튀고 탁 달라붙는 조작감"
-Related ADRs: ADR-0001, ADR-0006
-Supersedes: —
-Superseded By: —
+  Related ADRs: ADR-0001, ADR-0006
+  Supersedes: —
+  Superseded By: —
 
 ## Context
 
@@ -25,17 +26,20 @@ Superseded By: —
 - 시각: 진한 남색 패널, 채도 높은 파랑/분홍/보라 버튼, 텍스트 라벨 버튼 나열.
 
 ### 채팅 첨부 이미지 (비canonical, 기록용)
+
 top-down pitch, 2v2, 팀색 token+등번호, 공, 점선 path+arrowhead, Blue 2 곡선(청록) / Blue 1 직선(파랑) / Red 1·2 곡선 수렴, 작은 원 annotation, "지우개 크기 190%" 슬라이더, 우측 채팅(무관).
 
 ## Decision
 
 ### 채택 (기능 인벤토리로)
+
 1. Formation preset 빠른 선택 (단, 버튼 그리드 나열이 아닌 검색/최근/카테고리 있는 picker).
 2. 도구 집합: 선택/이동, 경로(직선·곡선), 패스 유형(땅볼/로빙 → ADR-0003 `flight: ground|lofted`), 드리블(possession + move), 도형(사각/원/타원), 자유 펜, 지우개, 구역 레이어 토글.
 3. 키보드 단축키 1급 지원 (Space 재생, 숫자키 도구, 모디파이어 드래그).
 4. Top-down landscape full pitch, 팀색 token + 등번호, 공 인접 표시, 점선 path + arrowhead, 직선·곡선 모두.
 
 ### 배제 (anti-pattern)
+
 1. 상시 고정 사이드바에 모든 도구를 텍스트 버튼으로 나열 → Attention Focus·Pitch 가시성 훼손.
 2. 번호 매긴 섹션("1. 2. 3. 4.") 식 관리자 패널 톤.
 3. 고채도 다색 버튼(파랑/분홍/보라) → Visual Harmony 훼손. 색은 팀색과 상태(선택/재생)에만.
@@ -50,10 +54,10 @@ top-down pitch, 2v2, 팀색 token+등번호, 공, 점선 path+arrowhead, Blue 2 
 
 ## Agent Misread / User Correction Ledger
 
-| ID | Agent's Incorrect Interpretation | User Correction | Evidence | Recurrence Prevention |
-|---|---|---|---|---|
-| M-00 | 채팅 이미지 Blue2 청록 path = "런", 파랑 = "패스" 구분으로 추정 | 미확인 (canonical png에는 "직선 이동 / 땅볼 패스 / 로빙 패스"가 별도 도구 → 이동·패스 시각 구분은 **있는 것으로 채택**) | canonical png 도구 목록 | 패스/런 시각 구분을 ADR-0006에서 명시 |
-| M-01 | 사용자가 저장할 파일 = 채팅 첨부 이미지일 것으로 가정 | 저장된 파일은 다른 보드(사이드바형 UI). 사용자: "절대로 이대로 하지 말고" | png vs 채팅 첨부 | Artifact 저장 후 반드시 열어 대조하고 해석 갱신. 채팅 첨부는 "비canonical" 기록 |
+| ID   | Agent's Incorrect Interpretation                                | User Correction                                                                                                         | Evidence                | Recurrence Prevention                                                           |
+| ---- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------- |
+| M-00 | 채팅 이미지 Blue2 청록 path = "런", 파랑 = "패스" 구분으로 추정 | 미확인 (canonical png에는 "직선 이동 / 땅볼 패스 / 로빙 패스"가 별도 도구 → 이동·패스 시각 구분은 **있는 것으로 채택**) | canonical png 도구 목록 | 패스/런 시각 구분을 ADR-0006에서 명시                                           |
+| M-01 | 사용자가 저장할 파일 = 채팅 첨부 이미지일 것으로 가정           | 저장된 파일은 다른 보드(사이드바형 UI). 사용자: "절대로 이대로 하지 말고"                                               | png vs 채팅 첨부        | Artifact 저장 후 반드시 열어 대조하고 해석 갱신. 채팅 첨부는 "비canonical" 기록 |
 
 ## Validation
 

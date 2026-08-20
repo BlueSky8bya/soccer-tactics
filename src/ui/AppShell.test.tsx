@@ -40,7 +40,6 @@ afterEach(() => {
     hover: null,
     currentStep: 1,
     tour: { active: false, step: 0, set: 'main' as const },
-    animMode: false,
     playback: { t: 0, playing: false, speed: 1, loop: false },
     hasPlayed: false,
   })

@@ -1,6 +1,6 @@
 /**
- * UI state (not undoable): selection, tool, hover, drag, panels, snap toggle.
- * Playback state arrives in M2. See ADR-0005.
+ * UI state (not undoable): selection, playback (scope/range/completion), gesture drafts,
+ * tour, toast. See ADR-0005 / ADR-0009; legacy mode fields were removed in PLAN-005 M7.
  */
 import { create } from 'zustand'
 import type { Id, Vec2 } from '@/domain/types'
@@ -52,8 +52,6 @@ export interface UiState {
   /** Team used when adding players via the add-player tool. */
   activeTeamId: Id | null
   snapEnabled: boolean
-  inspectorPinned: boolean
-  timelineExpanded: boolean
   reducedMotion: boolean
   playback: PlaybackState
   /** True once playback was started at least once this session (getting-started checklist). */
@@ -75,9 +73,6 @@ export interface UiState {
   holdResult: (t: number) => void
   /** Explicit return to the authoring view: t=0, stopped, scope reset (Home / first edit). */
   returnToAuthoringStart: () => void
-  /** Animation mode (ADR-0009 v2): double-click drawing + the animation bar only when on. */
-  animMode: boolean
-  setAnimMode: (on: boolean) => void
   /** Simple mode (ADR-0009): step number newly drawn movements get. */
   currentStep: number
   setCurrentStep: (n: number) => void
@@ -96,11 +91,9 @@ export interface UiState {
   shortcutsOpen: boolean
   onboardingDismissed: boolean
   helpOpen: boolean
-  theme: 'light' | 'dark'
   selectedDrawingIds: Id[]
   drawDraft: { kind: 'rect' | 'ellipse' | 'arrow'; a: Vec2; b: Vec2 } | null
   textEdit: { at: Vec2; id?: Id; value: string } | null
-  autoReactOpen: boolean
 
   setTool: (tool: Tool) => void
   select: (ids: Id[]) => void
@@ -110,8 +103,6 @@ export interface UiState {
   setDrag: (drag: DragState | null) => void
   setActiveTeam: (id: Id | null) => void
   setSnapEnabled: (on: boolean) => void
-  setInspectorPinned: (on: boolean) => void
-  setTimelineExpanded: (on: boolean) => void
   setReducedMotion: (on: boolean) => void
   setPlayhead: (t: number) => void
   setPlaying: (on: boolean) => void
@@ -123,11 +114,9 @@ export interface UiState {
   setShortcutsOpen: (on: boolean) => void
   dismissOnboarding: () => void
   setHelpOpen: (on: boolean) => void
-  setTheme: (theme: 'light' | 'dark') => void
   selectDrawings: (ids: Id[]) => void
   setDrawDraft: (d: { kind: 'rect' | 'ellipse' | 'arrow'; a: Vec2; b: Vec2 } | null) => void
   setTextEdit: (t: { at: Vec2; id?: Id; value: string } | null) => void
-  setAutoReactOpen: (on: boolean) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -137,8 +126,6 @@ export const useUiStore = create<UiState>((set) => ({
   drag: null,
   activeTeamId: null,
   snapEnabled: true,
-  inspectorPinned: false,
-  timelineExpanded: false,
   reducedMotion: false,
   playback: { t: 0, playing: false, speed: 1, loop: false },
   hasPlayed: false,
@@ -149,17 +136,14 @@ export const useUiStore = create<UiState>((set) => ({
   tour: { active: false, step: 0, set: 'main' },
   toast: null,
   currentStep: 1,
-  animMode: false,
   selectedSegmentId: null,
   waypointDrag: null,
   pathDraft: null,
   shortcutsOpen: false,
   helpOpen: typeof localStorage === 'undefined' || localStorage.getItem('st.helpOpen') !== '0',
-  theme: 'light', // single bright warm theme (user decision 2026-08-20) — no dark mode
   selectedDrawingIds: [],
   drawDraft: null,
   textEdit: null,
-  autoReactOpen: false,
   onboardingDismissed:
     typeof localStorage !== 'undefined' && localStorage.getItem('st.onboardingDismissed') === '1',
 
@@ -176,8 +160,6 @@ export const useUiStore = create<UiState>((set) => ({
   setDrag: (drag) => set({ drag }),
   setActiveTeam: (activeTeamId) => set({ activeTeamId }),
   setSnapEnabled: (snapEnabled) => set({ snapEnabled }),
-  setInspectorPinned: (inspectorPinned) => set({ inspectorPinned }),
-  setTimelineExpanded: (timelineExpanded) => set({ timelineExpanded }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setPlayhead: (t) =>
     set((s) => ({ playback: { ...s.playback, t: Math.max(0, t) }, completion: 'idle' })),
@@ -203,7 +185,6 @@ export const useUiStore = create<UiState>((set) => ({
       rangeEnd: null,
       completion: 'idle',
     })),
-  setAnimMode: (animMode) => set({ animMode }),
   setCurrentStep: (currentStep) =>
     set({ currentStep: Math.max(1, Math.min(MAX_STEP, currentStep)) }),
   flashToast: (msg, ms = 1800) => {
@@ -230,15 +211,6 @@ export const useUiStore = create<UiState>((set) => ({
   selectDrawings: (selectedDrawingIds) => set({ selectedDrawingIds }),
   setDrawDraft: (drawDraft) => set({ drawDraft }),
   setTextEdit: (textEdit) => set({ textEdit }),
-  setAutoReactOpen: (autoReactOpen) => set({ autoReactOpen }),
-  setTheme: (theme) => {
-    try {
-      localStorage.setItem('st.theme', theme)
-    } catch {
-      /* ignore */
-    }
-    set({ theme })
-  },
   setHelpOpen: (helpOpen) => {
     try {
       localStorage.setItem('st.helpOpen', helpOpen ? '1' : '0')
