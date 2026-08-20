@@ -538,3 +538,12 @@ Problem: 사용자 — "애니메이션 진행할 때는 이거 화살표 안 �
 Change: PathLayer 전체를 재생 중(`playing`) `.decorHidden`으로 페이드 아웃(160ms, reduced-motion 즉시) — M4의 "재생 중 active 경로 강조"를 사용자 결정으로 대체(ADR-0009 v4 해당 항목 수정). 일시정지·결과 화면·단계 미리보기 frame에서는 phase 감쇠로 다시 표시. dimOthers 재생 분기 제거.
 Validation: typecheck/test 116/build/harness/format PASS; Playwright(m8.cjs): authoring path 1.0 → playing path 0·badge 0 → held-result path 0.22(past) → Home 1.0, 콘솔 클린.
 
+### CHG-20260820-044 — UX — 배지 인라인 단계 피커·셰브론 화살촉·애플식 UI 재디자인 (사용자 지시 3건)
+
+Problem: ① 단계 변경이 번거로움(선택→상단 카드까지 이동) ② 화살촉이 크고 투박(채운 삼각형 2.2m) ③ 제목 입력 불필요, 패널/하단바가 밋밋하고 기능 그룹핑 없음.
+Change:
+- **인라인 단계 피커**: 배지 클릭 → 그 자리에 1~9 흰 알약 피커(현재 단계 하이라이트), 숫자 클릭 즉시 변경·닫힘, 바깥 클릭/재생 시 닫힘. 상단 액션 바·숫자키도 유지.
+- **화살촉**: 코칭보드 스타일 벤치마킹 — 채운 삼각형 → 선 굵기에 맞춘 **가는 열린 셰브론**(stroke-only, 선수 1.4m/공 1.2m, 둥근 캡).
+- **재디자인**: 제목 입력 제거(정적 브랜드 "⚽ 전술 보드"), 헤더/하단바 frosted(blur+hairline), 하단바=중앙 부유 알약(재생 그룹 | 구분선 | 단계 칩+구간 재생), 좌측 패널=카드 2장(팀 구성: 포메이션+채우기(파랑)+공 투입(초록) / 정리: 전체 지우기·새로 시작(빨강 틴트)), 우측 조작법·미니 투어도 카드화. 토스트 위치 하단 바 위로.
+Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright(r9.cjs): 피커 열림→5 지정→닫힘·chip5 반영, 제목 input 부재, 스크린샷 육안 확인(카드/부유 바/셰브론), m8 회귀(재생 중 경로 숨김) PASS, 콘솔 클린.
+

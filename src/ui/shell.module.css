@@ -23,32 +23,17 @@
   align-items: center;
   gap: var(--st-space-3);
   padding: 0 var(--st-space-4);
-  background: var(--st-surface);
+  background: color-mix(in srgb, var(--st-surface) 86%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   border-bottom: 1px solid var(--st-border);
 }
 
-.title {
-  font-weight: 600;
+.brand {
+  font-weight: 700;
   font-size: 14px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  padding: 6px 8px;
-  border-radius: var(--st-radius-s);
-  min-width: 140px;
-  width: clamp(160px, 22vw, 380px);
-  max-width: 380px;
-  text-overflow: ellipsis;
-}
-
-.title:hover {
-  background: var(--st-surface-2);
-}
-
-.title:focus {
-  outline: 2px solid var(--st-accent);
-  outline-offset: 0;
-  background: var(--st-surface);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .group {
@@ -441,6 +426,11 @@
 .bottomWrap {
   grid-area: bottom;
   min-width: 0;
+  display: flex;
+  justify-content: center;
+  padding: 4px 12px 12px;
+  background: transparent;
+  pointer-events: none;
 }
 
 /* ---------- formation picker ---------- */
@@ -935,10 +925,9 @@
   grid-area: left;
   display: flex;
   flex-direction: column;
-  gap: var(--st-space-2);
+  gap: var(--st-space-3);
   padding: var(--st-space-3);
-  background: var(--st-surface);
-  border-right: 1px solid var(--st-border);
+  background: transparent;
   overflow: auto;
   min-height: 0;
 }
@@ -949,26 +938,77 @@
   flex-direction: column;
   gap: var(--st-space-3);
   padding: var(--st-space-3);
-  background: var(--st-surface);
-  border-left: 1px solid var(--st-border);
+  background: transparent;
   overflow: auto;
   min-height: 0;
   font-size: 12px;
+}
+
+/* Frosted section card (Apple-style): hairline border, soft depth, generous radius. */
+.panelCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--st-surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--st-border);
+  border-radius: 14px;
+  box-shadow: var(--st-shadow-1);
 }
 
 .panelBtn {
   justify-content: flex-start;
   border: 1px solid var(--st-border);
   width: 100%;
+  border-radius: 10px;
+  height: 34px;
+  font-weight: 600;
+}
+
+/* Soft tinted actions: blue = build, green = ball, red = destructive. */
+.btnTintBlue {
+  background: rgba(10, 122, 255, 0.1);
+  border-color: rgba(10, 122, 255, 0.22);
+  color: #0a63cc;
+}
+
+.btnTintBlue:hover:not(:disabled) {
+  background: rgba(10, 122, 255, 0.16);
+}
+
+.btnTintGreen {
+  background: rgba(52, 168, 83, 0.1);
+  border-color: rgba(52, 168, 83, 0.24);
+  color: #1e7e3e;
+}
+
+.btnTintGreen:hover:not(:disabled) {
+  background: rgba(52, 168, 83, 0.16);
+}
+
+.btnTintRed {
+  background: rgba(255, 59, 48, 0.08);
+  border-color: rgba(255, 59, 48, 0.2);
+  color: #c62a22;
+}
+
+.btnTintRed:hover:not(:disabled) {
+  background: rgba(255, 59, 48, 0.14);
 }
 
 .guideGroup {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: var(--st-space-2) var(--st-space-3);
-  background: var(--st-surface-2);
-  border-radius: var(--st-radius-m);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--st-surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--st-border);
+  border-radius: 14px;
+  box-shadow: var(--st-shadow-1);
 }
 
 .guideTitle {
@@ -1030,8 +1070,30 @@
 .simpleBar {
   display: flex;
   align-items: center;
-  gap: var(--st-space-2);
-  padding: var(--st-space-2) var(--st-space-3);
+  gap: 10px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--st-surface) 90%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid var(--st-border);
+  border-radius: 20px;
+  box-shadow: var(--st-shadow-2);
+  pointer-events: auto;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.barGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.barDivider {
+  width: 1px;
+  height: 26px;
+  background: var(--st-border);
+  flex: none;
 }
 
 .playBtn {
@@ -1099,8 +1161,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding-left: var(--st-space-2);
-  border-left: 1px solid var(--st-border);
 }
 
 .stepLabel {
@@ -1250,7 +1310,7 @@
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 74px;
+  bottom: 92px; /* clear of the floating play bar */
   transform: translateX(-50%);
   background: color-mix(in srgb, var(--st-text-1) 92%, transparent);
   color: var(--st-surface);

@@ -37,60 +37,69 @@ export function ActionsPanel() {
   )
   return (
     <aside className={styles.sideLeft} aria-label={t('panel.actions')}>
-      <div className={styles.sectionLabel}>{t('panel.actions')}</div>
-      {formationSelect(homeF, setHomeF, home?.name ?? 'Home')}
-      {formationSelect(awayF, setAwayF, away?.name ?? 'Away')}
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.panelBtn}`}
-        onClick={() => {
-          const picks = [
-            home ? { teamId: home.id, formationId: homeF } : null,
-            away ? { teamId: away.id, formationId: awayF } : null,
-          ].filter((x): x is { teamId: string; formationId: string } => !!x)
-          if (picks.length) applyFormations(core, picks)
-        }}
-        title={`${home?.name ?? 'Home'} ${homeF} · ${away?.name ?? 'Away'} ${awayF}`}
-        data-tour="fill"
-      >
-        ⚽ {t('panel.fill')}
-      </button>
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.panelBtn}`}
-        onClick={() => {
-          placeBallCenter(core)
-          flashToast(t('panel.ball'))
-        }}
-        data-tour="ball-btn"
-      >
-        ● {t('panel.ball')}
-      </button>
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.panelBtn}`}
-        onClick={() => {
-          const n = clearAllMovements(core)
-          flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
-        }}
-        title={t('panel.clearAll')}
-      >
-        ⌫ {t('panel.clearAll')}
-      </button>
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.panelBtn}`}
-        onClick={() => {
-          replaceDocument(core, seedDefaultTeams(createEmptyDocument({ title: t('doc.untitled') })))
-          const u = useUiStore.getState()
-          u.clearSelection()
-          u.setPlaying(false)
-          u.setPlayhead(0)
-        }}
-      >
-        🗑 {t('panel.reset')}
-      </button>
-      <div className={styles.muted}>{t('panel.clearHint')}</div>
+      <div className={styles.panelCard}>
+        <div className={styles.sectionLabel}>{t('panel.team')}</div>
+        {formationSelect(homeF, setHomeF, home?.name ?? 'Home')}
+        {formationSelect(awayF, setAwayF, away?.name ?? 'Away')}
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintBlue}`}
+          onClick={() => {
+            const picks = [
+              home ? { teamId: home.id, formationId: homeF } : null,
+              away ? { teamId: away.id, formationId: awayF } : null,
+            ].filter((x): x is { teamId: string; formationId: string } => !!x)
+            if (picks.length) applyFormations(core, picks)
+          }}
+          title={`${home?.name ?? 'Home'} ${homeF} · ${away?.name ?? 'Away'} ${awayF}`}
+          data-tour="fill"
+        >
+          ⚽ {t('panel.fill')}
+        </button>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintGreen}`}
+          onClick={() => {
+            placeBallCenter(core)
+            flashToast(t('panel.ball'))
+          }}
+          data-tour="ball-btn"
+        >
+          ● {t('panel.ball')}
+        </button>
+      </div>
+
+      <div className={styles.panelCard}>
+        <div className={styles.sectionLabel}>{t('panel.cleanup')}</div>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintRed}`}
+          onClick={() => {
+            const n = clearAllMovements(core)
+            flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
+          }}
+          title={t('panel.clearAll')}
+        >
+          ⌫ {t('panel.clearAll')}
+        </button>
+        <button
+          type="button"
+          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintRed}`}
+          onClick={() => {
+            replaceDocument(
+              core,
+              seedDefaultTeams(createEmptyDocument({ title: t('doc.untitled') })),
+            )
+            const u = useUiStore.getState()
+            u.clearSelection()
+            u.returnToAuthoringStart()
+          }}
+          title={t('panel.reset')}
+        >
+          🗑 {t('panel.reset')}
+        </button>
+        <div className={styles.muted}>{t('panel.clearHint')}</div>
+      </div>
     </aside>
   )
 }
@@ -112,7 +121,7 @@ export function GuidePanel() {
       <div className={styles.sectionLabel}>{t('panel.guide')}</div>
       <button
         type="button"
-        className={`${styles.btn} ${styles.panelBtn}`}
+        className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintBlue}`}
         onClick={() => startTour(0, 'mini')}
         title={t('tour.mini')}
       >

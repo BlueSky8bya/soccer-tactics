@@ -509,3 +509,42 @@
     transition: none;
   }
 }
+
+/* In-place 1-9 step picker opened from a badge */
+.stepPicker {
+  pointer-events: auto;
+}
+
+.stepPickerBg {
+  fill: rgba(255, 255, 255, 0.94);
+  stroke: rgba(20, 24, 32, 0.14);
+  stroke-width: 0.06;
+  filter: drop-shadow(0 0.25px 0.7px rgba(16, 24, 40, 0.25));
+}
+
+.stepPickerItem {
+  cursor: pointer;
+}
+
+.stepPickerItem circle {
+  fill: transparent;
+}
+
+.stepPickerItem:hover circle {
+  fill: rgba(10, 122, 255, 0.12);
+}
+
+.stepPickerItem text {
+  font-size: 1.3px;
+  font-weight: 700;
+  fill: #3a4150;
+  pointer-events: none;
+}
+
+.stepPickerItemActive circle {
+  fill: var(--st-accent, #0a7aff);
+}
+
+.stepPickerItemActive text {
+  fill: #fff;
+}

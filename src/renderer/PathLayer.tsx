@@ -149,32 +149,45 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
   return (
     <g className={styles.pathLayer}>
       <defs>
+        {/* Slim open-chevron heads (coaching-board style): stroke-only, sized to the line. */}
         {p.doc.players.map((pl) => (
           <marker
             key={pl.id}
             id={`arrow-${pl.id}`}
             viewBox="0 0 10 10"
-            refX="8"
+            refX="7.5"
             refY="5"
-            markerWidth="2.2"
-            markerHeight="2.2"
+            markerWidth="1.4"
+            markerHeight="1.4"
             markerUnits="userSpaceOnUse"
             orient="auto-start-reverse"
           >
-            <path d="M 0 0 L 10 5 L 0 10 z" style={{ fill: p.teamColorOf(pl.id) }} />
+            <path
+              d="M 2 1.5 L 8.5 5 L 2 8.5"
+              style={{ fill: 'none', stroke: p.teamColorOf(pl.id) }}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </marker>
         ))}
         <marker
           id="arrow-ball"
           viewBox="0 0 10 10"
-          refX="8"
+          refX="7.5"
           refY="5"
-          markerWidth="2"
-          markerHeight="2"
+          markerWidth="1.2"
+          markerHeight="1.2"
           markerUnits="userSpaceOnUse"
           orient="auto-start-reverse"
         >
-          <path d="M 0 0 L 10 5 L 0 10 z" style={{ fill: 'var(--st-ball-path, #f5f5f7)' }} />
+          <path
+            d="M 2 1.5 L 8.5 5 L 2 8.5"
+            style={{ fill: 'none', stroke: 'var(--st-ball-path, #f5f5f7)' }}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </marker>
       </defs>
       {items}

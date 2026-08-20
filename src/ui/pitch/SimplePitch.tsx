@@ -16,6 +16,7 @@ import {
   MAX_STEP,
   addStepPass,
   addStepRun,
+  setSegmentStep,
   bendGrabWaypointInDraft,
   bendMoveWaypointInDraft,
   relayoutStepsInDraft,
@@ -100,6 +101,8 @@ export function SimplePitch() {
   const [snapPos, setSnapPos] = useState<Vec2 | null>(null)
   /** Ball drop feedback (D-03): UI-only offset spring from the release point to the settled home. */
   const [ballDrop, setBallDrop] = useState<{ from: Vec2; key: number } | null>(null)
+  /** In-place 1-9 picker opened by clicking a step badge (faster than the action bar). */
+  const [stepPicker, setStepPicker] = useState<{ segId: Id; at: Vec2 } | null>(null)
   /** Unbroken Shift chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
@@ -371,6 +374,12 @@ export function SimplePitch() {
     const pt = clientToPitch(svg, e.clientX, e.clientY)
     svg.focus({ preventScroll: true })
     const st = useUiStore.getState()
+
+    // In-place step picker swallows its own presses; anything else closes it.
+    if (stepPicker) {
+      if (targetEl.closest('[data-step-picker]')) return
+      setStepPicker(null)
+    }
 
     const pressToken = (entityId: Id) => {
       st.returnToAuthoringStart()
@@ -784,9 +793,10 @@ export function SimplePitch() {
             className={styles.stepBadge}
             transform={`translate(${b.end.x}, ${b.end.y})`}
             onPointerDown={(e) => {
-              // Select only (C-02): the exact step is set in the selection action bar or with 1-9.
+              // Select + open the in-place 1-9 picker right here (user 2026-08-20: 단계 바꾸기 간소화).
               e.stopPropagation()
               useUiStore.getState().selectSegment(b.id)
+              setStepPicker({ segId: b.id, at: b.end })
             }}
             role="button"
             aria-label={t('simple.badge', { n: b.step })}
@@ -834,6 +844,48 @@ export function SimplePitch() {
         dropKey={ballDrop?.key ?? 0}
         pulseKey={pulses[doc.ball.id]}
       />
+      {stepPicker && !viewingFrame && (
+        <g
+          data-step-picker="true"
+          className={styles.stepPicker}
+          transform={`translate(${Math.min(Math.max(stepPicker.at.x, 11), L - 11)}, ${Math.max(stepPicker.at.y - 3.4, 2)})`}
+        >
+          <rect
+            x={-10.4}
+            y={-1.5}
+            width={20.8}
+            height={3}
+            rx={1.5}
+            className={styles.stepPickerBg}
+          />
+          {Array.from({ length: 9 }, (_, i) => i + 1).map((n, i) => {
+            const cur = stepOf(
+              (sceneTracks(doc)
+                .flatMap((tr) => tr.segments)
+                .find((sg) => sg.id === stepPicker.segId) ?? {}) as { step?: number },
+            )
+            return (
+              <g
+                key={n}
+                transform={`translate(${(i - 4) * 2.25}, 0)`}
+                className={`${styles.stepPickerItem} ${cur === n ? styles.stepPickerItemActive : ''}`}
+                role="button"
+                aria-label={t('simple.stepAssign', { n })}
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  setSegmentStep(core, stepPicker.segId, n)
+                  setStepPicker(null)
+                }}
+              >
+                <circle r={1.02} />
+                <text textAnchor="middle" dominantBaseline="central">
+                  {n}
+                </text>
+              </g>
+            )
+          })}
+        </g>
+      )}
       {snapPos && ui.pathDraft && (
         <g className={styles.snapRing} transform={`translate(${snapPos.x}, ${snapPos.y})`}>
           <circle r={2.3} />

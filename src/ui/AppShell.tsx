@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react'
-import { setDocumentTitle } from '@/editor/commands'
+import { useEffect } from 'react'
 import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { usePlaybackController } from '@/editor/usePlayback'
@@ -23,11 +22,10 @@ import { useEditorKeyboard } from './useEditorKeyboard'
  */
 export function AppShell() {
   const core = useEditor()
-  const { doc, canUndo, canRedo } = useEditorSnapshot()
+  const { canUndo, canRedo } = useEditorSnapshot()
   const compiled = useCompiled()
   const ui = useUiStore()
   const pb = usePlaybackController(compiled.duration)
-  const titleBefore = useRef('')
   const setReducedMotion = useUiStore((s) => s.setReducedMotion)
   const startTour = useUiStore((s) => s.startTour)
   const variants = useVariantSession()
@@ -71,23 +69,7 @@ export function AppShell() {
   return (
     <div className={styles.shell} data-simple="true">
       <header className={styles.top}>
-        <input
-          className={styles.title}
-          value={doc.meta.title}
-          onChange={(e) => setDocumentTitle(core, e.target.value)}
-          onFocus={(e) => {
-            titleBefore.current = e.currentTarget.value
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur()
-            else if (e.key === 'Escape') {
-              setDocumentTitle(core, titleBefore.current)
-              e.currentTarget.blur()
-            }
-          }}
-          aria-label={t('doc.rename')}
-          spellCheck={false}
-        />
+        <span className={styles.brand}>{t('app.brand')}</span>
         <span className={styles.hintInline}>{t('simple.topHint')}</span>
         <span className={styles.spacer} />
         {variants && (
@@ -165,35 +147,38 @@ export function AppShell() {
 
       <footer className={styles.bottomWrap}>
         <div className={styles.simpleBar}>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
-            onClick={pb.toggle}
-            data-tour="play"
-            title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
-            aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
-          >
-            {ui.playback.playing ? '❚❚' : '▶'}
-          </button>
-          <button
-            type="button"
-            className={styles.btn}
-            onClick={pb.restart}
-            title={`${t('tl.restart')} (Home)`}
-            aria-label={t('tl.restart')}
-          >
-            ↺
-          </button>
-          <button
-            type="button"
-            className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
-            onClick={() => ui.setLoop(!ui.playback.loop)}
-            title={`${t('tl.loop')} (G)`}
-            aria-label={t('tl.loop')}
-            aria-pressed={ui.playback.loop}
-          >
-            ⟳
-          </button>
+          <span className={styles.barGroup}>
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
+              onClick={pb.toggle}
+              data-tour="play"
+              title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
+              aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
+            >
+              {ui.playback.playing ? '❚❚' : '▶'}
+            </button>
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={pb.restart}
+              title={`${t('tl.restart')} (Home)`}
+              aria-label={t('tl.restart')}
+            >
+              ↺
+            </button>
+            <button
+              type="button"
+              className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
+              onClick={() => ui.setLoop(!ui.playback.loop)}
+              title={`${t('tl.loop')} (G)`}
+              aria-label={t('tl.loop')}
+              aria-pressed={ui.playback.loop}
+            >
+              ⟳
+            </button>
+          </span>
+          <span className={styles.barDivider} aria-hidden="true" />
           <StepBar />
           {ui.completion === 'held-result' && (
             <span className={styles.heldResult} role="status">
