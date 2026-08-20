@@ -296,7 +296,7 @@ export function AppShell() {
                     color={ui.annotate.color}
                     onChange={(c) => ui.setAnnotate({ color: c, tool: 'pen' })}
                     onClose={() => setColorPickerOpen(false)}
-                    anchor={customCellRef.current}
+                    anchorRef={customCellRef}
                   />
                 )}
               </span>

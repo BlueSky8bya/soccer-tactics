@@ -65,8 +65,8 @@ export function ColorPicker(p: {
   color: string
   onChange: (hex: string) => void
   onClose: () => void
-  /** Anchor element the popover opens above (the custom-colour cell). */
-  anchor: HTMLElement | null
+  /** Anchor element ref the popover opens above (the custom-colour cell). */
+  anchorRef: React.RefObject<HTMLElement | null>
 }) {
   const [hsv, setHsv] = useState(() => hexToHsv(p.color))
   const [hexText, setHexText] = useState(() => p.color.toLowerCase())
@@ -75,13 +75,14 @@ export function ColorPicker(p: {
   // so the popover renders through a PORTAL on <body>, fixed above the anchor cell.
   const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null)
   useLayoutEffect(() => {
-    if (!p.anchor) return
-    const r = p.anchor.getBoundingClientRect()
+    const anchor = p.anchorRef.current
+    if (!anchor) return
+    const r = anchor.getBoundingClientRect()
     setPos({
       left: Math.max(8, Math.min(window.innerWidth - 208, r.right - 196)),
       bottom: window.innerHeight - r.top + 10,
     })
-  }, [p.anchor])
+  }, [p.anchorRef])
 
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
