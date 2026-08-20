@@ -561,3 +561,14 @@ Change:
 - `.playerCard label`에 white-space: nowrap.
 Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright: 보유 상태에서 중심 드래그=move 1/travel 0, 공 드래그=travel 1, 라벨 높이 30px(1줄), 콘솔 클린.
 
+### CHG-20260820-047 — FEAT — 보유 공 360도 방향 (사용자 지시)
+
+Problem: 보유 공이 항상 홀더 오른쪽(+1.1,+0.7) 고정 — 어느 방향으로 잡고 있는지 표현 불가.
+Change:
+- `carryOffset(v)` (engine/compile, 순수): 홀더→공 벡터의 방향 유지, 거리 [0.8,1.6]m 클램프, 퇴화 시 기존 오프셋.
+- 공 드롭(moveBallStartInDraft): 놓은 방향 그대로 rest/첫 possessed.offset에 반영 — 같은 홀더 주위로 끌면 각도 재조정.
+- 수신 소유(syncTravelReceiver): 패스가 떨어진 지점의 상대 방향으로 offset; 스냅으로 정중앙이면 **공이 온 방향**(진행 반대) 폴백.
+- 엔진 stateAt의 initial-holder 폴백도 ball.home 방향 파생. 수신 공 고스트는 엔진 위치(stateAt end+0.05) 사용.
+- 스키마 변경 없음(기존 optional `possessed.offset` 활용).
+Validation: typecheck/lint/test 119(+3)/build/harness/format PASS; Playwright: 왼쪽 드롭=왼쪽 유지(dx -13px), 위로 재배치(dy -14px), 스냅 패스 후 수신자 왼쪽(온 방향) 유지(dx -13px), 콘솔 클린.
+

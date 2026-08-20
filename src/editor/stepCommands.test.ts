@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyDocument } from '@/domain'
-import { compile } from '@/engine/compile'
+import { carryOffset, compile } from '@/engine/compile'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
 import { findTrack, makePath } from './segmentCommands'
@@ -255,5 +255,49 @@ describe('partial clears (PLAN-005 M2, A-06)', () => {
     expect(cm.issues.filter((i) => i.level === 'error')).toHaveLength(0)
     core.undo()
     expect(stepCounts(core.getDocument()).reduce((x, y) => x + y, 0)).toBe(2)
+  })
+})
+
+describe('360-degree carry direction (user 2026-08-20)', () => {
+  it('carryOffset keeps the direction and clamps the distance to [0.8, 1.6]m', () => {
+    expect(carryOffset({ x: -3, y: 0 })).toEqual({ x: -1.6, y: 0 })
+    expect(carryOffset({ x: 0, y: 0.2 })).toEqual({ x: 0, y: 0.8 })
+    expect(carryOffset({ x: 0, y: 0 })).toEqual({ x: 1.1, y: 0.7 }) // degenerate -> classic
+  })
+
+  it('dropping the ball LEFT of a player holds it on the left, not hardcoded right', async () => {
+    const core = filled()
+    const d = core.getDocument()
+    const p = d.players[0]!
+    const { moveBallStartInDraft } = await import('./segmentCommands')
+    core.transaction('Move ball', (dd) => {
+      moveBallStartInDraft(dd as never, { x: p.home.x - 1.2, y: p.home.y }, p.id)
+    })
+    const doc = core.getDocument()
+    const { stateAt } = await import('@/engine/stateAt')
+    const rs = stateAt(compile(doc), doc, 0)
+    expect(rs.ball.holderId).toBe(p.id)
+    expect(rs.ball.pos.x).toBeLessThan(p.home.x) // left side preserved
+  })
+
+  it('a receiver keeps the ball on the side the pass arrived from', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    const mate = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    // pass lands 1m to the LEFT of the mate
+    addStepPass(
+      core,
+      makePath([d.ball.home, { x: mate.home.x - 1.0, y: mate.home.y }]).waypoints,
+      1,
+      holder.id,
+    )
+    const doc = core.getDocument()
+    const track = findTrack(doc, doc.ball.id)!
+    const recv = track.segments.find((s) => s.kind === 'possessed' && s.holderId === mate.id) as {
+      offset?: { x: number; y: number }
+    }
+    expect(recv?.offset).toBeDefined()
+    expect(recv.offset!.x).toBeLessThan(0) // held on the arrival side
   })
 })

@@ -13,6 +13,7 @@ import type {
   Vec2,
   Waypoint,
 } from '@/domain/types'
+import { carryOffset } from '@/engine/compile'
 import { newId } from './commands'
 import type { EditorCore } from './editorCore'
 
@@ -322,10 +323,23 @@ export function syncTravelReceiverInDraft(
   const passer = prev && prev.kind === 'possessed' ? prev.holderId : undefined
   const near = playersAtArrival
     .filter((p) => p.id !== passer)
-    .map((p) => ({ id: p.id, dist: Math.hypot(p.pos.x - end.x, p.pos.y - end.y) }))
+    .map((p) => ({ id: p.id, pos: p.pos, dist: Math.hypot(p.pos.x - end.x, p.pos.y - end.y) }))
     .filter((x) => x.dist <= radius)
     .sort((a, b) => a.dist - b.dist)[0]
   const receiver = near?.id
+  // Carry angle after the catch = where the pass landed relative to the receiver (360°).
+  // Snapped-on-target passes land dead-centre — fall back to the side the ball CAME from.
+  let recvOffset: Vec2 | undefined
+  if (near) {
+    const rel = { x: end.x - near.pos.x, y: end.y - near.pos.y }
+    if (Math.hypot(rel.x, rel.y) >= 0.3) recvOffset = carryOffset(rel)
+    else {
+      const prevWp = seg.path.waypoints[seg.path.waypoints.length - 2]?.p
+      recvOffset = prevWp
+        ? carryOffset({ x: prevWp.x - end.x, y: prevWp.y - end.y })
+        : carryOffset(rel)
+    }
+  }
   if (receiver) seg.receiverId = receiver
   else delete seg.receiverId
   if (seg.travelKind === 'pass' || seg.travelKind === 'loose')
@@ -337,8 +351,10 @@ export function syncTravelReceiverInDraft(
     nx.trigger.type === 'afterSegment' &&
     nx.trigger.segmentId === segmentId
   ) {
-    if (receiver) nx.holderId = receiver
-    else f.track.segments.splice(f.index + 1, 1)
+    if (receiver) {
+      nx.holderId = receiver
+      if (recvOffset) nx.offset = recvOffset
+    } else f.track.segments.splice(f.index + 1, 1)
   } else if (receiver) {
     f.track.segments.splice(f.index + 1, 0, {
       id: `${segmentId}-recv`,
@@ -346,6 +362,7 @@ export function syncTravelReceiverInDraft(
       trigger: { type: 'afterSegment', segmentId, anchor: 'end', offset: 0 },
       timing: { duration: 0 },
       holderId: receiver,
+      ...(recvOffset ? { offset: recvOffset } : {}),
     })
   }
 }
@@ -381,6 +398,9 @@ export function giveBallToInDraft(doc: TacticDocument, playerId: Id | null): voi
   if (!p) return
   doc.ball.initialHolderId = playerId
   doc.ball.home = { x: p.home.x + 1.1, y: p.home.y + 0.7 }
+  const track0 = findTrack(doc, doc.ball.id)
+  const first0 = track0?.segments[0]
+  if (first0 && first0.kind === 'possessed') first0.offset = { x: 1.1, y: 0.7 }
   // An authored opening possession (possessed @0) is the truth at t=0 — retarget it too,
   // otherwise "공 주기" looks like it did nothing (QA r4 C-3).
   const track = findTrack(doc, doc.ball.id)
@@ -448,7 +468,10 @@ export function shiftEntityPathsInDraft(doc: TacticDocument, entityId: Id, delta
 
 export function moveBallStartInDraft(doc: TacticDocument, to: Vec2, holderId: Id | null): void {
   const holder = holderId ? doc.players.find((p) => p.id === holderId) : undefined
-  const rest = holder ? { x: holder.home.x + 1.1, y: holder.home.y + 0.7 } : to
+  // Keep the DIRECTION the user dropped the ball at (carry angle is theirs to choose);
+  // only the distance is normalized to a natural dribbling radius.
+  const off = holder ? carryOffset({ x: to.x - holder.home.x, y: to.y - holder.home.y }) : undefined
+  const rest = holder && off ? { x: holder.home.x + off.x, y: holder.home.y + off.y } : to
   doc.ball.home = rest
   if (holder) doc.ball.initialHolderId = holder.id
   else delete doc.ball.initialHolderId
@@ -456,8 +479,10 @@ export function moveBallStartInDraft(doc: TacticDocument, to: Vec2, holderId: Id
   if (!track) return
   const first = track.segments[0]
   if (first && first.kind === 'possessed' && first.trigger.type === 'at' && first.trigger.t === 0) {
-    if (holder) first.holderId = holder.id
-    else track.segments.shift()
+    if (holder) {
+      first.holderId = holder.id
+      if (off) first.offset = off
+    } else track.segments.shift()
   }
   const firstPath = track.segments.find((s) => 'path' in s)
   if (firstPath && 'path' in firstPath) {

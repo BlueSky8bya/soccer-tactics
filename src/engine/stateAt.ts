@@ -4,6 +4,7 @@
 import type { Id, TacticDocument, Vec2 } from '@/domain/types'
 import {
   BALL_OFFSET,
+  carryOffset,
   scheduleEndDistance,
   schedulePosAt,
   scheduleDuration,
@@ -124,6 +125,12 @@ function resolveBall(
   t: number,
 ): ResolvedBall {
   const track = compiled.tracks[doc.ball.id]
+  /** Carry offset for the INITIAL holder, derived from where the ball rests around them. */
+  const initialOffset = (): Vec2 => {
+    const h = doc.players.find((p) => p.id === doc.ball.initialHolderId)
+    if (!h) return BALL_OFFSET
+    return carryOffset({ x: doc.ball.home.x - h.home.x, y: doc.ball.home.y - h.home.y })
+  }
   const holderPos = (id: Id, offset: Vec2): Vec2 | undefined => {
     const p = players[id]
     return p ? { x: p.pos.x + offset.x, y: p.pos.y + offset.y } : undefined
@@ -131,7 +138,7 @@ function resolveBall(
 
   if (!track || track.segments.length === 0) {
     if (doc.ball.initialHolderId) {
-      const pos = holderPos(doc.ball.initialHolderId, BALL_OFFSET)
+      const pos = holderPos(doc.ball.initialHolderId, initialOffset())
       if (pos)
         return { pos, status: 'possessed', holderId: doc.ball.initialHolderId, height: 0, spin: 0 }
     }
@@ -176,7 +183,7 @@ function resolveBall(
   // Before the first ball segment
   if (!lastEnded) {
     if (doc.ball.initialHolderId) {
-      const pos = holderPos(doc.ball.initialHolderId, BALL_OFFSET)
+      const pos = holderPos(doc.ball.initialHolderId, initialOffset())
       if (pos)
         return { pos, status: 'possessed', holderId: doc.ball.initialHolderId, height: 0, spin: 0 }
     }

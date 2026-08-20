@@ -698,7 +698,13 @@ export function SimplePitch() {
             tr.entityKind === 'ball' &&
             sg.kind === 'travel' &&
             !!(sg as { receiverId?: Id }).receiverId
-          const pos = received ? { x: end.x + 1.1, y: end.y + 0.7 } : end
+          // Received ball ghost sits where the engine will hold it (carry angle, 360°).
+          let pos = end
+          if (received) {
+            const tmEnd = compiled.segmentTimes[(sg as { id: Id }).id]?.end
+            const after = tmEnd !== undefined ? stateAt(compiled, doc, tmEnd + 0.05) : null
+            pos = after && after.ball.holderId ? after.ball.pos : { x: end.x + 1.1, y: end.y + 0.7 }
+          }
           const out = [
             {
               id: `${sg.id}-ghost`,

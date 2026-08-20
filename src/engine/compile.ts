@@ -19,6 +19,18 @@ export const DEFAULT_SPEED = 4.5 // m/s (jog/run) when a move has speed timing b
 export const MIN_SCENE_DURATION = 5 // seconds shown when the timeline is empty
 export const BALL_OFFSET: Vec2 = { x: 1.1, y: 0.7 } // possessed ball relative to holder (m)
 
+/**
+ * Carry direction: clamp a holder→ball vector to a natural dribbling radius. The holder can carry
+ * the ball at ANY angle (user 2026-08-20) — direction is preserved, distance stays in [0.8, 1.6] m.
+ * Degenerate vectors fall back to the classic right-foot offset.
+ */
+export function carryOffset(v: Vec2): Vec2 {
+  const len = Math.hypot(v.x, v.y)
+  if (len < 0.05) return BALL_OFFSET
+  const r = Math.max(0.8, Math.min(1.6, len))
+  return { x: (v.x / len) * r, y: (v.y / len) * r }
+}
+
 export interface MoveSchedule {
   lut: PathLUT
   /** Travel time excluding holds. */
