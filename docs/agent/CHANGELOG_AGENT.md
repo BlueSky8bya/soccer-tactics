@@ -1077,3 +1077,9 @@ Change:
 - 도착 호에 경계 폴백: 다음 패스가 즉시 발사되는 정션은 안착 대신 다음 패스의 보이는 꼬리(0.55m 지점)로 연결. d2 가드 3.4→3.6.
 - 공 패스 표시를 꼬리 0.55m 시작-트림(trimPathEndD에 startTrim 파라미터) — 체인 패스가 이전 화살촉을 덮지 않음. 히트는 전체 경로 유지.
 Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright chainarc.cjs: 정션 호 2개(중간+도착), 꼬리 갭 0.55m, 스크린샷 검수 — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-110 — UX — 체인 중간 패스의 화살촉 제거 (마지막만 화살표)
+
+Problem: 정션 이음새에서 이전 패스의 화살촉과 다음 꼬리가 어색하게 만남(사용자 제안: 화살표는 맨 끝에만).
+Change: 0.15s 내 다음 패스가 이어지는 '중간' 패스는 markerEnd 생략 — 대시→호→꼬리가 하나의 흐름으로 읽히고 체인의 최종 패스만 화살촉 유지. PathLayer noHeadIds prop.
+Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright: [pass1, pass2] 화살촉 = [false, true], 정션 스크린샷 검수 — ALL PASS.

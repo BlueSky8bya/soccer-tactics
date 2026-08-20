@@ -19,6 +19,8 @@ export interface PathLayerProps {
   draft?: { points: Vec2[]; color: string; dashed: boolean } | null
   /** Dim unrelated paths while editing/playing. */
   dimOthers?: boolean
+  /** Segments whose ARROWHEAD is hidden (mid-chain junctions — only the final pass keeps it). */
+  noHeadIds?: Readonly<Record<Id, boolean>>
   /** Playback focus (PLAN-005 M4): per-segment phase; active paths pop, past/future recede. */
   pathPhase?: Readonly<Record<Id, 'past' | 'active' | 'future'>>
   /** Rest hierarchy (PLAN-006 M3b, A-05a): true = outside the current authoring step, recedes. */
@@ -117,7 +119,7 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
             d={strokeD}
             className={`${styles.path} ${segClass(seg)}`}
             style={{ stroke: color }}
-            markerEnd={`url(#${markerId})`}
+            markerEnd={p.noHeadIds?.[seg.id] ? undefined : `url(#${markerId})`}
           />
           {selected &&
             shown.waypoints.map((w, i) => (

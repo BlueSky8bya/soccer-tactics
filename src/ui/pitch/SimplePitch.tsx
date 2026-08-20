@@ -1213,6 +1213,26 @@ export function SimplePitch() {
   // Arrival arcs (user 2026-08-21): every pass's trimmed arrow tip connects to where the ball
   // actually SETTLES (carried ghost — front-rest / pinned side included) with an arc skirting
   // the receiver's edge at a small padding. Covers single arrivals AND pass→pass relays.
+  // Mid-chain passes keep no arrowhead — the arc + next tail read as ONE flow; only the chain's
+  // final pass points (user 2026-08-21).
+  const passNoHeads = (() => {
+    const out: Record<Id, boolean> = {}
+    const bt = sceneTracks(doc).find((tr) => tr.entityId === doc.ball.id)
+    if (!bt) return out
+    const travels = bt.segments.filter((sg) => sg.kind === 'travel' && !sg.id.startsWith('gen-'))
+    for (const sg of travels) {
+      const tm = compiled.segmentTimes[sg.id]
+      if (!tm) continue
+      const next = travels.find((n) => {
+        if (n.id === sg.id) return false
+        const ts = compiled.segmentTimes[n.id]?.start
+        return ts !== undefined && ts >= tm.end - 0.02 && ts <= tm.end + 0.15
+      })
+      if (next) out[sg.id] = true
+    }
+    return out
+  })()
+
   const passLinks = (() => {
     const out: { d: string }[] = []
     const bt = sceneTracks(doc).find((tr) => tr.entityId === doc.ball.id)
@@ -1658,6 +1678,7 @@ export function SimplePitch() {
           pathPhase={viewingFrame ? pathPhase : undefined}
           stepMuted={stepMuted}
           hoverSegmentId={hoverKey?.startsWith('segment:') ? hoverKey.slice(8) : null}
+          noHeadIds={passNoHeads}
         />
         {/* relay arcs: the dashed flow continues around the holder instead of breaking */}
         {passLinks.map((l, i) => (
