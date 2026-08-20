@@ -249,7 +249,9 @@ describe('compile + stateAt', () => {
     expect(sBefore.players.r2!.moving).toBe(false)
   })
 
-  it('travel start snaps to holder release position when preceded by possession', () => {
+  it('travel release anchor equals the held-ball position at launch (ADR-0010 shared resolver)', () => {
+    // 1) MID-RUN release: the holder dribbles the ball out FRONT — the pass leaves from there,
+    //    and the anchor is position-continuous with the possessed ball one instant earlier.
     const doc = baseDoc()
     doc.scenes[0]!.timeline.tracks.push(
       track('b1', 'player', [
@@ -280,10 +282,93 @@ describe('compile + stateAt', () => {
       ]),
     )
     const c = compile(doc)
-    const s = stateAt(c, doc, 0.5)
-    // holder at x=45 at t=0.5 → ball starts at 45+offset
-    expect(s.ball.pos.x).toBeCloseTo(45 + 1.75, 3)
-    expect(s.ball.status).toBe('travel')
+    const before = stateAt(c, doc, 0.5 - 1e-3)
+    const launch = stateAt(c, doc, 0.5)
+    expect(launch.ball.status).toBe('travel')
+    expect(launch.ball.pos.x).toBeCloseTo(before.ball.pos.x, 1)
+    expect(launch.ball.pos.y).toBeCloseTo(before.ball.pos.y, 1)
+    // dribbling releases AHEAD of the feet (heading +x), not on the hip
+    expect(launch.ball.pos.x).toBeCloseTo(45 + 1.9, 3)
+    expect(launch.ball.pos.y).toBeCloseTo(34, 3)
+
+    // 2) PINNED junction: a run with carryEnd, release while standing after it → anchor = pin.
+    const doc2 = baseDoc()
+    doc2.scenes[0]!.timeline.tracks.push(
+      track('b1', 'player', [
+        {
+          id: 'm',
+          kind: 'move',
+          trigger: { type: 'at', t: 0 },
+          timing: { speed: 10 },
+          path: line([40, 34], [50, 34]),
+          carryEnd: { x: 0, y: 2.6 },
+        },
+      ]),
+      track('ball', 'ball', [
+        {
+          id: 'p1',
+          kind: 'possessed',
+          trigger: { type: 'at', t: 0 },
+          timing: { duration: 0 },
+          holderId: 'b1',
+        },
+        {
+          id: 'tr',
+          kind: 'travel',
+          travelKind: 'pass',
+          trigger: { type: 'at', t: 1.5 },
+          timing: { speed: 10 },
+          path: line([0, 0], [60, 34]),
+        },
+      ]),
+    )
+    const c2 = compile(doc2)
+    const before2 = stateAt(c2, doc2, 1.5 - 1e-3)
+    const launch2 = stateAt(c2, doc2, 1.5)
+    expect(launch2.ball.pos.x).toBeCloseTo(50, 3)
+    expect(launch2.ball.pos.y).toBeCloseTo(34 + 2.6, 3)
+    expect(launch2.ball.pos.x).toBeCloseTo(before2.ball.pos.x, 2)
+    expect(launch2.ball.pos.y).toBeCloseTo(before2.ball.pos.y, 2)
+
+    // 3) LOCKED offset beats the front-rest while standing (user pinned the ball-ghost side).
+    const doc3 = baseDoc()
+    doc3.scenes[0]!.timeline.tracks.push(
+      track('b1', 'player', [
+        {
+          id: 'm',
+          kind: 'move',
+          trigger: { type: 'at', t: 0 },
+          timing: { speed: 10 },
+          path: line([40, 34], [50, 34]),
+        },
+      ]),
+      track('ball', 'ball', [
+        {
+          id: 'p1',
+          kind: 'possessed',
+          trigger: { type: 'at', t: 0 },
+          timing: { duration: 0 },
+          holderId: 'b1',
+          offset: { x: -2.2, y: 0 },
+          offsetLocked: true,
+        },
+        {
+          id: 'tr',
+          kind: 'travel',
+          travelKind: 'pass',
+          trigger: { type: 'at', t: 1.5 },
+          timing: { speed: 10 },
+          path: line([0, 0], [60, 34]),
+        },
+      ]),
+    )
+    const c3 = compile(doc3)
+    const launch3 = stateAt(c3, doc3, 1.5)
+    const before3 = stateAt(c3, doc3, 1.5 - 1e-3)
+    expect(launch3.ball.pos.x).toBeCloseTo(50 - 2.2, 3)
+    expect(launch3.ball.pos.y).toBeCloseTo(34, 3)
+    expect(launch3.ball.pos.x).toBeCloseTo(before3.ball.pos.x, 2)
+    expect(launch3.ball.pos.y).toBeCloseTo(before3.ball.pos.y, 2)
   })
 })
 

@@ -1083,3 +1083,9 @@ Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright chaina
 Problem: 정션 이음새에서 이전 패스의 화살촉과 다음 꼬리가 어색하게 만남(사용자 제안: 화살표는 맨 끝에만).
 Change: 0.15s 내 다음 패스가 이어지는 '중간' 패스는 markerEnd 생략 — 대시→호→꼬리가 하나의 흐름으로 읽히고 체인의 최종 패스만 화살촉 유지. PathLayer noHeadIds prop.
 Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright: [pass1, pass2] 화살촉 = [false, true], 정션 스크린샷 검수 — ALL PASS.
+
+### CHG-20260821-111 — ENGINE — 공용 carry resolver + 정션 경계 연속성 (감사 1안 M1, ADR-0010)
+
+Problem: 공 정션 위치 해석기가 넷(offset/offsetLocked·travel 끝점·carryEnd·stateAt 전방 캐리)이고 compile의 travel release는 possession offset만 사용 — 화면·재생 원점 불일치(감사 S3/R2), chainIn ramp=1 강제로 방향 전환/핀 정션에서 한 프레임 2.7~3.2m 순간이동(S5/R12-A), lastEnded possession의 offsetLocked 소실(R12-C).
+Change: src/engine/carry.ts 신설 — carryAheadFor(단일 캐리 해석: 활성 run 전방+carryEnd blend, standing 영구 front-rest, 경계에서 이전 run end-carry를 '정확히 통과' 후 0.35s 보간)와 heldBallPos(offsetLocked>carry>offset 우선순위). stateAt·compile 둘 다 이 resolver 호출(travel release가 stateAt과 동일 계산). chainIn edge=Infinity 폐기. lastEnded possessed에 offsetLocked 전달.
+Validation: typecheck/lint/test 161/build/harness/format PASS. 신규 테스트 3: 90° 전환 체인 경계 무점프(0.025s 스텝 <0.9m), carryEnd 핀 정확 통과+세척, release anchor=stateAt(launch−ε) 3케이스(전방/핀/락). 구 골든 'release=possession offset'(engine.test) ADR-0010 D6로 교체.

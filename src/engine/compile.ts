@@ -14,6 +14,7 @@ import type {
   Waypoint,
 } from '@/domain/types'
 import { EASINGS, buildPathLUT, pointAtDistance, type PathLUT } from './path'
+import { carryAheadFor, heldBallPos, type CarryMove } from './carry'
 
 export const DEFAULT_SPEED = 4.5 // m/s (jog/run) when a move has speed timing but no value
 export const MIN_SCENE_DURATION = 5 // seconds shown when the timeline is empty
@@ -329,13 +330,16 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
             const prev = list[p.indexInTrack - 1]
             let path = seg.path
             if (prev && prev.seg.kind === 'possessed') {
-              const holderPos = playerPosAt(prev.seg.holderId, p.start)
-              if (holderPos && path.waypoints.length >= 1) {
+              // Shared carry resolver (ADR-0010 D2): the release anchor is wherever stateAt
+              // says the held ball IS at launch — front carry, junction pin and lock included.
+              const release = heldBallPosAt(
+                prev.seg.holderId,
+                p.start,
+                prev.seg.offset ?? BALL_OFFSET,
+                prev.seg.offsetLocked,
+              )
+              if (release && path.waypoints.length >= 1) {
                 const first = path.waypoints[0]!
-                const release = {
-                  x: holderPos.x + (prev.seg.offset ?? BALL_OFFSET).x,
-                  y: holderPos.y + (prev.seg.offset ?? BALL_OFFSET).y,
-                }
                 path = { waypoints: [{ ...first, p: release }, ...path.waypoints.slice(1)] }
               }
             }
@@ -375,6 +379,35 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
       break
     }
     return pos
+  }
+
+  // Helper: carry-aware held-ball position at absolute t — same resolver as stateAt
+  // (ADR-0010 D2), so compiled release anchors and playback can never disagree.
+  function heldBallPosAt(
+    playerId: Id,
+    t: number,
+    offset: Vec2,
+    offsetLocked?: boolean,
+  ): Vec2 | undefined {
+    const pos = playerPosAt(playerId, t)
+    if (!pos) return undefined
+    const list = byTrack.find((l) => l[0]?.entityId === playerId)
+    const moves: CarryMove[] = []
+    let moving = false
+    if (list) {
+      for (const q of list) {
+        if (q.seg.kind !== 'move' || !q.schedule || q.start === undefined || q.end === undefined)
+          continue
+        moves.push({
+          start: q.start,
+          end: q.end,
+          lut: q.schedule.lut,
+          ...(q.seg.carryEnd ? { carryEnd: q.seg.carryEnd } : {}),
+        })
+        if (t >= q.start && t < q.end) moving = true
+      }
+    }
+    return heldBallPos({ pos, moving }, carryAheadFor(moves, t), offset, offsetLocked)
   }
 
   // Unresolved → errors (cycle or dangling reference)
