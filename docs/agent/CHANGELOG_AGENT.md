@@ -542,10 +542,11 @@ Validation: typecheck/test 116/build/harness/format PASS; Playwright(m8.cjs): au
 
 Problem: ① 단계 변경이 번거로움(선택→상단 카드까지 이동) ② 화살촉이 크고 투박(채운 삼각형 2.2m) ③ 제목 입력 불필요, 패널/하단바가 밋밋하고 기능 그룹핑 없음.
 Change:
+
 - **인라인 단계 피커**: 배지 클릭 → 그 자리에 1~9 흰 알약 피커(현재 단계 하이라이트), 숫자 클릭 즉시 변경·닫힘, 바깥 클릭/재생 시 닫힘. 상단 액션 바·숫자키도 유지.
 - **화살촉**: 코칭보드 스타일 벤치마킹 — 채운 삼각형 → 선 굵기에 맞춘 **가는 열린 셰브론**(stroke-only, 선수 1.4m/공 1.2m, 둥근 캡).
 - **재디자인**: 제목 입력 제거(정적 브랜드 "⚽ 전술 보드"), 헤더/하단바 frosted(blur+hairline), 하단바=중앙 부유 알약(재생 그룹 | 구분선 | 단계 칩+구간 재생), 좌측 패널=카드 2장(팀 구성: 포메이션+채우기(파랑)+공 투입(초록) / 정리: 전체 지우기·새로 시작(빨강 틴트)), 우측 조작법·미니 투어도 카드화. 토스트 위치 하단 바 위로.
-Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright(r9.cjs): 피커 열림→5 지정→닫힘·chip5 반영, 제목 input 부재, 스크린샷 육안 확인(카드/부유 바/셰브론), m8 회귀(재생 중 경로 숨김) PASS, 콘솔 클린.
+  Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright(r9.cjs): 피커 열림→5 지정→닫힘·chip5 반영, 제목 input 부재, 스크린샷 육안 확인(카드/부유 바/셰브론), m8 회귀(재생 중 경로 숨김) PASS, 콘솔 클린.
 
 ### CHG-20260820-045 — FIX — 단계 피커 최상위 렌더·좌측 패널 비율 (사용자 지시 2건)
 
@@ -557,38 +558,42 @@ Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright: 피�
 
 Problem: ① 공을 보유한 선수를 Shift+드래그하면 위에 그려진 공이 프레스를 가로채 런 대신 패스가 그려짐 ② 선택 액션 바 "단계" 라벨이 세로로 줄바꿈.
 Change:
+
 - 공이 보유 상태일 때 토큰 프레스를 **시각 반경 정규화 거리**로 판정: 선수 몸통(1.8m 기준)을 누르면 선수(런/이동), 발 옆의 작은 공(0.9m 기준)을 직접 누르면 공(패스). draw/이동/선택 모두 동일 규칙.
 - `.playerCard label`에 white-space: nowrap.
-Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright: 보유 상태에서 중심 드래그=move 1/travel 0, 공 드래그=travel 1, 라벨 높이 30px(1줄), 콘솔 클린.
+  Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright: 보유 상태에서 중심 드래그=move 1/travel 0, 공 드래그=travel 1, 라벨 높이 30px(1줄), 콘솔 클린.
 
 ### CHG-20260820-047 — FEAT — 보유 공 360도 방향 (사용자 지시)
 
 Problem: 보유 공이 항상 홀더 오른쪽(+1.1,+0.7) 고정 — 어느 방향으로 잡고 있는지 표현 불가.
 Change:
+
 - `carryOffset(v)` (engine/compile, 순수): 홀더→공 벡터의 방향 유지, 거리 [0.8,1.6]m 클램프, 퇴화 시 기존 오프셋.
 - 공 드롭(moveBallStartInDraft): 놓은 방향 그대로 rest/첫 possessed.offset에 반영 — 같은 홀더 주위로 끌면 각도 재조정.
 - 수신 소유(syncTravelReceiver): 패스가 떨어진 지점의 상대 방향으로 offset; 스냅으로 정중앙이면 **공이 온 방향**(진행 반대) 폴백.
 - 엔진 stateAt의 initial-holder 폴백도 ball.home 방향 파생. 수신 공 고스트는 엔진 위치(stateAt end+0.05) 사용.
 - 스키마 변경 없음(기존 optional `possessed.offset` 활용).
-Validation: typecheck/lint/test 119(+3)/build/harness/format PASS; Playwright: 왼쪽 드롭=왼쪽 유지(dx -13px), 위로 재배치(dy -14px), 스냅 패스 후 수신자 왼쪽(온 방향) 유지(dx -13px), 콘솔 클린.
+  Validation: typecheck/lint/test 119(+3)/build/harness/format PASS; Playwright: 왼쪽 드롭=왼쪽 유지(dx -13px), 위로 재배치(dy -14px), 스냅 패스 후 수신자 왼쪽(온 방향) 유지(dx -13px), 콘솔 클린.
 
 ### CHG-20260820-048 — FEAT/UX — 정리 단축키·전술안 A/B/C 세그먼트·팀 색 표시 (사용자 지시 3건)
 
 Problem: ① 움직임 전체 지우기/새로 시작에 단축키 없음, 버튼에 표기도 없음 ② A/B 2안뿐이고 복제 버튼이 별도라 어색 ③ 팀 구성 카드에 홈/어웨이 색 구분 없음.
 Change:
+
 - **Shift+Delete** = 움직임 전체 지우기, **Shift+R** = 새로 시작(패널 버튼과 동일 동작·토스트). 버튼 우측에 희미한 ⇧Del/⇧R 표기(.btnKbd), ? 오버레이 편집 그룹에도 추가.
 - 전술안 **A/B/C** 세그먼트 컨트롤(헤더 알약): 채워진 슬롯 클릭=전환(활성 하이라이트), **빈 슬롯(점선 +) 클릭=지금 판을 그 안으로 복제 후 전환** — 별도 복제 버튼 제거, HCI 단순화. VariantId에 'C' 추가(세션 메모리 전용 동일).
 - 팀 구성 Home/Away 라벨 앞에 팀 색 점(teamDotSmall).
-Validation: typecheck/lint/test 120(variant C +1)/build/harness/format PASS; Playwright: 팀 점 2색(blue/red), Shift+Delete로 segments 1→0+토스트, Shift+R로 선수 0→undo 22, kbd 표기 2개, A→B→C 복제·C 활성, 스크린샷 육안 확인, 콘솔 클린.
+  Validation: typecheck/lint/test 120(variant C +1)/build/harness/format PASS; Playwright: 팀 점 2색(blue/red), Shift+Delete로 segments 1→0+토스트, Shift+R로 선수 0→undo 22, kbd 표기 2개, A→B→C 복제·C 활성, 스크린샷 육안 확인, 콘솔 클린.
 
 ### CHG-20260820-049 — UX — 전체 지우기 단축키 X로 교체·버튼 글자 넘침 수정·Ctrl+클릭 추가 선택 (사용자 지시 3건)
 
 Problem: ① Shift+Delete가 누르기 힘듦 ② 정리 버튼 라벨+단축키 표기가 버튼 밖으로 뚫림 ③ 선수 다중 선택이 마퀴뿐 — 엔티티를 하나씩 추가 지정 불가.
 Change:
+
 - 움직임 전체 지우기 = **X** 한 키(Shift+Delete 대체). 버튼 표기/타이틀/? 오버레이 갱신.
 - panelBtn: overflow hidden·패딩/폰트 축소, btnKbd flex none — 라벨+표기가 항상 버튼 안(scrollWidth 검증).
 - **Ctrl+선수 클릭 = 선택에 추가**, 이미 선택된 멤버 Ctrl+클릭 = 빼기(토글), **Ctrl+누른 채 드래그 = 추가 후 그룹 전체 이동**. gestureIntent에 press-token-additive 추가(truth table 테스트 포함). 잔디 Ctrl+클릭=선수 투입은 그대로.
-Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 클릭 1→Ctrl+클릭 2→재클릭 1(토글), Ctrl+드래그로 3명 추가·그룹 60,36px 이동, X로 segments 0, 버튼 overflow 없음, 콘솔 클린.
+  Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 클릭 1→Ctrl+클릭 2→재클릭 1(토글), Ctrl+드래그로 3명 추가·그룹 60,36px 이동, X로 segments 0, 버튼 overflow 없음, 콘솔 클린.
 
 ### CHG-20260820-050 — FIX — 조작법 상단 실선(미니 투어 버튼) 제거 (사용자 지시)
 
@@ -600,69 +605,76 @@ Validation: typecheck/lint/test 120/build/harness/format PASS; 조작법 패널 
 
 Problem: ① 공을 선수 왼쪽에 붙여도 그 선수를 옮기면 공이 제자리에 남아 방향이 틀어짐 ② 공이 붙었는지 땅에 떨어진 건지 구분이 안 됨.
 Change:
+
 - 토큰 드래그 제스처에 ballOrigin: 드래그 그룹에 초기 보유자가 있고 공이 그룹에 없으면 ball.home을 같은 delta로 이동(단일/그룹 드래그 모두) — 선택한 방향 그대로 동행.
 - 부착 순간: 보유자+공 동시 펄스 + "#N 공 보유 — 선수를 옮기면 공도 같이 갑니다" 토스트.
 - 보유 중 상시 표시: 공에 홀더 팀색 **holderRing**(0.28m 스트로크) — 루즈볼과 즉시 구분.
-Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 왼쪽 부착 후 단일 드래그·마퀴 그룹 드래그 모두 상대 오프셋 동일(-13.1,-0.3 유지), 토스트·링 확인, 스크린샷 육안, 콘솔 클린.
+  Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 왼쪽 부착 후 단일 드래그·마퀴 그룹 드래그 모두 상대 오프셋 동일(-13.1,-0.3 유지), 토스트·링 확인, 스크린샷 육안, 콘솔 클린.
 
 ### CHG-20260820-052 — UX — 헤더 중앙 정렬(브랜드+전술안)·버전 배지·Ctrl 안내 사이드바 이동 (사용자 지시)
 
 Problem: 전술안 A/B/C와 "전술 보드"가 작게 흩어져 있고, 배포 버전 확인 수단이 없고, Ctrl 안내가 헤더에 낑겨 있음.
 Change:
+
 - 헤더를 3열 그리드로: 중앙에 **⚽ 전술 보드(17px)** + **A/B/C 세그먼트(칩 34px)** 나란히, 우측 undo/redo/?.
-- 좌상단 **버전 배지**: `v0.1.0 (커밋해시)` — vite define(__APP_VERSION__, package.json+git rev-parse), 흐릿(opacity .55)·호버 선명·클릭 시 클립보드 복사+토스트.
+- 좌상단 **버전 배지**: `v0.1.0 (커밋해시)` — vite define(**APP_VERSION**, package.json+git rev-parse), 흐릿(opacity .55)·호버 선명·클릭 시 클립보드 복사+토스트.
 - 헤더의 Ctrl+클릭/우클릭 안내 제거 → 좌측 팀 구성 카드 하단에 두 줄 들여쓰기(panelHintLine).
-Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 배지 "v0.1.0 (844bab3)"·클릭 복사 토스트, 사이드바 안내 2줄, 스크린샷 육안(중앙 정렬), 콘솔 클린.
+  Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 배지 "v0.1.0 (844bab3)"·클릭 복사 토스트, 사이드바 안내 2줄, 스크린샷 육안(중앙 정렬), 콘솔 클린.
 
 ### CHG-20260820-053 — FEAT — 플레이 GIF 내보내기 (사용자 지시)
 
 Problem: 만든 애니메이션을 시간 압축해 GIF로 뽑아 보관/공유하고 싶음.
 Change:
+
 - 신규 `exportGif.ts`: 엔진 stateAt 기반 캔버스 렌더(재생 뷰와 동일 — 잔디+선수+공만) → gifenc 인코딩. 기본 2배속·12fps·640px, 진행률 콜백, 8프레임마다 yield. `sampleTimes` 순수(테스트 2).
 - 하단 바 재생 그룹에 **GIF** 버튼: 진행률 토스트 → 파일 다운로드(`tactic-YYYY-MM-DD.gif`). 파일이 곧 보관함 — 앱 내 저장 없음(클린 보드 원칙 유지).
 - 의존성 gifenc 추가(8KB, 무의존) — 사용자 기능 지시로 정당화, 기록.
-Validation: typecheck/lint/test 122(+2)/build/harness/format PASS; Playwright: 다운로드 파일 GIF89a 매직·412KB, 콘솔 클린.
+  Validation: typecheck/lint/test 122(+2)/build/harness/format PASS; Playwright: 다운로드 파일 GIF89a 매직·412KB, 콘솔 클린.
 
 ### CHG-20260820-054 — UX — Ctrl+좌클릭 표기·글로시 토큰·결정적 런 바운스·심도 폴리시 (사용자 지시)
 
 Problem: "Ctrl+클릭" 표기가 모호, 디자인이 밋밋(애플 심도 부족), 이동이 뻣뻣함.
 Change:
+
 - 모든 안내 문구 Ctrl+클릭 → **Ctrl+좌클릭**.
 - 토큰: 상단광 radialGradient 캡 + 지면 그림자(ellipse) — 말이 잔디 위에 떠 보이는 글로시 룩.
 - **결정적 런 바운스**: 이동 중 선수에 전술시간 f(t) 사인 bob(진폭 0.22m, 선수별 위상) — UI 표현 전용, 엔진/스크럽 정확성 불변(RULE-04 준수).
 - 심도: 피치 프레임 3중 그림자·라운드 20px, 카드/부유 바 blur 강화+흰 헤어라인+2중 그림자, 재생 버튼 그라디언트+글로우+호버 리프트.
-Validation: 위 게이트 동일 PASS; Playwright: 재생 중 y 진폭 1.1px 관측(결정적), 스크린샷 육안, 콘솔 클린.
+  Validation: 위 게이트 동일 PASS; Playwright: 재생 중 y 진폭 1.1px 관측(결정적), 스크린샷 육안, 콘솔 클린.
 
 ### CHG-20260820-055 — UX — 공을 발끝 거리로·부착 "탁!" 링 플래시 (사용자 지시)
 
 Problem: 보유 공이 선수 원판을 덮어 선수 클릭을 뺏고, 공을 대줬을 때 붙었다는 순간 피드백이 약함.
 Change:
+
 - carryOffset 반경 [0.8,1.6] → **[1.6,2.1]m**(기본 오프셋 1.45,0.95) — 공이 원판 밖 발끝에 위치, 등번호·클릭 안 가림. 관련 테스트 3곳 기대값 갱신.
 - 부착 순간: 기존 펄스+토스트에 **확장 링 플래시**(0.55s bounce ease, onAnimationEnd 자동 제거, reduced-motion 즉시) 추가.
-Validation: typecheck/lint/test 122/build/harness/format PASS; Playwright: 링 발화·자동 소거, 부착 후 중앙 클릭=선수 카드, 스크린샷 육안(공이 가장자리), 콘솔 클린.
+  Validation: typecheck/lint/test 122/build/harness/format PASS; Playwright: 링 발화·자동 소거, 부착 후 중앙 클릭=선수 카드, 스크린샷 육안(공이 가장자리), 콘솔 클린.
 
 ### CHG-20260820-056 — REFACTOR — PLAN-006 M0·M1: 기준 증거 + 시맨틱 토큰·재질 계층
 
 Problem: (M0) 리디자인 비교 기준 없음. (M1) blur 남용(AUD-01), CSS 임의값(AUD-02), depth 평탄(AUD-03), 모션 값 제각각(AUD-07), 화면·GIF 상수 분리(AUD-06).
 Change:
-- M0: BASE-01~08 스크린샷 + manifest를 `docs/agent/evidence/PLAN-20260821-006/`에 고정(콘솔 클린). Ambiguity A-01~A-06 사용자 확정(전부 (a), A-03은 절충 — bob 유지+다수 이동 시 감쇠 예정).
+
+- M0: BASE-01~~08 스크린샷 + manifest를 `docs/agent/evidence/PLAN-20260821-006/`에 고정(콘솔 클린). Ambiguity A-01~~A-06 사용자 확정(전부 (a), A-03은 절충 — bob 유지+다수 이동 시 감쇠 예정).
 - M1 tokens.css: 시맨틱 **depth 4단계**(rest/raised/drag/overlay), **radius 역할**(control 8/card 14/stage 20/pill), **모션 의미**(instant 80/feedback 140/transition 220/settle 320/emphasis 480 + standard/out/pop easing), reduced-motion 전부 0ms. 구 토큰은 alias 유지.
 - A-04a 적용: 헤더·패널 카드 **solid**(blur 제거), blur는 footer 바+오버레이 1종만. pitchFrame·toast·decor 페이드·attach 링·tour spotlight 모두 토큰 소비, module CSS에서 cubic-bezier 0.
 - `renderer/visualDefaults.ts`: 화면·GIF 공용 시각 상수(AUD-06) — exportGif가 소비.
 - SPRINGS를 의미 역할(press/pickup/drop/overlay)로 정리(레거시 alias 유지, ShortcutsOverlay 이행).
 - 신규 `designTokens.test.ts` 4건: 토큰 정의·reduced 커버리지·bezier 0·blur 상한(A-04a).
-Validation: typecheck/lint/test 126(+4)/build/harness/format PASS; 스크린샷 비교(BASE-01 대비 카드 solid·피치 단일 depth), 콘솔 클린.
+  Validation: typecheck/lint/test 126(+4)/build/harness/format PASS; 스크린샷 비교(BASE-01 대비 카드 solid·피치 단일 depth), 콘솔 클린.
 
 ### CHG-20260820-057 — UX — PLAN-006 M2: 첫 3초 계층·로컬 SVG 아이콘·파괴 버튼 절제
 
 Problem: 셸 컨트롤이 텍스트 글리프(↶↷▶↺⟳?) 혼용, 정리(파괴) 버튼이 상시 빨강 강조, 구간 재생 버튼이 본 재생과 같은 무게(AUD 격차표 header/actions/footer 항목).
 Change:
+
 - 신규 `UiIcon.tsx`: 로컬 stroke SVG 7종(undo/redo/play/pause/home/loop/help, currentColor·24 viewBox) — 외부 의존성 0, 셸 한 목소리.
 - 정리 카드: `btnQuietDanger` — 평시 무채색, hover/focus-visible에서만 빨강(파괴는 의도 시점에만 강조).
 - 양 팀 채우기 `panelPrimary`(38px) — 빈번 행동 크게(Fitts).
 - StepBar 구간 재생 버튼을 pill 세컨더리(28px, hover 시 accent)로 — footer Play가 유일한 primary.
 - 테스트: 랜드마크·핵심 액션 존재 + 레거시 크롬(스크럽/모드 토글/range) 부재 단언 1건 추가.
-Validation: typecheck/lint/test 127(+1)/build/harness/format PASS; 스크린샷 육안(아이콘·계층), 콘솔 클린.
+  Validation: typecheck/lint/test 127(+1)/build/harness/format PASS; 스크린샷 육안(아이콘·계층), 콘솔 클린.
 
 ### CHG-20260820-058 — UX — 보유 공 간격 확대·토큰 단색 (사용자 지시)
 
@@ -674,19 +686,21 @@ Validation: typecheck/lint/test 127/build/harness/format PASS; Playwright: 간�
 
 Problem: 팀 구분이 색뿐(CVD 취약), 대기 화면에서 모든 경로가 같은 대비로 경쟁, 22명 동시 이동 시 bob이 떨림(AUD-05, A-02/A-03/A-05).
 Change:
+
 - **A-02a**: away 선수 안쪽 흰 키라인(화면 Token + GIF 렌더러 동일 — parity 유지).
 - **A-05a**: 대기(t=0) 화면에서 현재 단계 외 경로 opacity 0.55(선택 세그먼트는 항상 선명) — 순수 helper deriveRestMutedIds(+테스트 2).
 - **A-03 절충 구현**: run bob 진폭이 동시 이동 4명까지 0.22m, 그 이상 4/n 비례 감쇠(하한 0.08) — 결정적 f(t) 유지.
-Validation: typecheck/lint/test 129(+2)/build/harness/format PASS; Playwright: away 키라인 11개, 단계 전환 시 mute 플래그 [true,false]↔[false,true], 콘솔 클린.
+  Validation: typecheck/lint/test 129(+2)/build/harness/format PASS; Playwright: away 키라인 11개, 단계 전환 시 mute 플래그 [true,false]↔[false,true], 콘솔 클린.
 
 ### CHG-20260820-060 — UX — PLAN-006 M4: 직접 조작 마이크로 인터랙션
 
 Problem: press/drag/drop 장식이 한 상태 모델 없이 흩어짐(AUD-04); 누르는 순간·잉크 시작·커밋 순간의 확인 피드백 부재.
 Change:
+
 - 신규 : 순수 phase 머신(idle→pressed→dragging→settling→idle, cancel 경로 포함, 비정상 이벤트 무시) — 장식의 단일 진실(+테스트 4).
 - **프레스 리프트**: 토큰 pointer down 즉시 scale 1.035(스프링, reduced=즉시), 드래그 시작하면 기존 1.08 픽업 — 입력 1프레임 내 반응.
 - **잉크 시작/커밋 확인**: Shift 드로우 시작 시 주체 토큰 1회 펄스, 경로 커밋 순간 다시 1회 펄스(화살표가 누구 것인지 즉시 인지).
-Validation: typecheck/lint/test 133(+4)/build/harness/format PASS; Playwright: 프레스 중 해당 토큰만 scale 1.035, 드로우 회귀 정상, 콘솔 클린.
+  Validation: typecheck/lint/test 133(+4)/build/harness/format PASS; Playwright: 프레스 중 해당 토큰만 scale 1.035, 드로우 회귀 정상, 콘솔 클린.
 
 ### CHG-20260820-061 — UX — PLAN-006 M5: 재생 무대 전환
 
@@ -709,22 +723,23 @@ Validation: typecheck/lint/test 134/build/harness/format PASS (최종 게이트 
 
 Problem: ① 공 보유+패스 상태에서 홀더를 옮기면 패스가 안 따라오고, 1단계 패스면 t=0에 공 상태가 travel이라 홀더 프레스가 공 드래그로 새어 소유가 풀림 ② compile의 MIN_SCENE_DURATION(5s) 바닥값 때문에 짧은 플레이도 5초 재생(느림) ③ 화살촉이 끝점의 엔티티/고스트에 가려짐.
 Change:
+
 - 프레스 홀더 판별에 t=0 폴백(initialHolderId) — 홀더 몸통 프레스가 항상 선수. 홀더 드래그 시 ball.home과 **패스 원점(wp0)** 동행(`moveBallPathOriginInDraft`, 단일/그룹). addStepPass가 만드는 소유가 carry 방향 상속(공 점프 제거). t=0 정지 상태 공은 possessed로 렌더(홀더 링 유지).
 - `playableEnd(compiled)` = 마지막 세그먼트 끝 — 재생/Space/GIF가 5초 패딩 대신 실제 끝까지만. 기본 속도 상향(선수 5→7, 패스 16→20 m/s).
 - 표시 경로 끝을 트림(선수 2.15m/공 1.15m, `trimPathEndD`+세그먼트 identity 캐시) — 화살촉이 토큰·고스트 밖에 뜸. 히트 경로는 원래 길이 유지.
-Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 홀더 +13.6m 드래그 후 상대 오프셋(−1.7,+0.9)·wp0=ball.home 유지·소유 유지, 18m 런 재생 5.0→**2.61s**, 화살촉 클리어런스 스크린샷, 콘솔 클린.
+  Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 홀더 +13.6m 드래그 후 상대 오프셋(−1.7,+0.9)·wp0=ball.home 유지·소유 유지, 18m 런 재생 5.0→**2.61s**, 화살촉 클리어런스 스크린샷, 콘솔 클린.
 
 ### CHG-20260820-065 — FIX — 미래 보유자 이동 시 공 앵커 동행·곡선 경로 평행이동 (사용자 지시)
 
 Problem: ① 패스를 받을(또는 받은 뒤 이어 찰) 선수를 옮겨도 패스 끝/재패스 원점이 제자리 ② 곡선 경로를 가진 선수를 옮기면 시작점만 붙어가 경로가 과도하게 꺾임.
 Change:
+
 - `shiftBallAnchorsForPlayerInDraft`: 선수 이동 시 그 선수가 **받을 패스의 끝** + **이어 찰 패스의 원점**(직전 소유 기준)을 같은 delta로 동행(핸들 포함). 커밋 시 relayout으로 타이밍 재계산.
 - 선수 드래그(단일 포함)를 그룹과 동일한 **경로 전체 평행이동**으로 통일 — 경유점+양 핸들이 같이 움직여 곡선 형태 완전 보존. 공 단독 드래그만 기존 절대 이동(드롭이 보유/루즈 결정) 유지.
-Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 수신자 +11.4,+5.7m 드래그 후 패스 끝 delta 불일치 **0.00m**·수신자 유지, 곡선 런 드래그 후 형태 시그니처(구간 거리) 동일, 콘솔 클린.
+  Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 수신자 +11.4,+5.7m 드래그 후 패스 끝 delta 불일치 **0.00m**·수신자 유지, 곡선 런 드래그 후 형태 시그니처(구간 거리) 동일, 콘솔 클린.
 
 ### CHG-20260820-066 — UX — 경로 작성 수정자 Shift → Alt (사용자 지시)
 
 Problem: Shift가 누르기 불편 — 왼쪽 Alt가 편하다는 사용자 결정.
 Change: 경로 작성 계열 전부 Alt로 교체 — 토큰/고스트 드로우, 지그재그 체인(Alt 유지), 고스트 활성 표시(drawKeyHeld). gestureIntent의 수정자 필드를 `draw`로 일반화(호출부가 Alt 바인딩). Alt keydown/up preventDefault로 브라우저 메뉴 포커스 차단. 안내(조작법/투어/? 오버레이) 전부 갱신. Shift+드래그는 이제 일반 이동과 동일. ADR-0009 v4 항목 갱신.
 Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: Alt+드래그=경로 1개, Shift+드래그=이동(경로 불생성), Alt 체인 2leg steps [1,2], 콘솔 클린.
-

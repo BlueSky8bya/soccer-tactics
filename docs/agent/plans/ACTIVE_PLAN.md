@@ -33,7 +33,7 @@ Execution Owner: Claude Code (사용자 승인 후)
 ### Project-owned evidence
 
 - 규칙·상태: `docs/agent/CONSTITUTION.md`, `docs/agent/CURRENT_STATE.md` 세션 12, `docs/agent/decisions/ADR-0009-simple-mode-interaction.md` 본문과 Amendment v2/v3/v4.
-- 사용자 피드백: `docs/agent/CHANGELOG_AGENT.md` CHG-20260820-043~055. 재생 중 경로 완전 숨김(043), frosted shell/inline picker(044~045), 공 조작·부착(046~051/055), 중앙 브랜드·A/B/C(052), GIF(053), 광택 token·run bob·pitch depth(054)를 회귀 보호한다.
+- 사용자 피드백: `docs/agent/CHANGELOG_AGENT.md` CHG-20260820-043~~055. 재생 중 경로 완전 숨김(043), frosted shell/inline picker(044~~045), 공 조작·부착(046~051/055), 중앙 브랜드·A/B/C(052), GIF(053), 광택 token·run bob·pitch depth(054)를 회귀 보호한다.
 - 코드: `src/ui/*` 전체와 테스트, `src/renderer/*` 전체, `src/ui/tokens.css`.
 - 현재 흐름: `AppShell`이 shell/panels/footer를 조립하고, `SimplePitch`가 pointer intent와 editor command를 연결하며, `PathLayer`/`Token`/`PitchMarkings`가 표시한다. 전술 좌표는 compiled state에서 오고 `AnimatedToken`과 CSS가 장식 반응만 덧붙인다.
 
@@ -41,15 +41,15 @@ Execution Owner: Claude Code (사용자 승인 후)
 
 저장소에는 기준 스크린샷이 없고 계획 환경의 in-app browser에도 사용 가능한 브라우저 세션이 없어 실화면을 캡처할 수 없었다. 아래 위치는 꾸며 낸 근거가 아니라 **M0에서 구현 전에 생성할 evidence 계약**이다. 공통 조건은 Chromium, 100% zoom, light scheme, 1440×900/1280×800이며 정지 캡처와 motion trace를 분리한다.
 
-| ID | 재현 상태 | 구현 전 / 후 위치 |
-| --- | --- | --- |
-| BASE-01 | 새로고침 직후 클린 보드 | `docs/agent/evidence/PLAN-20260821-006/BASE-01-empty-1440x900.png` / `M7-01-empty-1440x900.png` |
-| BASE-02 | 양 팀 22명, 경로 없음 | `.../BASE-02-22p.png` / `.../M7-02-22p.png` |
-| BASE-03 | 22명, 양 팀 run 각 3개+pass 2개, step 1~4, 비선택 | `.../BASE-03-22p-paths.png` / `.../M7-03-22p-paths.png` |
-| BASE-04 | 선수 drag 중 snap 후보 존재 | `.../BASE-04-token-drag.png` / `.../M7-04-token-drag.png` |
-| BASE-05 | path bend 중 ghost·badge·picker 표시 | `.../BASE-05-path-edit.png` / `.../M7-05-path-edit.png` |
-| BASE-06/07 | 재생 중 / 종료 held-result | `.../BASE-06-playback.png`, `BASE-07-held.png` / 대응 `M7-*` |
-| BASE-08 | 200% zoom 및 reduced-motion | `.../BASE-08-zoom200.png` / `.../M7-08-zoom200.png` |
+| ID         | 재현 상태                                         | 구현 전 / 후 위치                                                                               |
+| ---------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| BASE-01    | 새로고침 직후 클린 보드                           | `docs/agent/evidence/PLAN-20260821-006/BASE-01-empty-1440x900.png` / `M7-01-empty-1440x900.png` |
+| BASE-02    | 양 팀 22명, 경로 없음                             | `.../BASE-02-22p.png` / `.../M7-02-22p.png`                                                     |
+| BASE-03    | 22명, 양 팀 run 각 3개+pass 2개, step 1~4, 비선택 | `.../BASE-03-22p-paths.png` / `.../M7-03-22p-paths.png`                                         |
+| BASE-04    | 선수 drag 중 snap 후보 존재                       | `.../BASE-04-token-drag.png` / `.../M7-04-token-drag.png`                                       |
+| BASE-05    | path bend 중 ghost·badge·picker 표시              | `.../BASE-05-path-edit.png` / `.../M7-05-path-edit.png`                                         |
+| BASE-06/07 | 재생 중 / 종료 held-result                        | `.../BASE-06-playback.png`, `BASE-07-held.png` / 대응 `M7-*`                                    |
+| BASE-08    | 200% zoom 및 reduced-motion                       | `.../BASE-08-zoom200.png` / `.../M7-08-zoom200.png`                                             |
 
 ## External Research and Sources
 
@@ -66,50 +66,50 @@ Apple 자료는 형태 복제가 아니라 interaction quality 기준으로 사�
 
 ## Harness and Visual-System Audit
 
-| ID | 문제 | 코드·문서 근거 | 계획상 통제 |
-| --- | --- | --- | --- |
-| AUD-01 | Constitution은 glass/blur 남용을 금지하지만 header, 양 side card, footer가 모두 유사한 blur/흰 테두리를 쓴다. | `.simpleHeader`, `.sideCard`, `.simpleBar`; CHG-044/054 | M1에서 pitch/content는 solid, overlay/footer만 제한적 translucent로 둔다. |
-| AUD-02 | token 체계가 있어도 CSS/SVG에 색·radius·shadow·curve 임의값이 대량 남는다. | `shell.module.css`, `pitch.module.css`, `DrawingLayer.DEFAULT_COLOR`, `exportGif` 상수 | M1 semantic token contract와 static test로 모은다. |
-| AUD-03 | 모든 카드/피치의 강한 depth 반복 때문에 상태 계층이 평평하다. | side cards·pitch frame·footer·overlay shadow | rest/raised/floating/overlay 4단계로 재매핑한다. |
-| AUD-04 | drag state와 CSS animation이 분리돼 press/drag/drop 피드백이 한 상태 모델을 쓰지 않는다. | `resolvePointerIntent`, `gestureRef`, `AnimatedToken`, attach CSS | M4 UI-only visual state helper를 둔다. |
-| AUD-05 | 22명에서 ghost·badge·casing·gloss가 누적된다. | `ghostOpacityForStep`, `placeStepBadges`, `.tokenGloss`, `.pathCasing` | M3 semantic layering과 foreground 수 제한. |
-| AUD-06 | 화면과 GIF가 pitch/token 표현을 별도 하드코딩한다. | `exportGif.ts`의 GRASS/LINE/TOKEN_R | M5 무상태 visual constants로 parity를 맞춘다. |
-| AUD-07 | motion vocabulary가 제각각이다. | token 0.32/.45, attach 0.55s, CSS 220ms, token 120/200/320, run bob | M1 duration/curve/spring 의미를 고정한다. |
-| AUD-08 | CSS와 `src/ui/AGENTS.md`에 제거된 legacy UI 흔적이 남는다. | rail/scrub/inspector selector와 stale routing | M1은 reference 0인 CSS만 제거; 문서 부채는 후속 memory update. |
-| AUD-09 | a11y smoke가 name/tab/focus restore는 보지만 visual focus/contrast/forced-colors는 보지 않는다. | `accessibility.test.tsx` | M6 보강. |
-| AUD-10 | tour-seen marker는 storage/cookie에 남아 baseline 재현을 방해할 수 있다. | `tourStorage.ts` | M0 fixture가 tour state를 명시; 정책 변경은 범위 밖. |
+| ID     | 문제                                                                                                          | 코드·문서 근거                                                                         | 계획상 통제                                                               |
+| ------ | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| AUD-01 | Constitution은 glass/blur 남용을 금지하지만 header, 양 side card, footer가 모두 유사한 blur/흰 테두리를 쓴다. | `.simpleHeader`, `.sideCard`, `.simpleBar`; CHG-044/054                                | M1에서 pitch/content는 solid, overlay/footer만 제한적 translucent로 둔다. |
+| AUD-02 | token 체계가 있어도 CSS/SVG에 색·radius·shadow·curve 임의값이 대량 남는다.                                    | `shell.module.css`, `pitch.module.css`, `DrawingLayer.DEFAULT_COLOR`, `exportGif` 상수 | M1 semantic token contract와 static test로 모은다.                        |
+| AUD-03 | 모든 카드/피치의 강한 depth 반복 때문에 상태 계층이 평평하다.                                                 | side cards·pitch frame·footer·overlay shadow                                           | rest/raised/floating/overlay 4단계로 재매핑한다.                          |
+| AUD-04 | drag state와 CSS animation이 분리돼 press/drag/drop 피드백이 한 상태 모델을 쓰지 않는다.                      | `resolvePointerIntent`, `gestureRef`, `AnimatedToken`, attach CSS                      | M4 UI-only visual state helper를 둔다.                                    |
+| AUD-05 | 22명에서 ghost·badge·casing·gloss가 누적된다.                                                                 | `ghostOpacityForStep`, `placeStepBadges`, `.tokenGloss`, `.pathCasing`                 | M3 semantic layering과 foreground 수 제한.                                |
+| AUD-06 | 화면과 GIF가 pitch/token 표현을 별도 하드코딩한다.                                                            | `exportGif.ts`의 GRASS/LINE/TOKEN_R                                                    | M5 무상태 visual constants로 parity를 맞춘다.                             |
+| AUD-07 | motion vocabulary가 제각각이다.                                                                               | token 0.32/.45, attach 0.55s, CSS 220ms, token 120/200/320, run bob                    | M1 duration/curve/spring 의미를 고정한다.                                 |
+| AUD-08 | CSS와 `src/ui/AGENTS.md`에 제거된 legacy UI 흔적이 남는다.                                                    | rail/scrub/inspector selector와 stale routing                                          | M1은 reference 0인 CSS만 제거; 문서 부채는 후속 memory update.            |
+| AUD-09 | a11y smoke가 name/tab/focus restore는 보지만 visual focus/contrast/forced-colors는 보지 않는다.               | `accessibility.test.tsx`                                                               | M6 보강.                                                                  |
+| AUD-10 | tour-seen marker는 storage/cookie에 남아 baseline 재현을 방해할 수 있다.                                      | `tourStorage.ts`                                                                       | M0 fixture가 tour state를 명시; 정책 변경은 범위 밖.                      |
 
 ## Current vs Apple Principles Gap Table
 
-| 요소 | 현재 | Apple/HCI 원칙 적용 시 | 근거 | 증거 | 난이도/우선순위 |
-| --- | --- | --- | --- | --- | --- |
-| shell 첫 3초 | header·양 panel·footer·pitch가 모두 떠 있어 경쟁 | pitch는 안정된 기준면, controls는 가까우나 조용한 보조층 | HIG Materials/Depth; shell CSS | BASE-01 | M/P0 |
-| header·A/B/C | 브랜드/version/variants가 작은 pill로 경쟁 | 브랜드는 정적, variant는 단일 selection indicator, metadata는 저대비 | `AppShell`, CHG-052 | BASE-01/02 | S/P1 |
-| 왼쪽 actions | 3색 action과 정리 버튼이 비슷한 무게 | 빈번한 행동은 크고 가까이, destructive는 필요할 때만 강조 | Fitts; `ActionsPanel` | BASE-01 | M/P0 |
-| pitch frame | triple shadow/round card가 전술보다 먼저 보임 | 작업 공간 기준 surface로 두고 edge/depth 한 단계 | HIG Spatial layout; `.pitchFrame` | BASE-01/03 | S/P0 |
-| 선수 token | gloss·white rim·shadow·ring·bob 중첩 | rest는 깨끗하고 번호 우선, 잡는 순간만 lift; 상태는 색+형태 | HIG Drag/Feedback; `Token`, `AnimatedToken` | BASE-02/04 | M/P0 |
-| 공/보유자 | ball·holder ring·attach pulse/toast 강도 불일치 | 관계는 지속 단서, attach 순간만 짧은 confirm | CHG-051/055 | BASE-02/04 | S/P0 |
-| token drag/snap | 위치는 연속이나 lift/valid/failed 공통 언어 약함 | Keynote guide처럼 후보를 조작 중 예고하고 drop 뒤 selection 유지 | HIG Drag; Keynote guides; `SimplePitch` | BASE-04 | M/P0 |
-| 경로 작성 | live path/snap은 있으나 press→ink→commit 차가 약함 | 시작 acknowledgement, live ink, magnet, commit feedback 연속 | HIG Gesture/Feedback; `finishDraw` | BASE-05 | M/P0 |
-| bend/waypoint | handle·selection·casing이 모두 강해질 수 있음 | 잡은 국소 점/segment만 lift, release에 정돈 | Fitts; `PathLayer` | BASE-05 | M/P0 |
-| ghost/badge | 비선택 ghost와 모든 badge가 남아 겹침 | 현재 문맥만 선명, 나머지는 최소 문맥; badge collision 회피 | presentation helpers | BASE-03/05 | L/P0 |
-| step picker | 별도 흰 pill이 즉시 등장 | badge anchor에서 이어져 열리고 outside/Escape로 역전 | HIG Feedback; `SimplePitch` | BASE-05 | S/P1 |
-| playback | path fade, bob, play glow가 따로 움직임 | play가 stage 전환을 시작하고 chrome은 물러나며 held로 복귀 | ADR v4; CHG-043/054 | BASE-06/07 | M/P0 |
-| footer/StepBar | 여러 pill/ring/glow와 30/44px target 혼재 | Play는 크고 가까운 primary, step은 명확한 secondary | Fitts/HIG A11y | BASE-01/07 | M/P0 |
-| contextual cards | PlayerCard/selection bar가 비슷한 floating pill로 교대 | 대상 가까운 inspector, focus와 위치 continuity 유지 | Keynote 원칙; 두 컴포넌트 | BASE-05 | M/P1 |
-| guide/tour/help | 고정 guide와 overlay가 조작을 반복 설명 | 평상시는 조용하고 학습층은 첫 사용/요청 때만 | HIG progressive feedback | BASE-01/08 | M/P1 |
-| toast/error/export | 위치·지속·역할이 불일치 | confirm/error/progress를 semantic feedback으로 분리 | HIG Feedback; `AppShell` | BASE-07 | M/P1 |
-| keyboard/focus | 이름/tab은 있으나 focus-visible 대비 증거 부족 | modality별 focus와 모든 핵심 28px+ target | HIG A11y; a11y tests | BASE-08 | M/P0 |
+| 요소               | 현재                                                   | Apple/HCI 원칙 적용 시                                               | 근거                                        | 증거       | 난이도/우선순위 |
+| ------------------ | ------------------------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------- | ---------- | --------------- |
+| shell 첫 3초       | header·양 panel·footer·pitch가 모두 떠 있어 경쟁       | pitch는 안정된 기준면, controls는 가까우나 조용한 보조층             | HIG Materials/Depth; shell CSS              | BASE-01    | M/P0            |
+| header·A/B/C       | 브랜드/version/variants가 작은 pill로 경쟁             | 브랜드는 정적, variant는 단일 selection indicator, metadata는 저대비 | `AppShell`, CHG-052                         | BASE-01/02 | S/P1            |
+| 왼쪽 actions       | 3색 action과 정리 버튼이 비슷한 무게                   | 빈번한 행동은 크고 가까이, destructive는 필요할 때만 강조            | Fitts; `ActionsPanel`                       | BASE-01    | M/P0            |
+| pitch frame        | triple shadow/round card가 전술보다 먼저 보임          | 작업 공간 기준 surface로 두고 edge/depth 한 단계                     | HIG Spatial layout; `.pitchFrame`           | BASE-01/03 | S/P0            |
+| 선수 token         | gloss·white rim·shadow·ring·bob 중첩                   | rest는 깨끗하고 번호 우선, 잡는 순간만 lift; 상태는 색+형태          | HIG Drag/Feedback; `Token`, `AnimatedToken` | BASE-02/04 | M/P0            |
+| 공/보유자          | ball·holder ring·attach pulse/toast 강도 불일치        | 관계는 지속 단서, attach 순간만 짧은 confirm                         | CHG-051/055                                 | BASE-02/04 | S/P0            |
+| token drag/snap    | 위치는 연속이나 lift/valid/failed 공통 언어 약함       | Keynote guide처럼 후보를 조작 중 예고하고 drop 뒤 selection 유지     | HIG Drag; Keynote guides; `SimplePitch`     | BASE-04    | M/P0            |
+| 경로 작성          | live path/snap은 있으나 press→ink→commit 차가 약함     | 시작 acknowledgement, live ink, magnet, commit feedback 연속         | HIG Gesture/Feedback; `finishDraw`          | BASE-05    | M/P0            |
+| bend/waypoint      | handle·selection·casing이 모두 강해질 수 있음          | 잡은 국소 점/segment만 lift, release에 정돈                          | Fitts; `PathLayer`                          | BASE-05    | M/P0            |
+| ghost/badge        | 비선택 ghost와 모든 badge가 남아 겹침                  | 현재 문맥만 선명, 나머지는 최소 문맥; badge collision 회피           | presentation helpers                        | BASE-03/05 | L/P0            |
+| step picker        | 별도 흰 pill이 즉시 등장                               | badge anchor에서 이어져 열리고 outside/Escape로 역전                 | HIG Feedback; `SimplePitch`                 | BASE-05    | S/P1            |
+| playback           | path fade, bob, play glow가 따로 움직임                | play가 stage 전환을 시작하고 chrome은 물러나며 held로 복귀           | ADR v4; CHG-043/054                         | BASE-06/07 | M/P0            |
+| footer/StepBar     | 여러 pill/ring/glow와 30/44px target 혼재              | Play는 크고 가까운 primary, step은 명확한 secondary                  | Fitts/HIG A11y                              | BASE-01/07 | M/P0            |
+| contextual cards   | PlayerCard/selection bar가 비슷한 floating pill로 교대 | 대상 가까운 inspector, focus와 위치 continuity 유지                  | Keynote 원칙; 두 컴포넌트                   | BASE-05    | M/P1            |
+| guide/tour/help    | 고정 guide와 overlay가 조작을 반복 설명                | 평상시는 조용하고 학습층은 첫 사용/요청 때만                         | HIG progressive feedback                    | BASE-01/08 | M/P1            |
+| toast/error/export | 위치·지속·역할이 불일치                                | confirm/error/progress를 semantic feedback으로 분리                  | HIG Feedback; `AppShell`                    | BASE-07    | M/P1            |
+| keyboard/focus     | 이름/tab은 있으나 focus-visible 대비 증거 부족         | modality별 focus와 모든 핵심 28px+ target                            | HIG A11y; a11y tests                        | BASE-08    | M/P0            |
 
 ## Football Benchmark Summary
 
-| 기준 | 발견 | Soccer Tactics 적용 |
-| --- | --- | --- |
-| token 질감 | TacticalPad는 cleaner 2D object, round photo/name/jersey를 공개한다. Táctica는 club kit/marker, StatsBomb/Opta는 고밀도를 위해 작은 점·shape를 쓴다. | 사진/kit은 추가하지 않고 얕은 enamel puck, 번호 우선, 팀은 색+rim/pattern으로 표시한다. |
-| 경로 | TacticalPad는 smooth curve/ball trail/frame highlight, Táctica는 lane/run/zone, 분석·방송은 한 장면에 제한된 굵은 mark를 쓴다. | move/pass/shot/ball을 pattern+team color+casing으로 구분하되 현재 step/selection 외는 억제한다. |
-| 재생 | 전술보드는 step/play/reset, CoachFX는 생동감 있는 설명, 방송은 wide tactical view에서 한 순간 한 메시지에 집중한다. | v4대로 재생 중 route를 모두 숨기고 공·움직임·소유만 남긴 뒤 held-result에서 편집층을 복원한다. |
-| 색 | 전술보드는 field/object customization과 club colors, 분석은 중립 pitch+red/blue/heatmap, 방송은 강조색 수를 제한한다. | pitch/home/away/selection/semantic feedback를 분리하고 selection과 team blue는 outline/shape로도 구분한다. |
-| 취사선택 | 프로 도구의 판독성·곡선·단계 focus는 유효하지만 3D, 방대한 tool palette, 방송 AR은 제품 목표와 다르다. | “판독성+직접 조작 반응성”만 취하고 기능·장식 수는 늘리지 않는다. |
+| 기준       | 발견                                                                                                                                                 | Soccer Tactics 적용                                                                                        |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| token 질감 | TacticalPad는 cleaner 2D object, round photo/name/jersey를 공개한다. Táctica는 club kit/marker, StatsBomb/Opta는 고밀도를 위해 작은 점·shape를 쓴다. | 사진/kit은 추가하지 않고 얕은 enamel puck, 번호 우선, 팀은 색+rim/pattern으로 표시한다.                    |
+| 경로       | TacticalPad는 smooth curve/ball trail/frame highlight, Táctica는 lane/run/zone, 분석·방송은 한 장면에 제한된 굵은 mark를 쓴다.                       | move/pass/shot/ball을 pattern+team color+casing으로 구분하되 현재 step/selection 외는 억제한다.            |
+| 재생       | 전술보드는 step/play/reset, CoachFX는 생동감 있는 설명, 방송은 wide tactical view에서 한 순간 한 메시지에 집중한다.                                  | v4대로 재생 중 route를 모두 숨기고 공·움직임·소유만 남긴 뒤 held-result에서 편집층을 복원한다.             |
+| 색         | 전술보드는 field/object customization과 club colors, 분석은 중립 pitch+red/blue/heatmap, 방송은 강조색 수를 제한한다.                                | pitch/home/away/selection/semantic feedback를 분리하고 selection과 team blue는 outline/shape로도 구분한다. |
+| 취사선택   | 프로 도구의 판독성·곡선·단계 focus는 유효하지만 3D, 방대한 tool palette, 방송 AR은 제품 목표와 다르다.                                               | “판독성+직접 조작 반응성”만 취하고 기능·장식 수는 늘리지 않는다.                                           |
 
 공개 페이지에서 확인되지 않은 drag feel, latency, exact color는 결론으로 쓰지 않는다.
 
@@ -119,16 +119,16 @@ M1에서 `tokens.css`를 semantic source of truth로 만든다. 값은 A-01~A-04
 
 ### Color
 
-| 역할 | token / 초기값 | 제약 |
-| --- | --- | --- |
-| canvas/surface | `--st-color-canvas: #F2EFE7`, `--st-color-surface: #FBFAF6` | pitch와 명도 분리; content card blur 금지 |
-| raised | `--st-color-surface-raised: rgba(255,255,255,.84)` | footer/단기 popover만 |
-| text | `--st-color-text: #20231E`, `--st-color-text-muted: #676D63`, `--st-color-text-faint: #8B9187` | faint를 핵심 안내에 쓰지 않음 |
-| borders | `--st-color-hairline: rgba(31,38,29,.12)`, `--st-color-border-strong: rgba(31,38,29,.22)` | 흰 glass border 반복 제거 |
-| accent | `--st-color-accent: #0878D1`, `--st-color-accent-soft: rgba(8,120,209,.14)` | 선택/focus/primary 전용; team A와 표현 분리 |
-| semantic | success `#247A45`, warning `#9A6400`, danger `#C53B35` | text contrast 4.5:1 목표 |
-| pitch | pitch `#40945D`, alt `#3B8C56`, edge `#2F7046`, line `rgba(255,255,255,.78)` | BASE-03 CVD/contrast 뒤 확정 |
-| teams | home `#1E66D0`, away `#D24845` | color+승인된 secondary cue |
+| 역할           | token / 초기값                                                                                 | 제약                                        |
+| -------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| canvas/surface | `--st-color-canvas: #F2EFE7`, `--st-color-surface: #FBFAF6`                                    | pitch와 명도 분리; content card blur 금지   |
+| raised         | `--st-color-surface-raised: rgba(255,255,255,.84)`                                             | footer/단기 popover만                       |
+| text           | `--st-color-text: #20231E`, `--st-color-text-muted: #676D63`, `--st-color-text-faint: #8B9187` | faint를 핵심 안내에 쓰지 않음               |
+| borders        | `--st-color-hairline: rgba(31,38,29,.12)`, `--st-color-border-strong: rgba(31,38,29,.22)`      | 흰 glass border 반복 제거                   |
+| accent         | `--st-color-accent: #0878D1`, `--st-color-accent-soft: rgba(8,120,209,.14)`                    | 선택/focus/primary 전용; team A와 표현 분리 |
+| semantic       | success `#247A45`, warning `#9A6400`, danger `#C53B35`                                         | text contrast 4.5:1 목표                    |
+| pitch          | pitch `#40945D`, alt `#3B8C56`, edge `#2F7046`, line `rgba(255,255,255,.78)`                   | BASE-03 CVD/contrast 뒤 확정                |
+| teams          | home `#1E66D0`, away `#D24845`                                                                 | color+승인된 secondary cue                  |
 
 ### Depth, radius, type, spacing
 
@@ -139,35 +139,35 @@ M1에서 `tokens.css`를 semantic source of truth로 만든다. 값은 A-01~A-04
 
 ### Motion
 
-| 의미 | 값 | 용도 | reduced-motion |
-| --- | --- | --- | --- |
-| instant | 80ms, `cubic-bezier(.2,0,0,1)` | hover/focus color | 0ms |
-| feedback | 140ms, `cubic-bezier(.16,1,.3,1)` | press/release, badge | transform 제거, color ≤80ms |
-| transition | 220ms | panel/footer/held cross-fade | opacity ≤100ms |
-| settle | 320ms | drop/selection continuity | 즉시 final |
-| rare emphasis | 480ms 상한 | possession confirm 1회 | ring 없음, 정지 cue+text |
-| springs | `SPRINGS.press/pickup/drop/overlay` | UI-only scalar | final state; `stateAt` 불변 |
+| 의미          | 값                                  | 용도                         | reduced-motion              |
+| ------------- | ----------------------------------- | ---------------------------- | --------------------------- |
+| instant       | 80ms, `cubic-bezier(.2,0,0,1)`      | hover/focus color            | 0ms                         |
+| feedback      | 140ms, `cubic-bezier(.16,1,.3,1)`   | press/release, badge         | transform 제거, color ≤80ms |
+| transition    | 220ms                               | panel/footer/held cross-fade | opacity ≤100ms              |
+| settle        | 320ms                               | drop/selection continuity    | 즉시 final                  |
+| rare emphasis | 480ms 상한                          | possession confirm 1회       | ring 없음, 정지 cue+text    |
+| springs       | `SPRINGS.press/pickup/drop/overlay` | UI-only scalar               | final state; `stateAt` 불변 |
 
 모든 장식 모션은 입력에 1 frame 안에 반응하고 reverse/interruption 가능해야 한다. tactical playback 좌표에는 curve/spring을 적용하지 않는다.
 
 ## Microinteraction Contract
 
-| 대상 | Trigger | Response | Release/cancel | Reduced motion |
-| --- | --- | --- | --- | --- |
-| button/chip | pointer/key down | surface darken, shadow compress, scale .98 | 140ms settle; leave/cancel 원복 | scale 없음, 색만 |
-| 선수 | hover/select | thin halo; selected ring+marker, 번호 유지 | hover 해제/selection 유지 | 정지 상태 동일 |
-| 선수 drag | down→threshold | 즉시 pickup scale/shadow, cursor/guide | valid settle; cancel/invalid 원복+이유 toast; selection 유지 | 좌표 즉시, ring만 |
-| marquee | grass drag | 저대비 rectangle, 포함 token ring | rectangle 제거, selection 유지 | 즉시 |
-| Shift 경로 | Shift+down | 시작 pulse 1회, live ink | valid arrow/casing reveal; 짧으면 fade+toast; Escape 취소 | pulse/reveal 없음 |
-| snap/공 target | 후보 radius 진입 | candidate ring+endpoint magnet, 문서 불변 | commit 뒤 possession cue; 이탈 시 해제 | 정지 ring+toast |
-| path bend | path drag | 해당 segment/corner만 전경·handle | 1 commit 후 정돈; Escape rollback | 즉시 |
-| ghost | ghost drag | 선택 ghost solid, 관련 path 전경 | 단계 opacity 복귀 | 즉시 |
-| badge picker | badge click | anchor에서 opacity/scale open | select/outside/Escape reverse, focus 복귀 | 즉시 |
-| possession | ball drop 성공 | holder offset+subtle ring+`탁!` toast | ring ≤480ms, holder cue 유지 | ring animation 없음 |
-| Play | press | state 즉시, route 160~220ms 숨김, chrome 저대비 | held frame 고정 후 편집층 복귀 | fade 즉시, 전술 동일 |
-| step/variant | chip click | indicator/label만 cross-fade, 좌표 morph 금지 | 즉시 재입력 | 즉시 |
-| toast/error/progress | event | confirm/error/progress별 역할 | dismiss/timeout/원인 해소 | slide 없이 fade/즉시 |
-| overlay/tour | open | focus 이동+scale/opacity | Escape/close trigger focus 복귀 | opacity≤100ms |
+| 대상                 | Trigger          | Response                                        | Release/cancel                                               | Reduced motion       |
+| -------------------- | ---------------- | ----------------------------------------------- | ------------------------------------------------------------ | -------------------- |
+| button/chip          | pointer/key down | surface darken, shadow compress, scale .98      | 140ms settle; leave/cancel 원복                              | scale 없음, 색만     |
+| 선수                 | hover/select     | thin halo; selected ring+marker, 번호 유지      | hover 해제/selection 유지                                    | 정지 상태 동일       |
+| 선수 drag            | down→threshold   | 즉시 pickup scale/shadow, cursor/guide          | valid settle; cancel/invalid 원복+이유 toast; selection 유지 | 좌표 즉시, ring만    |
+| marquee              | grass drag       | 저대비 rectangle, 포함 token ring               | rectangle 제거, selection 유지                               | 즉시                 |
+| Shift 경로           | Shift+down       | 시작 pulse 1회, live ink                        | valid arrow/casing reveal; 짧으면 fade+toast; Escape 취소    | pulse/reveal 없음    |
+| snap/공 target       | 후보 radius 진입 | candidate ring+endpoint magnet, 문서 불변       | commit 뒤 possession cue; 이탈 시 해제                       | 정지 ring+toast      |
+| path bend            | path drag        | 해당 segment/corner만 전경·handle               | 1 commit 후 정돈; Escape rollback                            | 즉시                 |
+| ghost                | ghost drag       | 선택 ghost solid, 관련 path 전경                | 단계 opacity 복귀                                            | 즉시                 |
+| badge picker         | badge click      | anchor에서 opacity/scale open                   | select/outside/Escape reverse, focus 복귀                    | 즉시                 |
+| possession           | ball drop 성공   | holder offset+subtle ring+`탁!` toast           | ring ≤480ms, holder cue 유지                                 | ring animation 없음  |
+| Play                 | press            | state 즉시, route 160~220ms 숨김, chrome 저대비 | held frame 고정 후 편집층 복귀                               | fade 즉시, 전술 동일 |
+| step/variant         | chip click       | indicator/label만 cross-fade, 좌표 morph 금지   | 즉시 재입력                                                  | 즉시                 |
+| toast/error/progress | event            | confirm/error/progress별 역할                   | dismiss/timeout/원인 해소                                    | slide 없이 fade/즉시 |
+| overlay/tour         | open             | focus 이동+scale/opacity                        | Escape/close trigger focus 복귀                              | opacity≤100ms        |
 
 ## Execution Milestones
 
@@ -354,16 +354,16 @@ key binding 의미는 바꾸지 않는다. 필요 시 `keymap.ts`만 source of t
 
 ## Global Automated Verification Matrix
 
-| 검증 | 방법 | 통과 조건 |
-| --- | --- | --- |
-| Product invariants | diff+tests | simple mode, refresh clean, schema unchanged, dependencies 0 |
-| Purity/determinism | imports+harness+snapshots | engine/domain UI import 0; tactical coordinates deep-equal |
-| Transactions | gesture/history tests | drag/draw/bend/drop 1 commit, cancel 0 commit |
-| Token contract | test+`rg` allowlist | visual values semantic source에서만 소비 |
-| Readability | presentation tests+BASE/M7 | deterministic layer order, browser checklist 통과 |
-| Accessibility | jsdom+manual | names/order/focus/reduce/forced-colors/zoom 통과 |
-| Performance | bundle diff+trace | dependency 0, duplicate renderer 없음, targets 달성 |
-| Full gate | milestone마다 명령 | 모두 PASS; 미실행을 PASS로 기록 금지 |
+| 검증               | 방법                       | 통과 조건                                                    |
+| ------------------ | -------------------------- | ------------------------------------------------------------ |
+| Product invariants | diff+tests                 | simple mode, refresh clean, schema unchanged, dependencies 0 |
+| Purity/determinism | imports+harness+snapshots  | engine/domain UI import 0; tactical coordinates deep-equal   |
+| Transactions       | gesture/history tests      | drag/draw/bend/drop 1 commit, cancel 0 commit                |
+| Token contract     | test+`rg` allowlist        | visual values semantic source에서만 소비                     |
+| Readability        | presentation tests+BASE/M7 | deterministic layer order, browser checklist 통과            |
+| Accessibility      | jsdom+manual               | names/order/focus/reduce/forced-colors/zoom 통과             |
+| Performance        | bundle diff+trace          | dependency 0, duplicate renderer 없음, targets 달성          |
+| Full gate          | milestone마다 명령         | 모두 PASS; 미실행을 PASS로 기록 금지                         |
 
 ## Browser Acceptance Checklist — User-owned
 
@@ -380,14 +380,14 @@ key binding 의미는 바꾸지 않는다. 필요 시 `keymap.ts`만 source of t
 
 ## Ambiguity Register — Approval Required Before M1
 
-| ID | 질문 | 선택지 | 추천 | 영향 |
-| --- | --- | --- | --- | --- |
-| A-01 | 전체 미감의 온도? | (a) warm editorial/ivory 유지 (b) cool neutral/white (c) dark broadcast | **(a)** 기존 정체성과 pitch 중심을 함께 살린다. | canvas/surface/text 전체; M1 뒤 변경 비용 큼 |
-| A-02 | 팀의 색 외 구분? | (a) home solid, away inner keyline/notch (b) 원/사각 shape (c) 번호 서체만 | **(a)** 축구 token 문법을 유지한다. | SVG, CVD, GIF |
-| A-03 | deterministic run bob? | (a) 30~40% 약화 (b) 제거 (c) 현행 | **(a)** 생동감은 남기고 22명 떨림을 줄인다. | `SimplePitch` ornament |
-| A-04 | Material 범위? | (a) footer/popover만 translucent, panel solid (b) header/footer (c) 현행 모두 frosted | **(a)** HIG/Constitution의 절제에 맞다. | 첫인상/depth |
-| A-05 | rest 경로 노출량? | (a) 모두 유지+계층 감쇠 (b) current step 외 숨김 (c) 선택 entity만 | **(a)** 전체 전술 맥락과 기능을 보존한다. | 22명 판독성/발견성 |
-| A-06 | 특정 InStat/Wyscout/BBC/Sky 화면을 닮을까? | (a) 원칙만 차용 (b) 사용자 제공 1~3개 이미지를 mood target으로 | **(a)** 브랜드 모방 없이 고유 언어를 만든다. | (b)는 M0 이미지 필요 |
+| ID   | 질문                                       | 선택지                                                                                | 추천                                            | 영향                                         |
+| ---- | ------------------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------- |
+| A-01 | 전체 미감의 온도?                          | (a) warm editorial/ivory 유지 (b) cool neutral/white (c) dark broadcast               | **(a)** 기존 정체성과 pitch 중심을 함께 살린다. | canvas/surface/text 전체; M1 뒤 변경 비용 큼 |
+| A-02 | 팀의 색 외 구분?                           | (a) home solid, away inner keyline/notch (b) 원/사각 shape (c) 번호 서체만            | **(a)** 축구 token 문법을 유지한다.             | SVG, CVD, GIF                                |
+| A-03 | deterministic run bob?                     | (a) 30~40% 약화 (b) 제거 (c) 현행                                                     | **(a)** 생동감은 남기고 22명 떨림을 줄인다.     | `SimplePitch` ornament                       |
+| A-04 | Material 범위?                             | (a) footer/popover만 translucent, panel solid (b) header/footer (c) 현행 모두 frosted | **(a)** HIG/Constitution의 절제에 맞다.         | 첫인상/depth                                 |
+| A-05 | rest 경로 노출량?                          | (a) 모두 유지+계층 감쇠 (b) current step 외 숨김 (c) 선택 entity만                    | **(a)** 전체 전술 맥락과 기능을 보존한다.       | 22명 판독성/발견성                           |
+| A-06 | 특정 InStat/Wyscout/BBC/Sky 화면을 닮을까? | (a) 원칙만 차용 (b) 사용자 제공 1~3개 이미지를 mood target으로                        | **(a)** 브랜드 모방 없이 고유 언어를 만든다.    | (b)는 M0 이미지 필요                         |
 
 승인 전에는 M0 evidence만 수행한다. 선택이 없으면 추천안을 자동 확정하지 않는다.
 
@@ -403,15 +403,15 @@ key binding 의미는 바꾸지 않는다. 필요 시 `keymap.ts`만 source of t
 
 ## Plan Reversal Log
 
-| REV | 잠금된 결정 | 보호 방식 |
-| --- | --- | --- |
-| REV-01 | 단일 간편 모드, timeline 제거 | shell이 새 mode/navigation을 만들지 않음 |
-| REV-02 | 재생 중 route/arrow 완전 숨김 | M3/M5 자동·browser 검증 |
-| REV-03 | Shift 작성, path drag=bend | M4는 feedback만 추가; binding/intent 불변 |
-| REV-04 | 세션 A/B/C, refresh clean | visual transition만; persistence/schema 금지 |
-| REV-05 | held-result/부분 재생 | timing/좌표 불변, chrome만 전환 |
-| REV-06 | 보유 공/패스 시작 부착 | attached start/locked waypoint/offset 회귀 테스트 |
-| REV-07 | 사용자 피드백상 gloss·bob·depth 중시 | 제거가 아니라 A-03/A-04 아래 강도·의미 통일 |
+| REV    | 잠금된 결정                          | 보호 방식                                         |
+| ------ | ------------------------------------ | ------------------------------------------------- |
+| REV-01 | 단일 간편 모드, timeline 제거        | shell이 새 mode/navigation을 만들지 않음          |
+| REV-02 | 재생 중 route/arrow 완전 숨김        | M3/M5 자동·browser 검증                           |
+| REV-03 | Shift 작성, path drag=bend           | M4는 feedback만 추가; binding/intent 불변         |
+| REV-04 | 세션 A/B/C, refresh clean            | visual transition만; persistence/schema 금지      |
+| REV-05 | held-result/부분 재생                | timing/좌표 불변, chrome만 전환                   |
+| REV-06 | 보유 공/패스 시작 부착               | attached start/locked waypoint/offset 회귀 테스트 |
+| REV-07 | 사용자 피드백상 gloss·bob·depth 중시 | 제거가 아니라 A-03/A-04 아래 강도·의미 통일       |
 
 ## Rollback Strategy
 
@@ -422,11 +422,11 @@ key binding 의미는 바꾸지 않는다. 필요 시 `keymap.ts`만 source of t
 
 ## Decision Log
 
-| Date | Decision | Owner | Evidence |
-| --- | --- | --- | --- |
-| 2026-08-20 | 계획 승인. A-01 (a) warm ivory, A-02 (a) away 안쪽 키라인, A-04 (a) footer/popover만 translucent, A-05 (a) 전부 유지+계층 감쇠, A-06 (a) 원칙만 차용 | 사용자 | 대화 승인 ("어 승인할게" — Claude 추천안 수용) |
-| 2026-08-20 | M3a 선결정: 토큰 rest는 gloss 없이 **단색**(그라데이션 제거), 보유 공 거리 [2.0, 2.6]m로 확대 | 사용자 | 대화 지시 |
-| 2026-08-20 | A-03 절충: run bob 현행 강도 유지하되 동시에 움직이는 선수 수가 많으면 자동 감쇠 (Claude 제안 수용) | 사용자 | CHG-054에서 사용자가 직접 요청한 기능이므로 약화 대신 조건부 감쇠 |
+| Date       | Decision                                                                                                                                             | Owner  | Evidence                                                          |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------- |
+| 2026-08-20 | 계획 승인. A-01 (a) warm ivory, A-02 (a) away 안쪽 키라인, A-04 (a) footer/popover만 translucent, A-05 (a) 전부 유지+계층 감쇠, A-06 (a) 원칙만 차용 | 사용자 | 대화 승인 ("어 승인할게" — Claude 추천안 수용)                    |
+| 2026-08-20 | M3a 선결정: 토큰 rest는 gloss 없이 **단색**(그라데이션 제거), 보유 공 거리 [2.0, 2.6]m로 확대                                                        | 사용자 | 대화 지시                                                         |
+| 2026-08-20 | A-03 절충: run bob 현행 강도 유지하되 동시에 움직이는 선수 수가 많으면 자동 감쇠 (Claude 제안 수용)                                                  | 사용자 | CHG-054에서 사용자가 직접 요청한 기능이므로 약화 대신 조건부 감쇠 |
 
 ## Done Report Template for Execution Owner
 

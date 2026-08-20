@@ -20,7 +20,7 @@ PLAN-20260821-006 (대대적 리디자인, 승인 2026-08-20) 진행 중 — **M
 - 검증: `npm run typecheck && npm run lint && npm test`(116) `&& npm run build && npm run harness:verify && npm run format:check` 전부 PASS + Playwright 헤드리스 probe(m1~m6) PASS.
 - **EXTERNAL-VERIFICATION-PENDING(사용자)**: 결과 유지/복귀 체감, 경로 드래그=휘기 적응, A/B 흐름, 고스트 감쇠 수치(A-05), 드롭 스프링·페이드 체감, 미니 투어 문구.
 - A-04(route handle) 보류 — Shift 유지. 재론 시 ADR-0009 Amendment로.
-- 후속 사용자 지시(CHG-043~044): 재생 중 경로/화살표 숨김 · 배지 클릭=인라인 1~9 피커 · 셰브론 화살촉 · 제목 입력 제거·애플식 카드 UI(패널/하단 부유 바).
+- 후속 사용자 지시(CHG-043~~044): 재생 중 경로/화살표 숨김 · 배지 클릭=인라인 1~~9 피커 · 셰브론 화살촉 · 제목 입력 제거·애플식 카드 UI(패널/하단 부유 바).
 
 ## Current Status
 
