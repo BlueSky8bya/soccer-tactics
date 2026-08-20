@@ -833,3 +833,10 @@ Change:
 - segmentCommands.ts syncTravelReceiverInDraft: recvOffset을 접근 방향(끝에서 역방향으로 수신자에게서 3m 이상 떨어진 첫 웨이포인트로의 현)으로 계산 — 퍼스트터치처럼 공이 온 쪽에 안착. 릴리스 산포는 무시(폴백: rel ≥0.3m → 기본 오른발 방향). 결과: 화살표 끝 = 공 = 다음 원점이 한 접점.
 - 기존 테스트 "side the pass arrived from"이 실제로는 릴리스 쪽을 단언하고 있었음 — 이름대로 접근 방향 내적 >0으로 교정.
 Validation: typecheck/lint/test 146(+1)/build/harness/format PASS. 단위: 오버슛 릴리스(수신자 지나 2.5m) → 접근쪽 캐리 밴드 안착. Playwright approach.cjs: 오버슛+체인 아웃패스 → approach-side true, 부착 2.60m, 접합 0.00m, 콘솔 클린.
+
+### CHG-20260820-080 — FIX — 드리블→패스 경계에서 캐리 공 잔상 소실
+
+Problem: 선수가 공을 끌고 이동(1단계)한 뒤 그 지점에서 패스(2단계)하면, 이동 잔상 선수 옆의 캐리 공 잔상이 사라짐 — 잔상 판정이 stateAt(tm.end) 정확히 경계 시점 샘플이라 그 순간 패스가 이미 시작돼 소유가 해제된 상태(사용자: "미래시점 2번 선수한테도 잔상 공이 있어야지"). 체인 런만 있을 땐 소유가 유지돼 드러나지 않던 결함.
+Change:
+- SimplePitch.tsx 캐리 공 잔상: 홀더 판정을 tm.end − 0.05s 샘플로, 위치는 이동 종착점 + 그 시점 캐리 오프셋으로 고정. 패스가 경계에서 출발해도 잔상 유지.
+Validation: typecheck/lint/test 146/build/harness/format PASS. Playwright dribblepass.cjs: 드리블 후 잔상 공 생성 → 그 잔상에서 Alt+드래그로 패스(원점 접합 0.00m, step 자동 2, 수신자 확정) → 패스 존재 상태에서도 잔상 공 유지, 콘솔 클린.

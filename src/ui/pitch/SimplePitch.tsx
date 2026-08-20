@@ -942,22 +942,30 @@ export function SimplePitch() {
             ]
             // The runner still HOLDS the ball at the end of this movement → the ball travels with them:
             // show a faint ball there too, so the next pass can start from that future spot.
+            // Sample just BEFORE the end (user 2026-08-20): when a pass launches exactly at the
+            // boundary (dribble → pass), possession is already released AT tm.end and the carried
+            // ghost vanished. −0.05s still sees the holder; the ghost anchors at the true end.
             if (tr.entityKind === 'player') {
               const tm = compiled.segmentTimes[(sg as { id: Id }).id]
               if (tm && Number.isFinite(tm.end)) {
-                const rs = stateAt(compiled, doc, tm.end)
-                if (rs.ball.holderId === tr.entityId)
+                const rs = stateAt(compiled, doc, Math.max(0, tm.end - 0.05))
+                if (rs.ball.holderId === tr.entityId) {
+                  const pp = rs.players[tr.entityId]?.pos
+                  const off = pp
+                    ? { x: rs.ball.pos.x - pp.x, y: rs.ball.pos.y - pp.y }
+                    : { x: 1.75, y: 1.15 }
                   out.push({
                     id: `${sg.id}-ball-ghost`,
                     segId: (sg as { id: Id }).id,
                     entityId: doc.ball.id,
                     kind: 'ball' as const,
                     step: srcStep,
-                    pos: rs.ball.pos,
+                    pos: { x: end.x + off.x, y: end.y + off.y },
                     opacity,
                     number: undefined,
                     color: '#ffffff',
                   })
+                }
               }
             }
             return out
