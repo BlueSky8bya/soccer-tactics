@@ -556,3 +556,8 @@
   opacity: 0.95;
   pointer-events: none;
 }
+
+.tokenShadow {
+  fill: rgba(10, 30, 16, 0.22);
+  pointer-events: none;
+}

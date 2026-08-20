@@ -614,3 +614,22 @@ Change:
 - 헤더의 Ctrl+클릭/우클릭 안내 제거 → 좌측 팀 구성 카드 하단에 두 줄 들여쓰기(panelHintLine).
 Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 배지 "v0.1.0 (844bab3)"·클릭 복사 토스트, 사이드바 안내 2줄, 스크린샷 육안(중앙 정렬), 콘솔 클린.
 
+### CHG-20260820-053 — FEAT — 플레이 GIF 내보내기 (사용자 지시)
+
+Problem: 만든 애니메이션을 시간 압축해 GIF로 뽑아 보관/공유하고 싶음.
+Change:
+- 신규 `exportGif.ts`: 엔진 stateAt 기반 캔버스 렌더(재생 뷰와 동일 — 잔디+선수+공만) → gifenc 인코딩. 기본 2배속·12fps·640px, 진행률 콜백, 8프레임마다 yield. `sampleTimes` 순수(테스트 2).
+- 하단 바 재생 그룹에 **GIF** 버튼: 진행률 토스트 → 파일 다운로드(`tactic-YYYY-MM-DD.gif`). 파일이 곧 보관함 — 앱 내 저장 없음(클린 보드 원칙 유지).
+- 의존성 gifenc 추가(8KB, 무의존) — 사용자 기능 지시로 정당화, 기록.
+Validation: typecheck/lint/test 122(+2)/build/harness/format PASS; Playwright: 다운로드 파일 GIF89a 매직·412KB, 콘솔 클린.
+
+### CHG-20260820-054 — UX — Ctrl+좌클릭 표기·글로시 토큰·결정적 런 바운스·심도 폴리시 (사용자 지시)
+
+Problem: "Ctrl+클릭" 표기가 모호, 디자인이 밋밋(애플 심도 부족), 이동이 뻣뻣함.
+Change:
+- 모든 안내 문구 Ctrl+클릭 → **Ctrl+좌클릭**.
+- 토큰: 상단광 radialGradient 캡 + 지면 그림자(ellipse) — 말이 잔디 위에 떠 보이는 글로시 룩.
+- **결정적 런 바운스**: 이동 중 선수에 전술시간 f(t) 사인 bob(진폭 0.22m, 선수별 위상) — UI 표현 전용, 엔진/스크럽 정확성 불변(RULE-04 준수).
+- 심도: 피치 프레임 3중 그림자·라운드 20px, 카드/부유 바 blur 강화+흰 헤어라인+2중 그림자, 재생 버튼 그라디언트+글로우+호버 리프트.
+Validation: 위 게이트 동일 PASS; Playwright: 재생 중 y 진폭 1.1px 관측(결정적), 스크린샷 육안, 콘솔 클린.
+

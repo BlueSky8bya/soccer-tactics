@@ -814,6 +814,14 @@ export function SimplePitch() {
       onPointerCancel={() => endGestureRef.current(false)}
       onContextMenu={(e) => e.preventDefault()}
     >
+      <defs>
+        {/* glossy token cap: light from top-left, gentle falloff (Apple-style depth) */}
+        <radialGradient id="tokGloss" cx="35%" cy="28%" r="80%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.38" />
+          <stop offset="55%" stopColor="#ffffff" stopOpacity="0.06" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.14" />
+        </radialGradient>
+      </defs>
       <PitchMarkings pitch={doc.pitch} />
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />
       {/* Routes hidden while the animation runs (user 2026-08-20): the moving tokens ARE the play. */}
@@ -860,14 +868,19 @@ export function SimplePitch() {
           </g>
         ))}
       </g>
-      {doc.players.map((p) => {
+      {doc.players.map((p, pi) => {
         const rp = resolved.players[p.id]
+        // Bouncy run feel (user 2026-08-20): a tiny deterministic bob derived from TACTICAL time —
+        // pure f(t), so scrubbing/replay stay exact and the engine stays untouched.
+        const bob =
+          rp?.moving && isPlaying ? -Math.abs(Math.sin(ui.playback.t * 6.5 + pi * 1.3)) * 0.22 : 0
+        const pos0 = rp?.pos ?? p.home
         return (
           <AnimatedToken
             key={p.id}
             id={p.id}
             kind="player"
-            pos={rp?.pos ?? p.home}
+            pos={bob ? { x: pos0.x, y: pos0.y + bob } : pos0}
             color={teamColorOf(doc, p.id)}
             number={p.number}
             label={p.label && p.role ? `${p.label}(${p.role})` : (p.label ?? p.role)}

@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
+import { downloadBlob, exportGif } from './exportGif'
 import { usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
@@ -29,7 +30,28 @@ export function AppShell() {
   const setReducedMotion = useUiStore((s) => s.setReducedMotion)
   const startTour = useUiStore((s) => s.startTour)
   const variants = useVariantSession()
+  const [gifBusy, setGifBusy] = useState(false)
   useEditorKeyboard()
+
+  const exportPlayGif = async () => {
+    if (gifBusy) return
+    setGifBusy(true)
+    ui.flashToast(t('gif.start'), 90000)
+    try {
+      const blob = await exportGif(core.getDocument(), {
+        onProgress: (d, n) => {
+          if (d % 12 === 0)
+            ui.flashToast(t('gif.progress', { p: Math.round((d / n) * 100) }), 90000)
+        },
+      })
+      downloadBlob(blob, `tactic-${new Date().toISOString().slice(0, 10)}.gif`)
+      ui.flashToast(t('gif.done'))
+    } catch {
+      ui.flashToast(t('gif.fail'))
+    } finally {
+      setGifBusy(false)
+    }
+  }
 
   const switchVariant = (id: 'A' | 'B' | 'C') => {
     if (!variants || !variants.has(id) || variants.activeId === id) return
@@ -190,6 +212,16 @@ export function AppShell() {
               aria-pressed={ui.playback.loop}
             >
               ⟳
+            </button>
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={exportPlayGif}
+              disabled={gifBusy || compiled.duration < 0.3}
+              title={t('gif.button')}
+              aria-label={t('gif.button')}
+            >
+              {gifBusy ? '…' : 'GIF'}
             </button>
           </span>
           <span className={styles.barDivider} aria-hidden="true" />

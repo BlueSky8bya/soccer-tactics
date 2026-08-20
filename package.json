@@ -18,6 +18,7 @@
     "harness:handoff": "node scripts/agent-harness/create-handoff.mjs"
   },
   "dependencies": {
+    "gifenc": "^1.0.3",
     "immer": "^11.1.18",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

@@ -27,7 +27,7 @@ export const KEYMAP = {
 
 /** 배치 (always available). */
 export const PLACE_BINDINGS: Binding[] = [
-  { label: 'Ctrl+클릭', hint: '우리팀 선수 추가' },
+  { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가' },
   { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
   { label: '드래그', hint: '옮기기 (여러 명이면 같이)' },
   { label: '빈 잔디 드래그', hint: '박스로 여러 명 선택' },

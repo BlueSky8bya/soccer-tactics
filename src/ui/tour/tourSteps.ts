@@ -58,7 +58,7 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'place',
     title: '선수 놓기',
     body: 'Ctrl을 누른 채 잔디를 클릭하면 우리팀, 우클릭하면 상대팀 선수가 그 자리에 생겨요. 한 번에 채우려면 왼쪽 [양 팀 채우기].',
-    kbd: 'Ctrl+클릭 · Ctrl+우클릭',
+    kbd: 'Ctrl+좌클릭 · Ctrl+우클릭',
     target: () => '[data-tour="fill"]',
     done: (c) => c.doc.players.length > 0,
   },

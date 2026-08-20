@@ -66,6 +66,8 @@ export const Token = memo(function Token(p: TokenProps) {
   if (p.kind === 'player') {
     body = (
       <>
+        {/* soft ground shadow — lifts the piece off the grass (design polish 2026-08-20) */}
+        <ellipse cx={0.22} cy={0.3} rx={r * 1.02} ry={r * 0.62} className={styles.tokenShadow} />
         {p.selected && (
           <circle r={r + 0.7} className={styles.selectionRing} style={{ stroke: p.color }} />
         )}
@@ -79,6 +81,8 @@ export const Token = memo(function Token(p: TokenProps) {
           />
         )}
         <circle r={r} className={styles.tokenBody} style={{ fill: p.color }} />
+        {/* glossy cap (shared gradient def lives in SimplePitch) */}
+        <circle r={r} fill="url(#tokGloss)" pointerEvents="none" />
         <text className={styles.tokenNumber}>{p.number}</text>
         {p.label && (
           <text className={styles.tokenLabel} y={r + 1.6}>
