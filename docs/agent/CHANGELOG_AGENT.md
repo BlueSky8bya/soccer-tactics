@@ -588,5 +588,5 @@ Change:
 - 움직임 전체 지우기 = **X** 한 키(Shift+Delete 대체). 버튼 표기/타이틀/? 오버레이 갱신.
 - panelBtn: overflow hidden·패딩/폰트 축소, btnKbd flex none — 라벨+표기가 항상 버튼 안(scrollWidth 검증).
 - **Ctrl+선수 클릭 = 선택에 추가**, 이미 선택된 멤버 Ctrl+클릭 = 빼기(토글), **Ctrl+누른 채 드래그 = 추가 후 그룹 전체 이동**. gestureIntent에 press-token-additive 추가(truth table 테스트 포함). 잔디 Ctrl+클릭=선수 투입은 그대로.
-Validation: typecheck/lint/test 121/build/harness/format PASS; Playwright: 클릭 1→Ctrl+클릭 2→재클릭 1(토글), Ctrl+드래그로 3명 추가·그룹 60,36px 이동, X로 segments 0, 버튼 overflow 없음, 콘솔 클린.
+Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 클릭 1→Ctrl+클릭 2→재클릭 1(토글), Ctrl+드래그로 3명 추가·그룹 60,36px 이동, X로 segments 0, 버튼 overflow 없음, 콘솔 클린.
 
