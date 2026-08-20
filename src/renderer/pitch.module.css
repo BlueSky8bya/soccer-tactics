@@ -110,13 +110,16 @@
   stroke-width: 0.25px;
 }
 
-/* Selection = the piece's own border thickens; NO outer rings (user 2026-08-21: 거추장). */
+/* Selection = the piece itself lifts (scale spring in AnimatedToken), its border thickens and
+   its shadow deepens; NO outer rings (user 2026-08-21: 거추장). */
 .tokenBodySelected {
   stroke-width: 3.5px;
+  filter: drop-shadow(0 0.4px 0.8px rgba(0, 0, 0, 0.5));
 }
 
 .ballSelected {
   stroke-width: 2.4px;
+  filter: drop-shadow(0 0.35px 0.7px rgba(0, 0, 0, 0.55));
 }
 
 .ball {

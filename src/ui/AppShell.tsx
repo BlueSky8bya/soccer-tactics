@@ -106,6 +106,7 @@ export function AppShell() {
         aria-pressed={!ui.annotate.on}
       >
         {t('mode.anim')}
+        {ui.annotate.on && <span className={styles.kbdMini}>D</span>}
       </button>
       <button
         type="button"
@@ -117,7 +118,7 @@ export function AppShell() {
         aria-pressed={ui.annotate.on}
       >
         {t('mode.draw')}
-        <span className={styles.kbdMini}>D</span>
+        {!ui.annotate.on && <span className={styles.kbdMini}>D</span>}
       </button>
     </span>
   )

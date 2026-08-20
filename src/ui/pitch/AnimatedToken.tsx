@@ -52,9 +52,29 @@ export const AnimatedToken = memo(function AnimatedToken(p: AnimatedTokenProps) 
   })
 
   useEffect(() => {
-    // press = instant small lift acknowledgement; drag = full pickup (M4 contract)
-    scale.to(p.dragging ? 1.08 : p.pressed ? 1.035 : 1)
-  }, [p.dragging, p.pressed, scale])
+    // press = instant small lift acknowledgement; drag = full pickup (M4 contract).
+    // Selected pieces stay LIFTED (user 2026-08-21: rings are gone — the pick must still read).
+    // The ball is small, so its lift is the strongest.
+    const selectedLift = p.selected ? (p.kind === 'ball' ? 1.16 : 1.05) : 1
+    scale.to(
+      p.dragging
+        ? Math.max(1.08, selectedLift)
+        : p.pressed
+          ? Math.max(1.035, selectedLift)
+          : selectedLift,
+    )
+  }, [p.dragging, p.pressed, p.selected, p.kind, scale])
+
+  // Becoming selected fires a one-shot pop — the "탁, 잡았다" moment.
+  const prevSelected = useRef(p.selected)
+  useEffect(() => {
+    if (p.selected && !prevSelected.current) {
+      pulse.jump(p.kind === 'ball' ? 1.35 : 1.22)
+      pulse.to(1)
+    }
+    prevSelected.current = p.selected
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.selected])
 
   useEffect(() => {
     if (!p.dropFrom) return

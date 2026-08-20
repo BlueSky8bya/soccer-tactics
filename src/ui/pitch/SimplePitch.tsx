@@ -489,19 +489,12 @@ export function SimplePitch() {
     }
   }, [])
 
-  // Esc cancels any gesture; with no gesture it leaves draw mode (PLAN-008)
+  // Esc cancels any gesture. It does NOT leave draw mode (user 2026-08-21: D alone toggles).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      if (gesture.current) {
+      if (e.key === 'Escape' && gesture.current) {
         e.preventDefault()
         endGestureRef.current(false)
-        return
-      }
-      const st = useUiStore.getState()
-      if (st.annotate.on) {
-        e.preventDefault()
-        st.setAnnotateOn(false)
       }
     }
     window.addEventListener('keydown', onKey)

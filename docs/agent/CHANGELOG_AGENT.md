@@ -905,3 +905,12 @@ Change:
 - 그리기 바: "D 전환·Ctrl+Z" 힌트·Esc 종료 버튼 제거(D/Esc 단축키가 담당, 모드 배지로 복귀 가능), 전체 지우기는 휴지통 아이콘으로. 굵기 버튼 폭 축소. 재생 바와 폭 743↔799px.
 - 도구 단축키 V(선택)/P(펜)/E(지우개) + 아이콘 위 9.5px 흐릿한 키 라벨. keymap 가이드 갱신.
 Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright: 팝업 열림·3-5-2 선택 반영, 힌트/Esc 부재, 키 라벨 V,P,E, e/v 키로 도구 전환 — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-089 — UX — 선택 = 말이 들리는 리프트+팝 / D 칩 목적지 표시 / Esc 복귀 제거
+
+Problem: (1) 링 제거 후 공을 집었는지 인지 불가(사용자). (2) 애니메이션 복귀 단축키가 배지에 안 보임. (3) Esc가 그리기 모드를 나가버림 — 사용자: D만 토글, Esc는 복귀 금지.
+Change:
+- AnimatedToken: 선택된 말은 스프링으로 상시 리프트(공 ×1.16, 선수 ×1.05, 드래그·프레스와 max 결합) + 선택 순간 원샷 팝(공 1.35/선수 1.22). 선택 테두리에 그림자 심도 추가. 해제 시 1.0 복귀. 측정: 1.005→1.123(상승)→1.160(안착)→1.000.
+- 모드 배지 D 칩을 "누르면 갈 곳" 세그먼트에 표시(그리기 중엔 애니메이션 쪽에 D).
+- Esc의 그리기 모드 종료 제거 — 획 취소만. keymap 가이드에서 Esc 종료 행 삭제.
+Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright liftsel.cjs 6건 ALL PASS(리프트·팝·복귀·칩 위치·D 왕복·Esc 유지), 콘솔 클린.
