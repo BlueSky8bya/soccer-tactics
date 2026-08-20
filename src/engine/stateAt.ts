@@ -183,9 +183,12 @@ function resolveBall(
     if (!h) return BALL_OFFSET
     return carryOffset({ x: doc.ball.home.x - h.home.x, y: doc.ball.home.y - h.home.y })
   }
-  const holderPos = (id: Id, offset: Vec2): Vec2 | undefined => {
+  const holderPos = (id: Id, offset: Vec2, offsetLocked?: boolean): Vec2 | undefined => {
     const p = players[id]
     if (!p) return undefined
+    // A user-pinned carry side (ball-ghost orbit) overrides the front-rest — but only while
+    // STANDING; an active run still dribbles out front.
+    if (offsetLocked && !p.moving) return { x: p.pos.x + offset.x, y: p.pos.y + offset.y }
     // DRIBBLE (user 2026-08-21): while the holder RUNS, the ball rides ahead of them in the
     // movement direction — like a real touch-and-go — blending back to the side-carry spot at
     // the start/end of the run so authored anchors (ghosts, pass origins) stay consistent.
@@ -215,7 +218,7 @@ function resolveBall(
   if (seg) {
     switch (seg.kind) {
       case 'possessed': {
-        const pos = holderPos(seg.holderId, seg.offset)
+        const pos = holderPos(seg.holderId, seg.offset, seg.offsetLocked)
         return {
           pos: pos ?? doc.ball.home,
           status: 'possessed',

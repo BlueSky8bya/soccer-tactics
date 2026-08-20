@@ -170,7 +170,13 @@ export type BallTravelKind =
   'pass' | 'throughBall' | 'cross' | 'shot' | 'clearance' | 'deflection' | 'loose'
 
 export type BallSegment =
-  | (SegmentBase & { kind: 'possessed'; holderId: Id; offset?: Vec2 })
+  | (SegmentBase & {
+      kind: 'possessed'
+      holderId: Id
+      offset?: Vec2
+      /** User pinned the carry side by orbiting the ball ghost — the dribble front-rest yields. */
+      offsetLocked?: boolean
+    })
   | (SegmentBase & {
       kind: 'travel'
       travelKind: BallTravelKind

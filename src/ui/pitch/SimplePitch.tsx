@@ -4,6 +4,7 @@ import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
 import { clampToPitch } from '@/editor/geometry'
 import {
+  ensureTrack,
   findSegment,
   lastKnownPosition,
   moveBallStartInDraft,
@@ -32,6 +33,8 @@ import { addFreehand } from '@/editor/moreCommands'
 import { MIN_POINT_DIST_PX, mapPenPressure, mouseSpeedPressure, smoothPressure } from './inking'
 
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
+const findTrackInDoc = (d: TacticDocument) =>
+  sceneOf(d).timeline.tracks.find((tr) => tr.entityId === d.ball.id)
 import { useUiStore } from '@/editor/uiStore'
 import { useCompiled, useResolvedState } from '@/editor/useCompiled'
 import { carryOffset } from '@/engine/compile'
@@ -132,6 +135,16 @@ type Gesture =
       lastKept: { x: number; y: number }
     }
   | { type: 'annot-erase'; pointerId: number; began: boolean }
+  /** Carried-ball ghost orbit: set the POSSESSION carry side around the junction player —
+   *  never bends the run underneath (user 2026-08-21). */
+  | {
+      type: 'orbit-carry'
+      pointerId: number
+      center: Vec2
+      holderId: Id
+      possessionId: Id | null
+      began: boolean
+    }
 
 /**
  * Simple-mode pitch (ADR-0009). The whole gesture language:
@@ -304,10 +317,7 @@ export function SimplePitch() {
       return
     }
     if (entityId === doc.ball.id)
-      // ghost-continue draws (minStep set) chose their origin DELIBERATELY — never snap it
-      addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId, {
-        exactOrigin: minStep !== undefined,
-      })
+      addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId)
     else addStepRun(core, entityId, waypoints, step)
     // commit confirmation: subject pops again as the arrow lands (M4)
     pulseKey.current++
@@ -395,6 +405,13 @@ export function SimplePitch() {
       return
     }
     if (g.type === 'annot-erase') {
+      if (g.began) {
+        if (commit) core.commit()
+        else core.cancel()
+      }
+      return
+    }
+    if (g.type === 'orbit-carry') {
       if (g.began) {
         if (commit) core.commit()
         else core.cancel()
@@ -878,6 +895,34 @@ export function SimplePitch() {
         const f = segId ? findSegment(core.getDocument(), segId) : null
         if (!f || !('path' in f.segment)) return
         const wps = f.segment.path.waypoints
+        if (ghostTop!.entityId === doc.ball.id && f.segment.kind === 'move') {
+          // carried ball beside a run's junction: orbit the possession side, leave the run alone
+          const center = wps[wps.length - 1]!.p
+          const tmEnd = compiled.segmentTimes[segId]?.end
+          const bt = compiled.tracks[doc.ball.id]
+          let possessionId: Id | null = null
+          if (bt && tmEnd !== undefined) {
+            const ps = bt.segments.find(
+              (cs) =>
+                cs.kind === 'possessed' &&
+                cs.holderId === f.track.entityId &&
+                cs.start <= tmEnd + 0.06 &&
+                cs.end >= tmEnd - 0.06,
+            )
+            possessionId = ps?.id ?? null
+          }
+          st.returnToAuthoringStart()
+          gesture.current = {
+            type: 'orbit-carry',
+            pointerId: e.pointerId,
+            center,
+            holderId: f.track.entityId,
+            possessionId,
+            began: false,
+          }
+          svg.setPointerCapture(e.pointerId)
+          return
+        }
         let orbitCenter: Vec2 | undefined
         if (
           ghostTop!.entityId === doc.ball.id &&
@@ -1000,6 +1045,46 @@ export function SimplePitch() {
     }
     if (g.type === 'annot-erase') {
       eraseAt(pt)
+      return
+    }
+
+    if (g.type === 'orbit-carry') {
+      if (!g.began) {
+        g.began = true
+        core.begin('Set carry side')
+      }
+      const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
+      core.update((d) => {
+        const doc2 = d as TacticDocument
+        const bt2 = findTrackInDoc(doc2)
+        let seg = g.possessionId
+          ? (bt2?.segments.find((s2) => s2.id === g.possessionId) ?? undefined)
+          : undefined
+        if (!seg || seg.kind !== 'possessed') {
+          seg = bt2?.segments
+            .filter(
+              (s2): s2 is Extract<typeof s2, { kind: 'possessed' }> =>
+                s2.kind === 'possessed' && s2.holderId === g.holderId,
+            )
+            .pop()
+        }
+        if (!seg) {
+          const tr = ensureTrack(doc2, doc2.ball.id, 'ball')
+          const created = {
+            id: newIdFor('seg'),
+            kind: 'possessed' as const,
+            trigger: { type: 'at' as const, t: 0 },
+            timing: { duration: 0 },
+            holderId: g.holderId,
+          }
+          tr.segments.unshift(created)
+          seg = created
+        }
+        if (seg && seg.kind === 'possessed') {
+          seg.offset = off
+          seg.offsetLocked = true
+        }
+      })
       return
     }
 
@@ -1360,9 +1445,13 @@ export function SimplePitch() {
               if (tm && Number.isFinite(tm.end)) {
                 const rs = stateAt(compiled, doc, Math.max(0, tm.end - 0.05))
                 if (rs.ball.holderId === tr.entityId) {
-                  const pp = rs.players[tr.entityId]?.pos
+                  // prefer the REST state just after the move (locked side / front-rest); the
+                  // −0.05 sample only decides WHO holds (boundary release, CHG-080)
+                  const rs2 = stateAt(compiled, doc, tm.end + 0.05)
+                  const use = rs2.ball.holderId === tr.entityId ? rs2 : rs
+                  const pp = use.players[tr.entityId]?.pos
                   const off = pp
-                    ? { x: rs.ball.pos.x - pp.x, y: rs.ball.pos.y - pp.y }
+                    ? { x: use.ball.pos.x - pp.x, y: use.ball.pos.y - pp.y }
                     : { x: 1.75, y: 1.15 }
                   out.push({
                     id: `${sg.id}-ball-ghost`,

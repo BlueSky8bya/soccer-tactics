@@ -79,6 +79,54 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     }
     t = Math.round((t + stepDur) * 100) / 100
   }
+  // ORIGIN = BALL AT LAUNCH (user 2026-08-21, structural): wherever and whenever a pass was
+  // drawn, its authored origin snaps to where the ball actually IS when it fires — the static
+  // view and the animation can never disagree again. One extra timing pass afterwards.
+  {
+    const cm0 = compile(draft)
+    let moved = false
+    for (const track of scene.timeline.tracks) {
+      if (track.entityKind !== 'ball') continue
+      for (const seg of track.segments) {
+        if (seg.kind !== 'travel' || seg.id.startsWith(GEN_PREFIX)) continue
+        if (seg.trigger.type !== 'at') continue
+        const first = seg.path.waypoints[0]
+        if (!first) continue
+        const rs = stateAt(cm0, draft, Math.max(0, seg.trigger.t - 0.02))
+        const launch = rs.ball.pos
+        const dx = launch.x - first.p.x
+        const dy = launch.y - first.p.y
+        if (Math.hypot(dx, dy) > 0.25) {
+          moved = true
+          first.p = { x: launch.x, y: launch.y }
+          if (first.handleIn)
+            first.handleIn = { x: first.handleIn.x + dx, y: first.handleIn.y + dy }
+          if (first.handleOut)
+            first.handleOut = { x: first.handleOut.x + dx, y: first.handleOut.y + dy }
+        }
+      }
+    }
+    if (moved) {
+      // lengths changed → re-derive the step timings once
+      let t2 = 0
+      for (const step of steps) {
+        const members = authored.filter((s2) => stepOf(s2) === step)
+        let stepDur = 0.1
+        for (const s2 of members) {
+          const seg2 = s2 as { kind: string; path: Path }
+          const speed = seg2.kind === 'travel' ? DEFAULT_PASS_SPEED : DEFAULT_PLAYER_SPEED
+          stepDur = Math.max(stepDur, Math.max(0.2, buildPathLUT(seg2.path).length / speed))
+        }
+        stepDur = Math.round(stepDur * 100) / 100
+        for (const s2 of members) {
+          s2.trigger = { type: 'at', t: t2 }
+          s2.timing = { duration: stepDur }
+        }
+        t2 = Math.round((t2 + stepDur) * 100) / 100
+      }
+    }
+  }
+
   // THROUGH BALL sync (user 2026-08-20): a pass aimed at a receiver's FUTURE spot must ARRIVE
   // when the runner does — otherwise possession snaps to the mid-run player and a phantom ball
   // appears. If the receiver's own movement ends where the pass ends, stretch the pass duration
@@ -191,7 +239,6 @@ export function addStepPass(
   waypoints: Waypoint[],
   step: number,
   holderHint?: Id,
-  opts?: { exactOrigin?: boolean },
 ): Id {
   const id = newId('seg')
   core.transaction('Add pass', (d) => {
@@ -214,34 +261,6 @@ export function addStepPass(
         holderId: holder,
         ...(off ? { offset: off } : {}),
       })
-    }
-    // A pass drawn from the LIVE ball token while a chain exists must still LAUNCH from where
-    // the ball will BE (user 2026-08-21: 선택하면 원점이 시작 지점까지 늘어나는 오류). The ball's
-    // future = its holder's last known spot (+carry) or the ball chain's own end. Origins the
-    // user placed anywhere on the holder's ring (≤3.2m) are THEIR choice and stay untouched.
-    const lastSeg = track.segments[track.segments.length - 1]
-    const holderFuture =
-      lastSeg && lastSeg.kind === 'possessed' ? lastKnownPosition(doc, lastSeg.holderId) : undefined
-    const anchor = holderFuture ?? lastKnownPosition(doc, doc.ball.id)
-    const off =
-      lastSeg && lastSeg.kind === 'possessed' && lastSeg.offset
-        ? lastSeg.offset
-        : { x: 1.75, y: 1.15 }
-    const expected = holderFuture
-      ? { x: holderFuture.x + off.x, y: holderFuture.y + off.y }
-      : anchor
-    const first = waypoints[0]
-    if (
-      !opts?.exactOrigin &&
-      first &&
-      Math.hypot(first.p.x - anchor.x, first.p.y - anchor.y) > 3.2
-    ) {
-      const dx = expected.x - first.p.x
-      const dy = expected.y - first.p.y
-      first.p = { x: expected.x, y: expected.y }
-      if (first.handleIn) first.handleIn = { x: first.handleIn.x + dx, y: first.handleIn.y + dy }
-      if (first.handleOut)
-        first.handleOut = { x: first.handleOut.x + dx, y: first.handleOut.y + dy }
     }
     track.segments.push({
       id,

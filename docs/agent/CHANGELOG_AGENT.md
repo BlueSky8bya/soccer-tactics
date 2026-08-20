@@ -1045,3 +1045,11 @@ Change:
 - addStepRun 후 근처 무수신 패스 재해석 — 공이 캐리 링에 부착(고스트 분리 2.6m). 고스트 드로우 원점은 exactOrigin으로 스냅 면제.
 - 웨이포인트 점 0.7→0.48m·투명 0.6(선택 시 1), 배지 배치가 토큰·고스트를 장애물로 회피(후보 8방향, 최소 소음 지점).
 Validation: typecheck/lint/test 159(드리블 v3 갱신)/build/harness/format PASS. Playwright four.cjs: 재생 종료 시 공 전방(+14.9px)/링 정각 (0,−2.04)/수신 부착 분리 2.60m — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-106 — FIX(구조) — 패스 원점=발사 시각 공 위치 불변식 + 캐리 고스트 전용 궤도
+
+Problem(사용자): (1) 초기 공에서 그린 패스가 화면에선 홀더의 미래 지점부터 그려지고 재생은 초기에서 발사 — 그리는 위치·순서에 따라 화면과 애니메이션이 계속 어긋남(3번째 신고). (2) 캐리 공 고스트를 돌리면 밑에 깔린 런 경로 곡률이 벤딩됨.
+Change:
+- **구조적 불변식**: relayoutStepsInDraft가 모든 저작 패스의 원점을 "그 패스 발사 시각의 실제 공 위치"(compile+stateAt, 드리블 전방·잠금 오프셋 포함)로 스냅하고 타이밍을 1회 재유도 — 어디서 어떻게 그렸든, 단계를 바꾸든, 정적 화면과 재생이 절대 어긋날 수 없음. 기존 addStepPass 원점 스냅·exactOrigin 폐지(대체).
+- 캐리 공 고스트 드래그 = orbit-carry 제스처: 해당 정션 소유 세그먼트의 offset을 캐리 링으로 회전 저장(offsetLocked, 스키마 옵션 필드 추가·하위호환) — 런 경로는 절대 안 건드림. 잠금 오프셋은 정지 시 전방 유지(v3)보다 우선(엔진), 고스트 표시도 종료+0.05s 휴식 상태 기준.
+Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright structural.cjs: 원점=발사 위치 소수 일치, 궤도 후 런 웨이포인트 바이트 동일·offset (0,−2.6) 잠금 — ALL PASS, 콘솔 클린.

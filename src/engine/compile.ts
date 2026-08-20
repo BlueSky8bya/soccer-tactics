@@ -49,7 +49,15 @@ export interface MoveSchedule {
 export type CompiledSegment =
   | { id: Id; kind: 'move'; start: number; end: number; schedule: MoveSchedule }
   | { id: Id; kind: 'hold'; start: number; end: number }
-  | { id: Id; kind: 'possessed'; start: number; end: number; holderId: Id; offset: Vec2 }
+  | {
+      id: Id
+      kind: 'possessed'
+      start: number
+      end: number
+      holderId: Id
+      offset: Vec2
+      offsetLocked?: boolean
+    }
   | {
       id: Id
       kind: 'travel'
@@ -410,6 +418,7 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
             end,
             holderId: seg.holderId,
             offset: seg.offset ?? BALL_OFFSET,
+            ...(seg.offsetLocked ? { offsetLocked: true } : {}),
           }
           events.push({ kind: 'segment.start', t: start, segmentId: seg.id, entityId })
           break
