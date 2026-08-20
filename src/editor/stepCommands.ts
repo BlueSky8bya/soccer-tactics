@@ -4,7 +4,7 @@
  * Steps are stored on the segments (`step`); triggers are derived here, so the engine,
  * persistence and old documents are untouched.
  */
-import type { Id, Path, TacticDocument, Waypoint } from '@/domain/types'
+import type { Id, Path, TacticDocument, Vec2, Waypoint } from '@/domain/types'
 import { GEN_PREFIX } from '@/engine/opponent'
 import { carryOffset, compile } from '@/engine/compile'
 import { smoothWaypoints } from '@/engine/path'
@@ -18,6 +18,7 @@ import {
   RECEIVE_RADIUS_M,
   ensureTrack,
   findSegment,
+  findTrack,
   lastKnownPosition,
   passerFor,
   possessTrigger,
@@ -283,11 +284,72 @@ export function bendMoveWaypointInDraft(
   const wps = f.segment.path.waypoints
   const i = wps.findIndex((w) => w.id === waypointId)
   if (i < 0) return
+  const isEnd = i === wps.length - 1
+  const old = { x: wps[i]!.p.x, y: wps[i]!.p.y }
   const pts = wps.map((w, k) => (k === i ? { x: to.x, y: to.y } : w.p))
   f.segment.path.waypoints = smoothWaypoints(
     pts,
     wps.map((w) => w.id),
   )
+  const inc = { x: to.x - old.x, y: to.y - old.y }
+  if (isEnd && (inc.x !== 0 || inc.y !== 0))
+    shiftJunctionAnchorsInDraft(doc, f.track.entityId, segmentId, old, inc)
+}
+
+/** Chained next-movement origin is SNAPPED to the ghost — tight follow tolerance. */
+const JUNCTION_CHAIN_M = 0.75
+/** Ball anchors sit within carry offset (≤2.6 m) / receive radius (3.5 m) of the junction. */
+const JUNCTION_BALL_M = RECEIVE_RADIUS_M
+
+function shiftWaypoint(w: Waypoint, inc: Vec2): void {
+  w.p = { x: w.p.x + inc.x, y: w.p.y + inc.y }
+  if (w.handleIn) w.handleIn = { x: w.handleIn.x + inc.x, y: w.handleIn.y + inc.y }
+  if (w.handleOut) w.handleOut = { x: w.handleOut.x + inc.x, y: w.handleOut.y + inc.y }
+}
+
+/**
+ * Junction follow (user 2026-08-20): dragging a movement's END (its ghost) must carry everything
+ * anchored at that future spot — the same entity's CHAINED next movement (its origin was drawn
+ * from this ghost) and the ball anchors held there (the pass this player makes FROM that spot,
+ * the pass they RECEIVE at it). Only the junction waypoint translates; the far anchor stays put,
+ * so the user's aimed destination is never disturbed. QA: "2단계와 3단계를 잇는 선수를 옮겼는데
+ * 공이 같이 안 옮겨져".
+ */
+export function shiftJunctionAnchorsInDraft(
+  doc: TacticDocument,
+  entityId: Id,
+  movedSegId: Id,
+  oldEnd: Vec2,
+  inc: Vec2,
+): void {
+  const near = (p: Vec2, tol: number) => Math.hypot(p.x - oldEnd.x, p.y - oldEnd.y) <= tol
+  // 1) chained next movement of the SAME entity: origin snapped to the moved end
+  const track = findTrack(doc, entityId)
+  if (track)
+    for (const s of track.segments) {
+      if (!('path' in s) || s.id === movedSegId || s.id.startsWith(GEN_PREFIX)) continue
+      const first = s.path.waypoints[0]
+      if (first && near(first.p, JUNCTION_CHAIN_M)) shiftWaypoint(first, inc)
+    }
+  // 2) ball anchors at the junction (player movements only)
+  if (entityId === doc.ball.id) return
+  const ball = findTrack(doc, doc.ball.id)
+  if (!ball) return
+  for (let i = 0; i < ball.segments.length; i++) {
+    const seg = ball.segments[i]!
+    if (seg.kind !== 'travel') continue
+    // pass INTO this player arriving at the moved spot → its end travels with the junction
+    if (seg.receiverId === entityId) {
+      const last = seg.path.waypoints[seg.path.waypoints.length - 1]
+      if (last && near(last.p, JUNCTION_BALL_M)) shiftWaypoint(last, inc)
+    }
+    // pass FROM this player leaving the moved spot → its origin travels with the junction
+    const prev = ball.segments[i - 1]
+    if (prev && prev.kind === 'possessed' && prev.holderId === entityId) {
+      const first = seg.path.waypoints[0]
+      if (first && near(first.p, JUNCTION_BALL_M)) shiftWaypoint(first, inc)
+    }
+  }
 }
 
 /** Change a movement's step (badge click / number key on selection). */

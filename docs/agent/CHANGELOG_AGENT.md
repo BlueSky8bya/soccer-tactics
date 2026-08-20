@@ -810,3 +810,10 @@ Change:
 - M4: 골든 G1~G7 재실행 전부 일치, 22명+5경로 호버 스윕 2초+ long task(>50ms) 0건, 콘솔 클린.
 Validation: typecheck/lint/test 142/build/harness/format PASS; Playwright: 호버 링 표시, 겹침 스택 클릭1=선수8→클릭2=움직임 순환, Escape 후 재클릭은 순환 안 함(새 의도 존중).
 
+
+### CHG-20260820-077 — FIX — 고스트(움직임 끝) 드래그 시 정션 앵커 동반 이동
+
+Problem: 단계 2·3을 잇는 선수 고스트를 드래그하면 그 지점에 정박한 공 앵커(도착 패스 끝, 그 지점에서 차는 패스 원점)와 같은 선수의 체인된 다음 움직임 원점이 남아 공이 떨어져 보임(사용자 스크린샷 "선수를 옮겼는데 공은 같이 안 옮겨져"). 라이브 토큰 드래그는 shiftBallAnchorsForPlayerInDraft로 이미 처리됐지만 ghost-end(bend 마지막 웨이포인트) 경로는 미처리.
+Change:
+- stepCommands.ts bendMoveWaypointInDraft: 마지막 웨이포인트 이동 시 shiftJunctionAnchorsInDraft 호출(신규). 정션 근처의 (1) 같은 엔티티 체인 다음 움직임 원점(0.75m), (2) 이 선수가 받는 패스의 끝·이 선수가 그 지점에서 차는 패스의 원점(3.5m=RECEIVE_RADIUS_M, 캐리 오프셋 ≤2.6m 포함)을 같은 델타로 평행이동(웨이포인트+양 핸들). 먼 앵커(패스 원점·다음 목적지)는 불변 — 사용자가 조준한 곳 유지.
+Validation: typecheck/lint/test 144(+2)/build/harness/format PASS. 단위 2건(체인 원점+도착 패스 끝 동반, 나가는 패스 캐리 원점 동반·타깃 불변). Playwright junction.cjs: 스루패스+체인 런 구성 후 고스트 6.65/4.33m 드래그 → passEnd·run2Start 동반, passStart·run2End 불변, 콘솔 클린.

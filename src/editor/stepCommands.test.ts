@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyDocument } from '@/domain'
+import type { TacticDocument } from '@/domain/types'
 import { carryOffset, compile } from '@/engine/compile'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
@@ -7,6 +8,7 @@ import { findTrack, makePath } from './segmentCommands'
 import {
   addStepPass,
   addStepRun,
+  bendMoveWaypointInDraft,
   clearAllMovements,
   clearEntityMovements,
   clearStep,
@@ -361,5 +363,76 @@ describe('through ball sync (user 2026-08-20: 미래 지점 패스)', () => {
     expect(trav.kind === 'travel' && trav.receiverId).toBe(runner.id)
     // pass ARRIVES together with the runner (never before)
     expect(pass.end).toBeCloseTo(run.end, 1)
+  })
+
+  it('junction follow: dragging a movement END carries the chained next run and the arriving pass', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    const runner = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    const E = { x: runner.home.x + 15, y: runner.home.y }
+    const runId = addStepRun(core, runner.id, makePath([runner.home, E]).waypoints, 1)
+    const passId = addStepPass(core, makePath([d.ball.home, E]).waypoints, 1, holder.id)
+    const run2Id = addStepRun(core, runner.id, makePath([E, { x: E.x, y: E.y - 8 }]).waypoints, 2)
+    const seg = (id: string) =>
+      core
+        .getDocument()
+        .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+        .find((s) => s.id === id)!
+    const wps = (id: string) => {
+      const s = seg(id)
+      if (!('path' in s)) throw new Error('no path')
+      return s.path.waypoints
+    }
+    const passEndBefore = { ...wps(passId)[wps(passId).length - 1]!.p }
+    const passStartBefore = { ...wps(passId)[0]!.p }
+    const run2StartBefore = { ...wps(run2Id)[0]!.p }
+    const run2EndBefore = { ...wps(run2Id)[wps(run2Id).length - 1]!.p }
+    const lastWpId = wps(runId)[wps(runId).length - 1]!.id
+    core.transaction('bend', (dd) =>
+      bendMoveWaypointInDraft(dd as TacticDocument, runId, lastWpId, { x: E.x + 3, y: E.y + 2 }),
+    )
+    // chained run 2 origin + arriving pass end travel WITH the junction
+    expect(wps(run2Id)[0]!.p.x).toBeCloseTo(run2StartBefore.x + 3, 5)
+    expect(wps(run2Id)[0]!.p.y).toBeCloseTo(run2StartBefore.y + 2, 5)
+    expect(wps(passId)[wps(passId).length - 1]!.p.x).toBeCloseTo(passEndBefore.x + 3, 5)
+    expect(wps(passId)[wps(passId).length - 1]!.p.y).toBeCloseTo(passEndBefore.y + 2, 5)
+    // far anchors stay put: pass origin, run 2 destination
+    expect(wps(passId)[0]!.p.x).toBeCloseTo(passStartBefore.x, 5)
+    expect(wps(run2Id)[wps(run2Id).length - 1]!.p.x).toBeCloseTo(run2EndBefore.x, 5)
+    expect(wps(run2Id)[wps(run2Id).length - 1]!.p.y).toBeCloseTo(run2EndBefore.y, 5)
+  })
+
+  it('junction follow: the pass a holder makes FROM the moved spot keeps its carried origin', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    const mate = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    const E = { x: holder.home.x + 12, y: holder.home.y }
+    const runId = addStepRun(core, holder.id, makePath([holder.home, E]).waypoints, 1)
+    // pass drawn from the CARRIED ball at the future spot (ghost-continue authoring)
+    const carried = { x: E.x + 1.9, y: E.y + 1.2 }
+    const passId = addStepPass(core, makePath([carried, mate.home]).waypoints, 2, holder.id)
+    const seg = (id: string) =>
+      core
+        .getDocument()
+        .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+        .find((s) => s.id === id)!
+    const wps = (id: string) => {
+      const s = seg(id)
+      if (!('path' in s)) throw new Error('no path')
+      return s.path.waypoints
+    }
+    const originBefore = { ...wps(passId)[0]!.p }
+    const targetBefore = { ...wps(passId)[wps(passId).length - 1]!.p }
+    const lastWpId = wps(runId)[wps(runId).length - 1]!.id
+    core.transaction('bend', (dd) =>
+      bendMoveWaypointInDraft(dd as TacticDocument, runId, lastWpId, { x: E.x - 2, y: E.y + 3 }),
+    )
+    expect(wps(passId)[0]!.p.x).toBeCloseTo(originBefore.x - 2, 5)
+    expect(wps(passId)[0]!.p.y).toBeCloseTo(originBefore.y + 3, 5)
+    // the aimed target never moves
+    expect(wps(passId)[wps(passId).length - 1]!.p.x).toBeCloseTo(targetBefore.x, 5)
+    expect(wps(passId)[wps(passId).length - 1]!.p.y).toBeCloseTo(targetBefore.y, 5)
   })
 })
