@@ -9,6 +9,7 @@ import {
   addStepPass,
   addStepRun,
   bendMoveWaypointInDraft,
+  relayoutStepsInDraft,
   clearAllMovements,
   clearEntityMovements,
   clearStep,
@@ -650,5 +651,70 @@ describe('local bend (ADR-0010 — audit R12-B)', () => {
     expect(after.map((w) => w.id)).toEqual(
       JSON.parse(`[${before.map((b) => JSON.stringify(JSON.parse(b).id)).join(',')}]`),
     )
+  })
+})
+
+describe('relayout pipeline (ADR-0010 — audit Q4/R1)', () => {
+  it('relayout is byte-idempotent after one pass', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    const mate = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    // busy doc: run + chained runs + pass to a future spot (through-ball) + a pin
+    const E = { x: mate.home.x + 14, y: mate.home.y }
+    addStepRun(core, mate.id, makePath([mate.home, E]).waypoints, 1)
+    addStepPass(core, makePath([d.ball.home, E]).waypoints, 1, holder.id)
+    addStepRun(core, mate.id, makePath([E, { x: E.x + 8, y: E.y - 6 }]).waypoints, 2)
+    addStepPass(core, makePath([E, { x: E.x - 20, y: E.y - 10 }]).waypoints, 3, mate.id)
+    const snap = () => JSON.stringify(core.getDocument().scenes)
+    core.transaction('relayout-1', (dd) => relayoutStepsInDraft(dd as TacticDocument))
+    const after1 = snap()
+    core.transaction('relayout-2', (dd) => relayoutStepsInDraft(dd as TacticDocument))
+    const after2 = snap()
+    expect(after2).toBe(after1)
+    // and the result still compiles clean
+    const cm = compile(core.getDocument())
+    expect(cm.issues.filter((i) => i.level === 'error')).toHaveLength(0)
+  })
+
+  it('self-heal precedes anchor resolution: one relayout fixes origin AND possession together', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    // pathological doc (audit CHG-105 class): a travel with NO leading possession
+    core.transaction('raw', (dd) => {
+      const doc = dd as TacticDocument
+      const scene = doc.scenes[0]!
+      scene.timeline.tracks.push({
+        id: 't-ball-raw',
+        entityId: doc.ball.id,
+        entityKind: 'ball',
+        segments: [
+          {
+            id: 'raw-pass',
+            kind: 'travel',
+            travelKind: 'pass',
+            trigger: { type: 'at', t: 0 },
+            timing: { speed: 28 },
+            path: makePath([
+              { x: 20, y: 20 }, // authored FAR from where the holder's ball actually rests
+              { x: 70, y: 50 },
+            ]),
+            step: 1,
+          },
+        ],
+      })
+      relayoutStepsInDraft(doc)
+    })
+    const track = findTrack(core.getDocument(), core.getDocument().ball.id)!
+    // (a) the possession was self-healed IN — before the travel
+    expect(track.segments[0]!.kind).toBe('possessed')
+    // (b) and the SAME relayout already snapped the origin to the held-ball spot (≤2.7m ring)
+    const travel = track.segments.find((x) => x.id === 'raw-pass')!
+    if (travel.kind === 'travel') {
+      const first = travel.path.waypoints[0]!.p
+      const dist = Math.hypot(first.x - holder.home.x, first.y - holder.home.y)
+      expect(dist).toBeLessThanOrEqual(2.7)
+    }
   })
 })

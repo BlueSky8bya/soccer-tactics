@@ -523,7 +523,10 @@ export function SimplePitch() {
         const f = findSegment(doc2, g.segmentId)
         if (f && f.segment.kind === 'travel') {
           const wps2 = f.segment.path.waypoints
-          if (g.wpId === wps2[wps2.length - 1]?.id) resolvePassReceiverInDraft(doc2, g.segmentId)
+          if (g.wpId === wps2[wps2.length - 1]?.id) {
+            resolvePassReceiverInDraft(doc2, g.segmentId)
+            relayoutStepsInDraft(doc2)
+          }
         }
       })
       core.commit()

@@ -1101,3 +1101,9 @@ Validation: typecheck/lint/test 162/build/harness/format PASS. 유닛: 국소성
 Problem: `bendMoveWaypointInDraft`가 매 drag마다 전체 waypoint 배열을 `smoothWaypoints` 결과로 교체 — 모든 `hold` 삭제, 비인접 handle 전부 재작성(감사 R12-B). S1의 '곡률이 멋대로 변한다'의 절반이 이 전역 재스무딩.
 Change: 잡은 waypoint의 p만 갱신 후 Catmull-Rom handle을 [i−1, i, i+1] 창에만 재계산(smoothWaypoints와 동일 공식·tension 0.5). id·hold·비인접 handle은 in-place라 byte 불변. n<3 폴리라인은 handle 미생성(기존 동일). junction follow(isEnd) 유지.
 Validation: typecheck/lint/test 163/build/harness/format PASS. 신규 테스트: wp[3] hold 0.5 + sentinel handle(99,99)·wp[4] handle(77,77)이 wp[1] bend 후 byte 동일, id 안정.
+
+### CHG-20260821-114 — EDITOR — relayout 단일 파이프라인 + 멱등성 (감사 1안 M4, Q4·R1·R4)
+
+Problem: relayout 순서가 timing→원점→재timing→스루볼→self-heal→possession pull로 구조 정규화가 뒤에 있고, `resolvePassReceiverInDraft`가 내부에서 relayout을 재호출해 command당 2~3중 실행(재진입). 원점 스냅은 `t-0.001` 샘플 트릭(R4). dead `durs` map.
+Change: 파이프라인 재배열 — ① self-heal(구조) ② step timing ③ 원점=stateAt(정확한 launch t; M1로 compile release=resolver라 ε 불필요) ④ 원점 이동 시 timing 재산출 1회 ⑤ through-ball 제약 ⑥ possession trigger 정규화. `resolvePassReceiverInDraft` 내부 relayout 제거(caller가 마지막에 1회 — addStepPass/addStepRun/bend commit 조정). `durs` 삭제.
+Validation: typecheck/lint/test 165/build/harness/format PASS. 신규: relayout byte 멱등성(2회 실행 === 1회, 복합 문서), self-heal 선행(무소유 travel이 한 번의 relayout로 possession+원점 동시 복구). s1_orbit probe 재실행 ALL PASS.

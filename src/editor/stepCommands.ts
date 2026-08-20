@@ -45,9 +45,10 @@ export function stepCounts(doc: TacticDocument): number[] {
 }
 
 /**
- * Derive every authored path trigger from step numbers. Auto-generated (`gen-`) segments keep
- * their event anchors; ball possessions keep their chaining (their `at` times are pulled to the
- * following pass's start so nothing clamps).
+ * Derive triggers/timings from steps and pin every ball anchor — ONE ordered pipeline
+ * (ADR-0010 / audit Q4): structure first, then timing, then anchors, then constraints.
+ * Byte-idempotent: running it twice yields the identical document (tested). Commands call it
+ * ONCE at their end — it never calls itself and nothing here calls back into commands.
  */
 export function relayoutStepsInDraft(draft: TacticDocument): void {
   const scene = sceneOf(draft)
@@ -56,111 +57,10 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     .filter((s) => 'path' in s && !s.id.startsWith(GEN_PREFIX))
   if (authored.length === 0) return
   const steps = [...new Set(authored.map(stepOf))].sort((a, b) => a - b)
-  let t = 0
-  for (const step of steps) {
-    const members = authored.filter((s) => stepOf(s) === step)
-    // Same step = same start AND same end (user 2026-08-20 최종 확정: 같은 단계는 무조건 같이
-    // 끝난다). The step lasts as long as its longest movement at natural speed; shorter members
-    // slow down to land together. Cross-step pacing needs no padding (playableEnd handles it).
-    let stepDur = 0.1
-    const durs = new Map<string, number>()
-    for (const s of members) {
-      const seg = s as { kind: string; path: Path }
-      const speed = seg.kind === 'travel' ? DEFAULT_PASS_SPEED : DEFAULT_PLAYER_SPEED
-      const dur = Math.max(0.2, buildPathLUT(seg.path).length / speed)
-      durs.set(s.id, dur)
-      stepDur = Math.max(stepDur, dur)
-    }
-    stepDur = Math.round(stepDur * 100) / 100
-    for (const s of members) {
-      s.trigger = { type: 'at', t }
-      s.timing = { duration: stepDur }
-    }
-    t = Math.round((t + stepDur) * 100) / 100
-  }
-  // ORIGIN = BALL AT LAUNCH (user 2026-08-21, structural): wherever and whenever a pass was
-  // drawn, its authored origin snaps to where the ball actually IS when it fires — the static
-  // view and the animation can never disagree again. One extra timing pass afterwards.
-  {
-    const cm0 = compile(draft)
-    let moved = false
-    for (const track of scene.timeline.tracks) {
-      if (track.entityKind !== 'ball') continue
-      for (const seg of track.segments) {
-        if (seg.kind !== 'travel' || seg.id.startsWith(GEN_PREFIX)) continue
-        if (seg.trigger.type !== 'at') continue
-        const first = seg.path.waypoints[0]
-        if (!first) continue
-        // 1ms before launch: a chained pass must sample the PREVIOUS flight's true end, not a
-        // mid-flight point (−0.02 landed 0.5m short at pass→pass boundaries — 2026-08-21)
-        const rs = stateAt(cm0, draft, Math.max(0, seg.trigger.t - 0.001))
-        const launch = rs.ball.pos
-        const dx = launch.x - first.p.x
-        const dy = launch.y - first.p.y
-        if (Math.hypot(dx, dy) > 0.25) {
-          moved = true
-          first.p = { x: launch.x, y: launch.y }
-          if (first.handleIn)
-            first.handleIn = { x: first.handleIn.x + dx, y: first.handleIn.y + dy }
-          if (first.handleOut)
-            first.handleOut = { x: first.handleOut.x + dx, y: first.handleOut.y + dy }
-        }
-      }
-    }
-    if (moved) {
-      // lengths changed → re-derive the step timings once
-      let t2 = 0
-      for (const step of steps) {
-        const members = authored.filter((s2) => stepOf(s2) === step)
-        let stepDur = 0.1
-        for (const s2 of members) {
-          const seg2 = s2 as { kind: string; path: Path }
-          const speed = seg2.kind === 'travel' ? DEFAULT_PASS_SPEED : DEFAULT_PLAYER_SPEED
-          stepDur = Math.max(stepDur, Math.max(0.2, buildPathLUT(seg2.path).length / speed))
-        }
-        stepDur = Math.round(stepDur * 100) / 100
-        for (const s2 of members) {
-          s2.trigger = { type: 'at', t: t2 }
-          s2.timing = { duration: stepDur }
-        }
-        t2 = Math.round((t2 + stepDur) * 100) / 100
-      }
-    }
-  }
 
-  // THROUGH BALL sync (user 2026-08-20): a pass aimed at a receiver's FUTURE spot must ARRIVE
-  // when the runner does — otherwise possession snaps to the mid-run player and a phantom ball
-  // appears. If the receiver's own movement ends where the pass ends, stretch the pass duration
-  // so both land together (never faster than the ball's natural flight).
-  for (const track of scene.timeline.tracks) {
-    if (track.entityKind !== 'ball') continue
-    for (const seg of track.segments) {
-      if (seg.kind !== 'travel' || !seg.receiverId || seg.id.startsWith(GEN_PREFIX)) continue
-      if (seg.trigger.type !== 'at' || !('duration' in seg.timing)) continue
-      const end = seg.path.waypoints[seg.path.waypoints.length - 1]?.p
-      if (!end) continue
-      const rTrack = scene.timeline.tracks.find((tr) => tr.entityId === seg.receiverId)
-      if (!rTrack) continue
-      for (const run of rTrack.segments) {
-        if (!('path' in run) || run.id.startsWith(GEN_PREFIX)) continue
-        if (run.trigger.type !== 'at' || !('duration' in run.timing)) continue
-        const rEnd = run.path.waypoints[run.path.waypoints.length - 1]?.p
-        // Pass ends now rest at the receiver's CARRIED spot (2.0–2.6m carry offset from their
-        // arrival) — the through-ball match tolerance must cover that attachment distance.
-        if (!rEnd || Math.hypot(rEnd.x - end.x, rEnd.y - end.y) > 3.0) continue
-        const receiverArrives = run.trigger.t + run.timing.duration
-        const synced = receiverArrives - seg.trigger.t
-        if (synced > seg.timing.duration) {
-          seg.timing.duration = Math.round(synced * 100) / 100
-        }
-        break
-      }
-    }
-  }
-
-  // SELF-HEAL (user 2026-08-21): a ball travel with NO preceding possession while a holder is
-  // known leaves the ball parked at its initial spot until the pass fires. Reinsert the
-  // possession so the ball rides with its holder up to the launch.
+  // 1) STRUCTURE (audit: self-heal must precede timing/anchor work). A ball travel with NO
+  //    preceding possession while a holder is known leaves the ball parked at its initial spot
+  //    until the pass fires — reinsert the possession so the ball rides with its holder.
   for (const track of scene.timeline.tracks) {
     if (track.entityKind !== 'ball') continue
     const firstPathIdx = track.segments.findIndex((s2) => 'path' in s2)
@@ -179,7 +79,88 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     break
   }
 
-  // Ball possessions with an absolute time: keep them at/before the pass they precede.
+  // 2) STEP GRAPH → timing. Same step = same start AND same end (user 2026-08-20 최종 확정).
+  const deriveTimings = (): void => {
+    let t = 0
+    for (const step of steps) {
+      const members = authored.filter((s2) => stepOf(s2) === step)
+      let stepDur = 0.1
+      for (const s2 of members) {
+        const seg2 = s2 as { kind: string; path: Path }
+        const speed = seg2.kind === 'travel' ? DEFAULT_PASS_SPEED : DEFAULT_PLAYER_SPEED
+        stepDur = Math.max(stepDur, Math.max(0.2, buildPathLUT(seg2.path).length / speed))
+      }
+      stepDur = Math.round(stepDur * 100) / 100
+      for (const s2 of members) {
+        s2.trigger = { type: 'at', t }
+        s2.timing = { duration: stepDur }
+      }
+      t = Math.round((t + stepDur) * 100) / 100
+    }
+  }
+  deriveTimings()
+
+  // 3) ORIGIN = BALL AT LAUNCH (ADR-0010 D2): the authored origin snaps to the ball position
+  //    at the EXACT launch instant. Since M1 the compiled release anchor IS the shared carry
+  //    resolver, so stateAt(t) at a travel start returns that same anchor — no ±ε sampling
+  //    tricks (audit R4), and a second pass moves nothing (idempotence).
+  {
+    const cm0 = compile(draft)
+    let moved = false
+    for (const track of scene.timeline.tracks) {
+      if (track.entityKind !== 'ball') continue
+      for (const seg of track.segments) {
+        if (seg.kind !== 'travel' || seg.id.startsWith(GEN_PREFIX)) continue
+        if (seg.trigger.type !== 'at') continue
+        const first = seg.path.waypoints[0]
+        if (!first) continue
+        const rs = stateAt(cm0, draft, seg.trigger.t)
+        const launch = rs.ball.pos
+        const dx = launch.x - first.p.x
+        const dy = launch.y - first.p.y
+        if (Math.hypot(dx, dy) > 0.25) {
+          moved = true
+          first.p = { x: launch.x, y: launch.y }
+          if (first.handleIn)
+            first.handleIn = { x: first.handleIn.x + dx, y: first.handleIn.y + dy }
+          if (first.handleOut)
+            first.handleOut = { x: first.handleOut.x + dx, y: first.handleOut.y + dy }
+        }
+      }
+    }
+    // lengths changed → re-derive the step timings once
+    if (moved) deriveTimings()
+  }
+
+  // 4) THROUGH BALL constraint (user 2026-08-20): a pass aimed at a receiver's FUTURE spot
+  //    must ARRIVE when the runner does — stretch the pass duration (never shrink).
+  for (const track of scene.timeline.tracks) {
+    if (track.entityKind !== 'ball') continue
+    for (const seg of track.segments) {
+      if (seg.kind !== 'travel' || !seg.receiverId || seg.id.startsWith(GEN_PREFIX)) continue
+      if (seg.trigger.type !== 'at' || !('duration' in seg.timing)) continue
+      const end = seg.path.waypoints[seg.path.waypoints.length - 1]?.p
+      if (!end) continue
+      const rTrack = scene.timeline.tracks.find((tr) => tr.entityId === seg.receiverId)
+      if (!rTrack) continue
+      for (const run of rTrack.segments) {
+        if (!('path' in run) || run.id.startsWith(GEN_PREFIX)) continue
+        if (run.trigger.type !== 'at' || !('duration' in run.timing)) continue
+        const rEnd = run.path.waypoints[run.path.waypoints.length - 1]?.p
+        // Pass ends rest at the receiver's CARRIED spot (2.0–2.6m) — the match tolerance
+        // must cover that attachment distance.
+        if (!rEnd || Math.hypot(rEnd.x - end.x, rEnd.y - end.y) > 3.0) continue
+        const receiverArrives = run.trigger.t + run.timing.duration
+        const synced = receiverArrives - seg.trigger.t
+        if (synced > seg.timing.duration) {
+          seg.timing.duration = Math.round(synced * 100) / 100
+        }
+        break
+      }
+    }
+  }
+
+  // 5) Ball possessions with an absolute time: keep them at/before the pass they precede.
   for (const track of scene.timeline.tracks) {
     if (track.entityKind !== 'ball') continue
     for (let i = 0; i < track.segments.length; i++) {
@@ -223,12 +204,16 @@ export function addStepRun(
     const runEnd = waypoints[waypoints.length - 1]?.p
     if (runEnd) {
       const ballTrack = findTrack(doc, doc.ball.id)
+      let resolved = false
       for (const sg of ballTrack?.segments ?? []) {
         if (sg.kind !== 'travel' || sg.id.startsWith('gen-') || sg.receiverId) continue
         const end = sg.path.waypoints[sg.path.waypoints.length - 1]?.p
-        if (end && Math.hypot(end.x - runEnd.x, end.y - runEnd.y) <= RECEIVE_RADIUS_M)
+        if (end && Math.hypot(end.x - runEnd.x, end.y - runEnd.y) <= RECEIVE_RADIUS_M) {
           resolvePassReceiverInDraft(doc, sg.id)
+          resolved = true
+        }
       }
+      if (resolved) relayoutStepsInDraft(doc)
     }
   })
   return id
@@ -275,6 +260,7 @@ export function addStepPass(
     if (!doc.ball.initialHolderId && holder) doc.ball.initialHolderId = holder
     relayoutStepsInDraft(doc)
     resolvePassReceiverInDraft(doc, id)
+    relayoutStepsInDraft(doc)
   })
   return id
 }
@@ -282,6 +268,8 @@ export function addStepPass(
 /**
  * Receiver for a pass, tried in order: positions at the arrival time → resting (t=0) positions →
  * every authored future spot (ghosts) → each player's final position. First radius hit wins.
+ * NOTE: mutates receiver/possession only — the CALLER runs relayoutStepsInDraft once
+ * afterwards (single-pipeline rule, ADR-0010 / audit Q4).
  */
 export function resolvePassReceiverInDraft(
   doc: TacticDocument,
@@ -311,8 +299,6 @@ export function resolvePassReceiverInDraft(
     const seg = findSegment(doc, segmentId)
     if (seg && seg.segment.kind === 'travel' && seg.segment.receiverId) break
   }
-  // Receiver just changed — re-derive timings so through-ball arrival sync sees it.
-  relayoutStepsInDraft(doc)
 }
 
 /**
