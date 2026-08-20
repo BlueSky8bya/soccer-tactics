@@ -25,6 +25,10 @@ export const PitchMarkings = memo(function PitchMarkings({ pitch }: { pitch: Pit
         <clipPath id="pitch-clip">
           <rect x={0} y={0} width={L} height={W} />
         </clipPath>
+        {/* goal net mesh — 0.4m diagonal weave, scales with the pitch (real net look) */}
+        <pattern id="goal-net" width={0.4} height={0.4} patternUnits="userSpaceOnUse">
+          <path d="M 0 0 L 0.4 0.4 M 0.4 0 L 0 0.4" className={styles.netMesh} />
+        </pattern>
       </defs>
       <rect x={-6} y={-6} width={L + 12} height={W + 12} className={styles.surround} />
       <g clipPath="url(#pitch-clip)">
@@ -97,15 +101,38 @@ export const PitchMarkings = memo(function PitchMarkings({ pitch }: { pitch: Pit
         d={`M ${L} ${W - m.cornerR} A ${m.cornerR} ${m.cornerR} 0 0 0 ${L - m.cornerR} ${W}`}
         className={line}
       />
-      {/* goals */}
-      <rect
-        x={-m.goalDepth}
-        y={goalTop}
-        width={m.goalDepth}
-        height={m.goalWidth}
-        className={styles.goal}
-      />
-      <rect x={L} y={goalTop} width={m.goalDepth} height={m.goalWidth} className={styles.goal} />
+      {/* goals: posts + crossbar + tapered net box (top-down, IFAB 7.32m mouth, 2m deep) */}
+      <GoalNet x={0} dir={-1} top={goalTop} w={m.goalWidth} d={m.goalDepth} />
+      <GoalNet x={L} dir={1} top={goalTop} w={m.goalWidth} d={m.goalDepth} />
     </g>
   )
 })
+
+/** One goal seen from above: net trapezoid (meshed), side/back frame, crossbar, two posts. */
+function GoalNet({
+  x,
+  dir,
+  top,
+  w,
+  d,
+}: {
+  x: number
+  dir: -1 | 1
+  top: number
+  w: number
+  d: number
+}) {
+  const bot = top + w
+  const back = x + dir * d
+  const inset = 0.8 // net box tapers toward the back stanchions
+  const outline = `M ${x} ${top} L ${back} ${top + inset} L ${back} ${bot - inset} L ${x} ${bot}`
+  return (
+    <g>
+      <path d={`${outline} Z`} fill="url(#goal-net)" stroke="none" />
+      <path d={outline} className={styles.goalFrame} />
+      <line x1={x} y1={top} x2={x} y2={bot} className={styles.goalBar} />
+      <circle cx={x} cy={top} r={0.3} className={styles.goalPost} />
+      <circle cx={x} cy={bot} r={0.3} className={styles.goalPost} />
+    </g>
+  )
+}

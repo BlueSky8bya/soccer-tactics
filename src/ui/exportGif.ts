@@ -27,10 +27,15 @@ const LINE = VISUAL.pitchLine
 const TOKEN_R = VISUAL.tokenRadiusM
 const BALL_R = VISUAL.ballRadiusM
 
+/** Metres of surround kept around the pitch in the GIF — the goals + nets live there. */
+export const GIF_PAD_M = 3
+
 function drawPitch(ctx: CanvasRenderingContext2D, doc: TacticDocument, k: number): void {
   const m = pitchMarkings(doc.pitch)
   const { length: L, width: W } = m
   const cy = W / 2
+  ctx.fillStyle = VISUAL.pitchSurround
+  ctx.fillRect(-GIF_PAD_M * k, -GIF_PAD_M * k, (L + GIF_PAD_M * 2) * k, (W + GIF_PAD_M * 2) * k)
   ctx.fillStyle = GRASS
   ctx.fillRect(0, 0, L * k, W * k)
   const stripes = 10
@@ -61,6 +66,56 @@ function drawPitch(ctx: CanvasRenderingContext2D, doc: TacticDocument, k: number
     ctx.arc(sx * k, cy * k, 0.3 * k, 0, Math.PI * 2)
     ctx.fill()
   }
+  // goals: net trapezoid with a diagonal mesh + crossbar + posts (same look as the board)
+  const goalTop = cy - m.goalWidth / 2
+  const goalBot = cy + m.goalWidth / 2
+  const inset = 0.8
+  for (const dir of [-1, 1] as const) {
+    const x = dir === -1 ? 0 : L
+    const back = x + dir * m.goalDepth
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(x * k, goalTop * k)
+    ctx.lineTo(back * k, (goalTop + inset) * k)
+    ctx.lineTo(back * k, (goalBot - inset) * k)
+    ctx.lineTo(x * k, goalBot * k)
+    ctx.closePath()
+    ctx.clip()
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'
+    ctx.lineWidth = Math.max(0.5, 0.045 * k)
+    ctx.beginPath()
+    const x0 = Math.min(x, back)
+    const x1 = Math.max(x, back)
+    const h = goalBot - goalTop
+    for (let s = x0 - h; s <= x1; s += 0.4) {
+      ctx.moveTo(s * k, goalBot * k)
+      ctx.lineTo((s + h) * k, goalTop * k)
+      ctx.moveTo(s * k, goalTop * k)
+      ctx.lineTo((s + h) * k, goalBot * k)
+    }
+    ctx.stroke()
+    ctx.restore()
+    ctx.strokeStyle = LINE
+    ctx.lineWidth = Math.max(1, 0.2 * k)
+    ctx.beginPath()
+    ctx.moveTo(x * k, goalTop * k)
+    ctx.lineTo(back * k, (goalTop + inset) * k)
+    ctx.lineTo(back * k, (goalBot - inset) * k)
+    ctx.lineTo(x * k, goalBot * k)
+    ctx.stroke()
+    // crossbar + posts on the goal line
+    ctx.lineWidth = Math.max(1.5, 0.3 * k)
+    ctx.beginPath()
+    ctx.moveTo(x * k, goalTop * k)
+    ctx.lineTo(x * k, goalBot * k)
+    ctx.stroke()
+    ctx.fillStyle = LINE
+    for (const py of [goalTop, goalBot]) {
+      ctx.beginPath()
+      ctx.arc(x * k, py * k, 0.3 * k, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
 }
 
 /** Canvas can't resolve CSS var() colors (SVG can) — read the computed value instead. */
@@ -83,6 +138,9 @@ export function drawFrame(
   t: number,
   k: number,
 ): void {
+  // shift the whole metre space so the goal nets (negative x) fit in frame
+  ctx.save()
+  ctx.translate(GIF_PAD_M * k, GIF_PAD_M * k)
   drawPitch(ctx, doc, k)
   // annotations under the tokens (PLAN-008): pen strokes belong to the board, not the play.
   // Freehand renders with the VIC pen geometry (midpoint quadratics, pressure widths).
@@ -159,6 +217,7 @@ export function drawFrame(
   ctx.arc(b.x * k, b.y * k, BALL_R * 0.35 * k, 0, Math.PI * 2)
   ctx.fillStyle = VISUAL.ballDetail
   ctx.fill()
+  ctx.restore()
 }
 
 /** Sample times for the whole play at `fps`, compressed by `speed`. Pure (unit-tested). */
@@ -178,8 +237,8 @@ export async function exportGif(doc: TacticDocument, opts: GifOptions = {}): Pro
   for (const t of Object.values(compiled.segmentTimes)) if (t.end > lastEnd) lastEnd = t.end
   const duration = Math.max(0.1, lastEnd)
   const m = pitchMarkings(doc.pitch)
-  const k = width / m.length
-  const height = Math.round(m.width * k)
+  const k = width / (m.length + GIF_PAD_M * 2)
+  const height = Math.round((m.width + GIF_PAD_M * 2) * k)
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height

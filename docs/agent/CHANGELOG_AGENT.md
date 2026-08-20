@@ -859,3 +859,11 @@ Change:
 - Drawing freehand 스키마에 pressures?: number[](옵션, 하위호환). SimplePitch 펜 제스처가 이벤트마다 필압 갱신·2px 게이트로 점 채집. DrawingLayer/드래프트가 공용 PenStroke(조각별 stroke-width SVG path)로 렌더. GIF도 같은 penSegments 기하.
 - 툴바: 2줄 17색 트레이+무지개 '직접 고르기' 셀+6단 굵기. 기본값 검정/5px(레퍼런스 동일).
 Validation: typecheck/lint/test 152(+6 inking 골든: 감마·EMA·속도 역산·wOf·조각 기하)/build/harness/format PASS. Playwright inkref.cjs: 색 18칸·굵기 6·pressures 기록(0.63~0.89 변동)·fill 있는 요소 0(덩어리 회귀)·조각 63개 전부 상이한 굵기·컬러 피커 1 — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-083 — FEAT — 골대·골망 렌더 (탑다운, 보드+GIF)
+
+Problem: 골대가 단순 직사각형 윤곽뿐 — 실제 경기장감 부족(사용자: "골대 골망도 구현해줘").
+Change:
+- PitchMarkings: GoalNet 컴포넌트 — IFAB 실측(입구 7.32m, 깊이 2m) 위에 포스트 2개(r 0.3m)·골라인 크로스바(3.5px)·뒤로 0.8m씩 좁아지는 골망 사다리꼴 + 0.4m 대각 메시 패턴(pattern#goal-net, 미터 단위라 줌과 함께 스케일).
+- GIF: 캔버스에 GIF_PAD_M(3m) 서라운드 추가(translate) — 경기장 밖 골망이 프레임에 들어옴. 같은 사다리꼴·메시·포스트를 canvas로 동일 렌더.
+Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright: net fill 2·frame 2·post 4·crossbar 2·pattern 존재, 스크린샷 양쪽 골대 확인, 콘솔 클린.
