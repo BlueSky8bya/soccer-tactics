@@ -775,3 +775,8 @@ Problem: 미래 지점(수신자의 런 끝)으로 꽂는 패스가 공 속도(2
 Change: relayout에 스루패스 동기화 — 패스 끝이 수신자 움직임의 끝(1.5m 내)과 일치하면 **패스 duration을 수신자 도착 시각에 맞춰 연장**(자연 비행보다 빨라지진 않음). 수신자 해석 직후 relayout 재실행(순서 버그). 같은 지점에 겹치는 공 고스트(수신+보유 런 끝) 중복 제거.
 Validation: typecheck/lint/test 136(+1)/build/harness/format PASS; Playwright: 런·스루패스 종료 3.27s 동시, 재생 후 공-수신자 19px, 유령 공 없음, 콘솔 클린.
 
+### CHG-20260820-072 — REVERT — 같은 단계 동시 종료 재확정 (사용자 최종)
+
+Change: CHG-070의 "단계 내 자연 속도"를 폐기하고 v3 규칙 복원 — 같은 단계는 가장 느린 멤버 길이에 맞춰 **같이 시작·같이 끝남**. (원래 불만의 원인이던 5초 패딩은 playableEnd로 이미 해결. 고스트 이어 그리기 자동 단계+1·스루패스 동기화는 유지.) ADR·테스트 갱신.
+Validation: typecheck/lint/test 136/build/harness/format PASS; Playwright: 20px+200px 같은 단계 → 두 창 모두 [0, 3.25] 동일.
+

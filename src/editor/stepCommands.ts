@@ -59,9 +59,9 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
   let t = 0
   for (const step of steps) {
     const members = authored.filter((s) => stepOf(s) === step)
-    // Same step = same START only (user 2026-08-20 final): every movement runs at its NATURAL
-    // speed and short ones simply finish early. The step window still lasts until its slowest
-    // member ends, so the next step's timing is unchanged.
+    // Same step = same start AND same end (user 2026-08-20 최종 확정: 같은 단계는 무조건 같이
+    // 끝난다). The step lasts as long as its longest movement at natural speed; shorter members
+    // slow down to land together. Cross-step pacing needs no padding (playableEnd handles it).
     let stepDur = 0.1
     const durs = new Map<string, number>()
     for (const s of members) {
@@ -73,9 +73,8 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     }
     stepDur = Math.round(stepDur * 100) / 100
     for (const s of members) {
-      const natural = Math.round((durs.get(s.id) ?? stepDur) * 100) / 100
       s.trigger = { type: 'at', t }
-      s.timing = { duration: natural }
+      s.timing = { duration: stepDur }
     }
     t = Math.round((t + stepDur) * 100) / 100
   }

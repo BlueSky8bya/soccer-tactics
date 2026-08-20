@@ -302,8 +302,8 @@ describe('360-degree carry direction (user 2026-08-20)', () => {
   })
 })
 
-describe('natural speed within a step (user 2026-08-20 final)', () => {
-  it('every member runs at natural speed; short ones finish early; the step still ends with the slowest', () => {
+describe('same step ends together (user 2026-08-20 최종)', () => {
+  it('every member of a step starts AND ends together, lasting the slowest natural duration', () => {
     const core = filled()
     const d = core.getDocument()
     const [a, b, c] = d.players
@@ -331,13 +331,11 @@ describe('natural speed within a step (user 2026-08-20 final)', () => {
     // same start
     expect(tShort.start).toBe(0)
     expect(tLong.start).toBe(0)
-    // short one runs at NATURAL speed (2m / 7m/s)
-    expect(tShort.end - tShort.start).toBeCloseTo(2 / 7, 1)
-    expect(tShort.end).toBeLessThan(tLong.end)
-    // the NEXT step still waits for the slowest member
-    expect(cm.segmentTimes[next]!.start).toBeCloseTo(tLong.end, 1)
-    // and both members run at their own natural pace
+    // both end together at the slowest member's natural duration (28m / 7m/s = 4s)
+    expect(tShort.end).toBeCloseTo(tLong.end, 1)
     expect(tLong.end - tLong.start).toBeCloseTo(28 / 7, 1)
+    // the NEXT step starts right after
+    expect(cm.segmentTimes[next]!.start).toBeCloseTo(tLong.end, 1)
   })
 })
 
