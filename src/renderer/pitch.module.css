@@ -407,7 +407,7 @@
 
 .stepBadge {
   cursor: pointer;
-  opacity: 0.45;
+  opacity: 0.35;
   transition: opacity 120ms ease;
 }
 
@@ -432,6 +432,15 @@
   cursor: crosshair;
 }
 
+.ghostToken:hover {
+  opacity: 1 !important;
+}
+
+.ghostToken:hover circle {
+  stroke: var(--st-accent, #2563eb);
+  stroke-width: 0.3;
+}
+
 .ghostToken circle {
   stroke: rgba(255, 255, 255, 0.8);
   stroke-width: 0.16;
@@ -442,5 +451,23 @@
   font-weight: 700;
   fill: #fff;
   user-select: none;
+  pointer-events: none;
+}
+
+.ghostBall circle:first-child {
+  fill: #ffffff;
+  stroke: rgba(20, 24, 32, 0.65);
+  stroke-width: 0.14;
+}
+
+.ghostBallDot {
+  fill: rgba(20, 24, 32, 0.6);
+}
+
+.snapRing circle {
+  fill: none;
+  stroke: var(--st-accent, #2563eb);
+  stroke-width: 0.28;
+  stroke-dasharray: 0.7 0.45;
   pointer-events: none;
 }

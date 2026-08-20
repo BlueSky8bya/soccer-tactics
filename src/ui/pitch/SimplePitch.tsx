@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
-import type { Id, TacticDocument, Vec2 } from '@/domain/types'
+import type { Id, Path, TacticDocument, Vec2 } from '@/domain/types'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
 import { clampToPitch } from '@/editor/geometry'
 import {
+  findSegment,
   findTrack,
   lastKnownPosition,
   moveBallStartInDraft,
@@ -11,12 +12,22 @@ import {
   newIdFor,
   sceneOf,
 } from '@/editor/segmentCommands'
-import { addStepPass, addStepRun, setSegmentStep, stepOf } from '@/editor/stepCommands'
+import {
+  addStepPass,
+  addStepRun,
+  bendGrabWaypointInDraft,
+  bendMoveWaypointInDraft,
+  relayoutStepsInDraft,
+  resolvePassReceiverInDraft,
+  setSegmentStep,
+  stepOf,
+} from '@/editor/stepCommands'
 
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
 import { useUiStore } from '@/editor/uiStore'
 import { useCompiled, useResolvedState } from '@/editor/useCompiled'
-import { beautifyStroke } from '@/engine/path'
+import { beautifyStroke, buildPathLUT, pointAtDistance } from '@/engine/path'
+import { stateAt } from '@/engine/stateAt'
 import { DrawingLayer } from '@/renderer/DrawingLayer'
 import { PathLayer } from '@/renderer/PathLayer'
 import { PitchMarkings } from '@/renderer/PitchMarkings'
@@ -43,9 +54,20 @@ type Gesture =
       lastPt: Vec2
       /** Last applied group offset (incremental translation of homes + paths). */
       prevRaw?: Vec2
+      /** Force whole-selection translation (drag started on a selected entity's path). */
+      translate?: boolean
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2 }
   | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[] }
+  | {
+      type: 'bend'
+      segmentId: Id
+      entityId: Id
+      pointerId: number
+      startClient: { x: number; y: number }
+      started: boolean
+      wpId: Id | null
+    }
   | {
       type: 'add'
       team: 'home' | 'away'
@@ -70,6 +92,8 @@ export function SimplePitch() {
   const gesture = useRef<Gesture | null>(null)
   const [marquee, setMarquee] = useState<{ a: Vec2; b: Vec2 } | null>(null)
   const [shiftHeld, setShiftHeld] = useState(false)
+  /** While drawing: the target (player now / any future ghost) the stroke end is snapped to. */
+  const [snapPos, setSnapPos] = useState<Vec2 | null>(null)
   /** Unbroken Shift chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
@@ -140,11 +164,45 @@ export function SimplePitch() {
       const y2 = Math.max(g.a.y, g.b.y)
       if ((x2 - x1) * (y2 - y1) < 1) return // a click, not a box
       const hit = (v: Vec2) => v.x >= x1 && v.x <= x2 && v.y >= y1 && v.y <= y2
-      const ids: Id[] = doc.players
-        .filter((pl) => hit(resolved.players[pl.id]?.pos ?? pl.home))
-        .map((pl) => pl.id)
-      if (hit(resolved.ball.pos)) ids.push(doc.ball.id)
-      st.select(ids)
+      const ids = new Set<Id>()
+      for (const pl of doc.players) if (hit(resolved.players[pl.id]?.pos ?? pl.home)) ids.add(pl.id)
+      if (hit(resolved.ball.pos)) ids.add(doc.ball.id)
+      // A box that crosses an authored path grabs that entity too (공 경로도 묶이게) —
+      // true segment/box intersection, not just waypoints (a straight pass has only two).
+      const segHitsBox = (a: Vec2, b: Vec2): boolean => {
+        if (hit(a) || hit(b)) return true
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        let t0 = 0
+        let t1 = 1
+        const clip = (p: number, q: number): boolean => {
+          if (p === 0) return q >= 0
+          const r = q / p
+          if (p < 0) {
+            if (r > t1) return false
+            if (r > t0) t0 = r
+          } else {
+            if (r < t0) return false
+            if (r < t1) t1 = r
+          }
+          return true
+        }
+        return (
+          clip(-dx, a.x - x1) && clip(dx, x2 - a.x) && clip(-dy, a.y - y1) && clip(dy, y2 - a.y)
+        )
+      }
+      for (const tr of sceneTracks(doc))
+        for (const sg of tr.segments) {
+          if (!('path' in sg) || sg.id.startsWith('gen-')) continue
+          const wps = sg.path.waypoints
+          for (let i = 1; i < wps.length; i++) {
+            if (segHitsBox(wps[i - 1]!.p, wps[i]!.p)) {
+              ids.add(tr.entityId)
+              break
+            }
+          }
+        }
+      st.select([...ids])
       return
     }
 
@@ -159,7 +217,25 @@ export function SimplePitch() {
 
     if (g.type === 'draw') {
       st.setPathDraft(null)
+      setSnapPos(null)
       if (commit) finishDraw(g.entityId, g.points)
+      return
+    }
+
+    if (g.type === 'bend') {
+      if (!g.started) return // plain click = select only
+      if (!commit) {
+        core.cancel()
+        return
+      }
+      // Length changed → steps re-stretch; a moved pass end → receiver re-resolve.
+      core.update((d) => {
+        const doc2 = d as TacticDocument
+        relayoutStepsInDraft(doc2)
+        const f = findSegment(doc2, g.segmentId)
+        if (f && f.segment.kind === 'travel') resolvePassReceiverInDraft(doc2, g.segmentId)
+      })
+      core.commit()
       return
     }
 
@@ -171,7 +247,7 @@ export function SimplePitch() {
       st.setDrag(null)
       return
     }
-    if (g.id === doc.ball.id && g.group.size === 1) {
+    if (g.id === doc.ball.id && g.group.size === 1 && !g.translate) {
       // Move the ball's starting spot: on a player → that player holds it; grass → loose there.
       // Works with authored passes too (their origin follows).
       const d = core.getDocument()
@@ -230,6 +306,33 @@ export function SimplePitch() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  /** Player positions now + every authored segment end (the ghost spots) within 2.5 m of `p`. */
+  const nearestSnapTarget = (p: Vec2, drawingEntityId: Id): Vec2 | null => {
+    const d = core.getDocument()
+    const candidates: Vec2[] = []
+    for (const pl of d.players) {
+      if (pl.id !== drawingEntityId) candidates.push(resolved.players[pl.id]?.pos ?? pl.home)
+    }
+    for (const tr of sceneTracks(d)) {
+      for (const sg of tr.segments) {
+        if (!('path' in sg) || sg.id.startsWith('gen-')) continue
+        const wps = sg.path.waypoints
+        const end = wps[wps.length - 1]?.p
+        if (end) candidates.push(end)
+      }
+    }
+    let best: Vec2 | null = null
+    let bestD = 2.5
+    for (const c of candidates) {
+      const dist = Math.hypot(c.x - p.x, c.y - p.y)
+      if (dist < bestD) {
+        bestD = dist
+        best = c
+      }
+    }
+    return best
+  }
+
   const startDraw = (entityId: Id, pointerId: number, startPos: Vec2) => {
     const st = useUiStore.getState()
     st.setPlaying(false)
@@ -247,34 +350,7 @@ export function SimplePitch() {
     svg.focus({ preventScroll: true })
     const st = useUiStore.getState()
 
-    // Ghost (a later position of an entity): Shift+drag = draw the next movement FROM there.
-    const ghostEl = targetEl.closest('[data-ghost]') as SVGElement | null
-    if (ghostEl && e.button === 0 && e.shiftKey) {
-      const entityId = ghostEl.getAttribute('data-ghost')!
-      const gx = Number(ghostEl.getAttribute('data-gx'))
-      const gy = Number(ghostEl.getAttribute('data-gy'))
-      startDraw(entityId, e.pointerId, { x: gx, y: gy })
-      return
-    }
-
-    const segEl = targetEl.closest('[data-segment]') as SVGElement | null
-    const tokenEl = targetEl.closest('[data-entity]') as SVGGElement | null
-
-    // Unbroken Shift chain: any press (not on another token) continues the zigzag from the last end.
-    if (e.shiftKey && e.button === 0 && chain.current && !tokenEl) {
-      const entityId = chain.current.entityId
-      startDraw(entityId, e.pointerId, lastKnownPosition(core.getDocument(), entityId))
-      return
-    }
-
-    // Path click = select that movement (badge handles the step)
-    if (segEl && !tokenEl && !ghostEl && e.button === 0) {
-      st.selectSegment(segEl.getAttribute('data-segment'))
-      return
-    }
-
-    if (tokenEl && e.button === 0) {
-      const entityId = tokenEl.getAttribute('data-entity')!
+    const pressToken = (entityId: Id) => {
       st.setPlaying(false)
       // Shift+drag on the token = draw a movement from its ORIGINAL spot.
       if (e.shiftKey) {
@@ -309,6 +385,108 @@ export function SimplePitch() {
         lastPt: pt,
       }
       svg.setPointerCapture(e.pointerId)
+    }
+
+    // Ghost (a later position of an entity): Shift+drag = draw the next movement FROM there;
+    // plain drag = fine-tune that movement's end (unless a live token sits right under the press).
+    const ghostEl = targetEl.closest('[data-ghost]') as SVGElement | null
+    if (ghostEl && e.button === 0) {
+      if (e.shiftKey) {
+        const entityId = ghostEl.getAttribute('data-ghost')!
+        const gx = Number(ghostEl.getAttribute('data-gx'))
+        const gy = Number(ghostEl.getAttribute('data-gy'))
+        startDraw(entityId, e.pointerId, { x: gx, y: gy })
+        return
+      }
+      const nearPlayer = doc.players.find((pl) => {
+        const pos = resolved.players[pl.id]?.pos ?? pl.home
+        return Math.hypot(pos.x - pt.x, pos.y - pt.y) < 1.2
+      })
+      const nearBall = Math.hypot(resolved.ball.pos.x - pt.x, resolved.ball.pos.y - pt.y) < 0.9
+      const liveNear = !!nearPlayer || nearBall
+      if (liveNear) {
+        pressToken(nearBall ? doc.ball.id : nearPlayer!.id)
+        return
+      }
+      if (!liveNear) {
+        const segId = ghostEl.getAttribute('data-move-seg')
+        const f = segId ? findSegment(core.getDocument(), segId) : null
+        if (f && 'path' in f.segment) {
+          const wps = f.segment.path.waypoints
+          st.setPlaying(false)
+          st.selectSegment(segId)
+          gesture.current = {
+            type: 'bend',
+            segmentId: segId!,
+            entityId: f.track.entityId,
+            pointerId: e.pointerId,
+            startClient: { x: e.clientX, y: e.clientY },
+            started: false,
+            wpId: wps[wps.length - 1]!.id,
+          }
+          svg.setPointerCapture(e.pointerId)
+          return
+        }
+      }
+    }
+
+    const segEl = targetEl.closest('[data-segment]') as SVGElement | null
+    const tokenEl = targetEl.closest('[data-entity]') as SVGGElement | null
+
+    // Unbroken Shift chain: any press (not on another token) continues the zigzag from the last end.
+    if (e.shiftKey && e.button === 0 && chain.current && !tokenEl) {
+      const entityId = chain.current.entityId
+      startDraw(entityId, e.pointerId, lastKnownPosition(core.getDocument(), entityId))
+      return
+    }
+
+    // Path click = select that movement (badge handles the step)
+    if (segEl && !tokenEl && !ghostEl && e.button === 0) {
+      const segmentId = segEl.getAttribute('data-segment')!
+      const ownerId = segEl.getAttribute('data-entity-of')
+      // Path of a selected entity (marquee): drag = move the whole selection, paths included.
+      if (ownerId && st.selection.includes(ownerId)) {
+        const group = new Map<Id, Vec2>()
+        for (const id of st.selection) {
+          const h =
+            id === doc.ball.id ? doc.ball.home : doc.players.find((pl) => pl.id === id)?.home
+          if (h) group.set(id, h)
+        }
+        st.setPlaying(false)
+        gesture.current = {
+          type: 'token',
+          id: ownerId,
+          pointerId: e.pointerId,
+          startClient: { x: e.clientX, y: e.clientY },
+          grab: { x: 0, y: 0 },
+          home: pt,
+          group,
+          started: false,
+          lastPt: pt,
+          prevRaw: pt,
+          translate: true,
+        }
+        svg.setPointerCapture(e.pointerId)
+        return
+      }
+      st.selectSegment(segmentId)
+      // Drag on the line = bend its curvature (grab point becomes a smooth waypoint).
+      const owner = segEl.getAttribute('data-entity-of')
+      gesture.current = {
+        type: 'bend',
+        segmentId,
+        entityId: owner ?? '',
+        pointerId: e.pointerId,
+        startClient: { x: e.clientX, y: e.clientY },
+        started: false,
+        wpId: null,
+      }
+      svg.setPointerCapture(e.pointerId)
+      return
+    }
+
+    if (tokenEl && e.button === 0) {
+      pressToken(tokenEl.getAttribute('data-entity')!)
       return
     }
 
@@ -350,6 +528,32 @@ export function SimplePitch() {
       return
     }
 
+    if (g.type === 'bend') {
+      if (!g.started) {
+        const moved = Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y)
+        if (moved < DRAG_THRESHOLD_PX) return
+        g.started = true
+        core.begin('Bend path')
+        core.update((d) => {
+          g.wpId = bendGrabWaypointInDraft(
+            d as TacticDocument,
+            g.segmentId,
+            clampToPitch(pt, doc.pitch),
+          )
+        })
+      }
+      if (g.wpId)
+        core.update((d) =>
+          bendMoveWaypointInDraft(
+            d as TacticDocument,
+            g.segmentId,
+            g.wpId!,
+            clampToPitch(pt, doc.pitch),
+          ),
+        )
+      return
+    }
+
     if (g.type === 'add') {
       const moved = Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y)
       if (moved > DRAG_THRESHOLD_PX * 2) gesture.current = null // a drag on grass is not an add
@@ -357,7 +561,14 @@ export function SimplePitch() {
     }
 
     if (g.type === 'draw') {
-      const p = clampToPitch(pt, doc.pitch)
+      let p = clampToPitch(pt, doc.pitch)
+      // Connection feedback: near a player (now) or any future spot (ghost) → snap + highlight,
+      // so releasing "on" a target is unambiguous (QA: 이어진 건지 땅인지 인식이 안 돼).
+      const target = nearestSnapTarget(p, g.entityId)
+      if (target) {
+        p = target
+        setSnapPos(target)
+      } else setSnapPos(null)
       const lastP = g.points[g.points.length - 1]!
       if (Math.hypot(p.x - lastP.x, p.y - lastP.y) > 0.25) {
         g.points.push(p)
@@ -376,7 +587,7 @@ export function SimplePitch() {
     }
     g.lastPt = pt
     const raw = clampToPitch({ x: pt.x + g.grab.x, y: pt.y + g.grab.y }, doc.pitch)
-    if (g.group.size > 1) {
+    if (g.group.size > 1 || g.translate) {
       // Group drag: translate homes AND every authored path (ball included) together.
       const prev = g.prevRaw ?? g.group.get(g.id) ?? g.home
       const inc = { x: raw.x - prev.x, y: raw.y - prev.y }
@@ -431,34 +642,72 @@ export function SimplePitch() {
   const ghosts = doc.scenes[0]
     ? sceneTracks(doc).flatMap((tr) => {
         const segs = tr.segments.filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
-        return segs.map((sg, i) => {
+        return segs.flatMap((sg, i) => {
           const path = (sg as { path: { waypoints: { p: Vec2 }[] } }).path
           const end = path.waypoints[path.waypoints.length - 1]!.p
-          return {
-            id: `${sg.id}-ghost`,
-            entityId: tr.entityId,
-            kind: tr.entityKind,
-            pos: end,
-            opacity: Math.max(0.22, 0.55 - i * 0.11),
-            number:
-              tr.entityKind === 'player'
-                ? doc.players.find((pl) => pl.id === tr.entityId)?.number
-                : undefined,
-            color: tr.entityKind === 'player' ? teamColorOf(doc, tr.entityId) : '#ffffff',
+          const opacity = Math.max(0.22, 0.55 - i * 0.11)
+          // A pass that lands ON a receiver: draw the ball ghost at the receiver's FEET (like a held
+          // ball), so the player centre stays grabbable for the receiver's own run.
+          const received =
+            tr.entityKind === 'ball' &&
+            sg.kind === 'travel' &&
+            !!(sg as { receiverId?: Id }).receiverId
+          const pos = received ? { x: end.x + 1.1, y: end.y + 0.7 } : end
+          const out = [
+            {
+              id: `${sg.id}-ghost`,
+              segId: (sg as { id: Id }).id,
+              entityId: tr.entityId,
+              kind: tr.entityKind,
+              pos,
+              opacity,
+              number:
+                tr.entityKind === 'player'
+                  ? doc.players.find((pl) => pl.id === tr.entityId)?.number
+                  : undefined,
+              color: tr.entityKind === 'player' ? teamColorOf(doc, tr.entityId) : '#ffffff',
+            },
+          ]
+          // The runner still HOLDS the ball at the end of this movement → the ball travels with them:
+          // show a faint ball there too, so the next pass can start from that future spot.
+          if (tr.entityKind === 'player') {
+            const tm = compiled.segmentTimes[(sg as { id: Id }).id]
+            if (tm && Number.isFinite(tm.end)) {
+              const rs = stateAt(compiled, doc, tm.end)
+              if (rs.ball.holderId === tr.entityId)
+                out.push({
+                  id: `${sg.id}-ball-ghost`,
+                  segId: (sg as { id: Id }).id,
+                  entityId: doc.ball.id,
+                  kind: 'ball' as const,
+                  pos: rs.ball.pos,
+                  opacity,
+                  number: undefined,
+                  color: '#ffffff',
+                })
+            }
           }
+          return out
         })
       })
     : []
 
   // Step badges at authored path ends
+  // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
   const badges = doc.scenes[0]
     ? doc.scenes[0].timeline.tracks.flatMap((tr) =>
         tr.segments
           .filter((s) => 'path' in s && !s.id.startsWith('gen-'))
           .map((s) => {
-            const path = (s as { path: { waypoints: { p: Vec2 }[] } }).path
-            const end = path.waypoints[path.waypoints.length - 1]!.p
-            return { id: s.id, step: stepOf(s as { step?: number }), end, entityId: tr.entityId }
+            const path = (s as { path: Path }).path
+            const lut = buildPathLUT(path)
+            const mid = pointAtDistance(lut, lut.length / 2)
+            return {
+              id: s.id,
+              step: stepOf(s as { step?: number }),
+              end: mid,
+              entityId: tr.entityId,
+            }
           }),
       )
     : []
@@ -502,7 +751,7 @@ export function SimplePitch() {
           <g
             key={b.id}
             className={styles.stepBadge}
-            transform={`translate(${b.end.x + 1.6}, ${b.end.y - 1.6})`}
+            transform={`translate(${b.end.x}, ${b.end.y - 1.9})`}
             onPointerDown={(e) => {
               e.stopPropagation()
               const next = (b.step % 9) + 1
@@ -554,6 +803,11 @@ export function SimplePitch() {
         dropKey={0}
         pulseKey={pulses[doc.ball.id]}
       />
+      {snapPos && ui.pathDraft && (
+        <g className={styles.snapRing} transform={`translate(${snapPos.x}, ${snapPos.y})`}>
+          <circle r={2.3} />
+        </g>
+      )}
       {marquee && (
         <rect
           x={Math.min(marquee.a.x, marquee.b.x)}
@@ -570,15 +824,24 @@ export function SimplePitch() {
             key={g.id}
             className={styles.ghostToken}
             transform={`translate(${g.pos.x}, ${g.pos.y})`}
-            style={{
-              opacity: shiftHeld ? Math.min(0.85, g.opacity + 0.25) : g.opacity,
-              pointerEvents: shiftHeld ? 'auto' : 'none',
-            }}
+            style={{ opacity: shiftHeld ? Math.min(0.85, g.opacity + 0.25) : g.opacity }}
             data-ghost={g.entityId}
+            data-move-seg={g.segId}
             data-gx={g.pos.x}
             data-gy={g.pos.y}
           >
-            <circle r={g.kind === 'ball' ? 1.3 : 1.7} style={{ fill: g.color }} />
+            {g.kind === 'ball' ? (
+              <g className={styles.ghostBall}>
+                {/* small invisible hit halo; visual matches the live ball size */}
+                <circle r={1.0} fill="transparent" stroke="none" />
+                <circle r={0.75} />
+                <circle cx={0} cy={-0.3} r={0.15} className={styles.ghostBallDot} />
+                <circle cx={-0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
+                <circle cx={0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
+              </g>
+            ) : (
+              <circle r={1.7} style={{ fill: g.color }} />
+            )}
             {g.number !== undefined && (
               <text textAnchor="middle" dominantBaseline="central">
                 {g.number}

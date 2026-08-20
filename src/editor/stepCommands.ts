@@ -7,6 +7,7 @@
 import type { Id, Path, TacticDocument, Waypoint } from '@/domain/types'
 import { GEN_PREFIX } from '@/engine/opponent'
 import { compile } from '@/engine/compile'
+import { smoothWaypoints } from '@/engine/path'
 import { buildPathLUT } from '@/engine/path'
 import { stateAt } from '@/engine/stateAt'
 import { newId } from './commands'
@@ -17,6 +18,7 @@ import {
   RECEIVE_RADIUS_M,
   ensureTrack,
   findSegment,
+  lastKnownPosition,
   passerFor,
   possessTrigger,
   removeSegmentInDraft,
@@ -150,18 +152,104 @@ export function addStepPass(
     })
     if (!doc.ball.initialHolderId && holder) doc.ball.initialHolderId = holder
     relayoutStepsInDraft(doc)
-    // Receiver = whoever stands at the end point when the ball arrives.
-    const compiled = compile(doc)
-    const arrival = compiled.segmentTimes[id]?.end ?? 0
-    const rs = stateAt(compiled, doc, arrival)
-    syncTravelReceiverInDraft(
-      doc,
-      id,
-      doc.players.map((p) => ({ id: p.id, pos: rs.players[p.id]?.pos ?? p.home })),
-      RECEIVE_RADIUS_M,
-    )
+    resolvePassReceiverInDraft(doc, id)
   })
   return id
+}
+
+/**
+ * Receiver for a pass, tried in order: positions at the arrival time → resting (t=0) positions →
+ * every authored future spot (ghosts) → each player's final position. First radius hit wins.
+ */
+export function resolvePassReceiverInDraft(doc: TacticDocument, segmentId: Id): void {
+  const compiled = compile(doc)
+  const arrival = compiled.segmentTimes[segmentId]?.end ?? 0
+  const rs = stateAt(compiled, doc, arrival)
+  const ghostSpots: { id: Id; pos: { x: number; y: number } }[] = []
+  for (const tr of sceneOf(doc).timeline.tracks) {
+    if (tr.entityKind !== 'player') continue
+    for (const sg of tr.segments) {
+      if (!('path' in sg) || sg.id.startsWith(GEN_PREFIX)) continue
+      const end = sg.path.waypoints[sg.path.waypoints.length - 1]?.p
+      if (end) ghostSpots.push({ id: tr.entityId, pos: end })
+    }
+  }
+  const candidateSets: { id: Id; pos: { x: number; y: number } }[][] = [
+    doc.players.map((p) => ({ id: p.id, pos: rs.players[p.id]?.pos ?? p.home })),
+    doc.players.map((p) => ({ id: p.id, pos: p.home })),
+    ghostSpots,
+    doc.players.map((p) => ({ id: p.id, pos: lastKnownPosition(doc, p.id) })),
+  ]
+  for (const candidates of candidateSets) {
+    syncTravelReceiverInDraft(doc, segmentId, candidates, RECEIVE_RADIUS_M)
+    const seg = findSegment(doc, segmentId)
+    if (seg && seg.segment.kind === 'travel' && seg.segment.receiverId) break
+  }
+}
+
+/**
+ * Grab-and-bend: pick (or insert) the waypoint nearest to `at` on the segment's polyline.
+ * Returns the waypoint id to drag. Existing waypoint within 1.2 m is reused.
+ */
+export function bendGrabWaypointInDraft(
+  doc: TacticDocument,
+  segmentId: Id,
+  at: { x: number; y: number },
+): Id | null {
+  const f = findSegment(doc, segmentId)
+  if (!f || !('path' in f.segment)) return null
+  const wps = f.segment.path.waypoints
+  // nearest existing waypoint
+  let bestI = -1
+  let bestD = 1.2
+  for (let i = 0; i < wps.length; i++) {
+    const d = Math.hypot(wps[i]!.p.x - at.x, wps[i]!.p.y - at.y)
+    if (d < bestD) {
+      bestD = d
+      bestI = i
+    }
+  }
+  if (bestI >= 0) return wps[bestI]!.id
+  // nearest polyline segment → insert there
+  let insI = 1
+  let insD = Infinity
+  for (let i = 1; i < wps.length; i++) {
+    const a = wps[i - 1]!.p
+    const b = wps[i]!.p
+    const abx = b.x - a.x
+    const aby = b.y - a.y
+    const len2 = abx * abx + aby * aby || 1
+    const t = Math.max(0, Math.min(1, ((at.x - a.x) * abx + (at.y - a.y) * aby) / len2))
+    const px = a.x + abx * t
+    const py = a.y + aby * t
+    const d = Math.hypot(px - at.x, py - at.y)
+    if (d < insD) {
+      insD = d
+      insI = i
+    }
+  }
+  const id = newId('w')
+  wps.splice(insI, 0, { id, p: { x: at.x, y: at.y } })
+  return id
+}
+
+/** Move a waypoint and re-smooth the whole path (Catmull-Rom handles) — the "bend" feel. */
+export function bendMoveWaypointInDraft(
+  doc: TacticDocument,
+  segmentId: Id,
+  waypointId: Id,
+  to: { x: number; y: number },
+): void {
+  const f = findSegment(doc, segmentId)
+  if (!f || !('path' in f.segment)) return
+  const wps = f.segment.path.waypoints
+  const i = wps.findIndex((w) => w.id === waypointId)
+  if (i < 0) return
+  const pts = wps.map((w, k) => (k === i ? { x: to.x, y: to.y } : w.p))
+  f.segment.path.waypoints = smoothWaypoints(
+    pts,
+    wps.map((w) => w.id),
+  )
 }
 
 /** Change a movement's step (badge click / number key on selection). */
