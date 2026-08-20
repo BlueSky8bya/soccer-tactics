@@ -30,8 +30,8 @@ export const PASS_SPEED_PRESETS = [
   { id: 'firm', label: '보통', speed: 16 },
   { id: 'driven', label: '강하게', speed: 22 },
 ] as const
-export const DEFAULT_PLAYER_SPEED = 5
-export const DEFAULT_PASS_SPEED = 16
+export const DEFAULT_PLAYER_SPEED = 7 // m/s — user 2026-08-20: 재생이 너무 느림
+export const DEFAULT_PASS_SPEED = 20
 
 export function sceneOf(doc: TacticDocument, sceneIndex = 0) {
   return doc.scenes[sceneIndex] ?? doc.scenes[0]!
@@ -464,6 +464,20 @@ export function shiftEntityPathsInDraft(doc: TacticDocument, entityId: Id, delta
       if (w.handleOut) w.handleOut = { x: w.handleOut.x + delta.x, y: w.handleOut.y + delta.y }
     }
   }
+}
+
+/** Move the ball's authored pass ORIGIN (first waypoint + handles) to `to` — target stays put. */
+export function moveBallPathOriginInDraft(doc: TacticDocument, to: Vec2): void {
+  const track = findTrack(doc, doc.ball.id)
+  const firstPath = track?.segments.find((s) => 'path' in s)
+  if (!firstPath || !('path' in firstPath)) return
+  const wp = firstPath.path.waypoints[0]
+  if (!wp) return
+  const dx = to.x - wp.p.x
+  const dy = to.y - wp.p.y
+  wp.p = { x: to.x, y: to.y }
+  if (wp.handleIn) wp.handleIn = { x: wp.handleIn.x + dx, y: wp.handleIn.y + dy }
+  if (wp.handleOut) wp.handleOut = { x: wp.handleOut.x + dx, y: wp.handleOut.y + dy }
 }
 
 export function moveBallStartInDraft(doc: TacticDocument, to: Vec2, holderId: Id | null): void {

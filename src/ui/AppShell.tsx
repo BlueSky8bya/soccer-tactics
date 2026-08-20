@@ -3,7 +3,7 @@ import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/Editor
 import { useCompiled } from '@/editor/useCompiled'
 import { downloadBlob, exportGif } from './exportGif'
 import { UiIcon } from './UiIcon'
-import { usePlaybackController } from '@/editor/usePlayback'
+import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
 import { SelectionActionBar } from './SelectionActionBar'
@@ -27,7 +27,8 @@ export function AppShell() {
   const { canUndo, canRedo } = useEditorSnapshot()
   const compiled = useCompiled()
   const ui = useUiStore()
-  const pb = usePlaybackController(compiled.duration)
+  const playEnd = playableEnd(compiled)
+  const pb = usePlaybackController(playEnd)
   const setReducedMotion = useUiStore((s) => s.setReducedMotion)
   const startTour = useUiStore((s) => s.startTour)
   const variants = useVariantSession()
@@ -222,7 +223,7 @@ export function AppShell() {
               type="button"
               className={styles.btn}
               onClick={exportPlayGif}
-              disabled={gifBusy || compiled.duration < 0.3}
+              disabled={gifBusy || playEnd < 0.3}
               title={t('gif.button')}
               aria-label={t('gif.button')}
             >

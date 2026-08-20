@@ -7,7 +7,7 @@ import { createEmptyDocument } from '@/domain'
 import { seedDefaultTeams } from '@/editor/commands'
 import { t } from './i18n'
 import { useUiStore } from '@/editor/uiStore'
-import { returnToStart, togglePlayback } from '@/editor/usePlayback'
+import { playableEnd, returnToStart, togglePlayback } from '@/editor/usePlayback'
 import { compile } from '@/engine/compile'
 
 function isTypingTarget(el: EventTarget | null): boolean {
@@ -44,7 +44,7 @@ export function useEditorKeyboard(): void {
       if (e.key === 'Tab' || e.key.startsWith('Arrow')) inputModality.current = 'keyboard'
       const ui = useUiStore.getState()
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
-      const duration = () => compile(core.getDocument()).duration
+      const duration = () => playableEnd(compile(core.getDocument()))
 
       if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
         if (isTypingTarget(e.target)) return

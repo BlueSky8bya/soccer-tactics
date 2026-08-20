@@ -124,7 +124,10 @@ export function sampleTimes(duration: number, fps: number, speed: number): numbe
 export async function exportGif(doc: TacticDocument, opts: GifOptions = {}): Promise<Blob> {
   const { speed = 2, fps = 12, width = 640, onProgress } = opts
   const compiled = compile(doc)
-  const duration = Math.max(0.1, compiled.duration)
+  // real end of the play, not the engine's 5s empty-board padding
+  let lastEnd = 0
+  for (const t of Object.values(compiled.segmentTimes)) if (t.end > lastEnd) lastEnd = t.end
+  const duration = Math.max(0.1, lastEnd)
   const m = pitchMarkings(doc.pitch)
   const k = width / m.length
   const height = Math.round(m.width * k)

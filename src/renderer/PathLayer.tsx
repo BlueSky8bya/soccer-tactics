@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { Id, Path, Segment, TacticDocument, Vec2 } from '@/domain/types'
 import { pathToSvgD } from '@/engine/path'
+import { trimPathEndD } from '@/ui/pitch/pathPresentation'
 import styles from './pitch.module.css'
 
 export interface PathLayerProps {
@@ -22,6 +23,25 @@ export interface PathLayerProps {
   pathPhase?: Readonly<Record<Id, 'past' | 'active' | 'future'>>
   /** Rest hierarchy (PLAN-006 M3b, A-05a): true = outside the current authoring step, recedes. */
   stepMuted?: Readonly<Record<Id, boolean>>
+}
+
+/** Display-d cache: immer keeps unchanged segments identical, so trims compute once per edit. */
+const trimCache = new WeakMap<object, string>()
+
+function displayD(
+  seg: object,
+  path: Path,
+  fullD: string,
+  trimM: number,
+  cacheable: boolean,
+): string {
+  if (cacheable) {
+    const hit = trimCache.get(seg)
+    if (hit) return hit
+  }
+  const d = trimPathEndD(path, trimM) ?? fullD
+  if (cacheable) trimCache.set(seg, d)
+  return d
 }
 
 function segClass(seg: Segment): string | undefined {
@@ -62,6 +82,8 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
             }
           : seg.path
       const d = pathToSvgD(shown)
+      // Arrowhead clearance: player ends host a 1.7m ghost, ball ends a small ball ghost.
+      const strokeD = displayD(seg, shown, d, isBall ? 1.15 : 2.15, !att)
       const selected = p.selectedSegmentId === seg.id
       const emphasized = selected || entitySelected
       const phase = p.pathPhase?.[seg.id]
@@ -84,12 +106,12 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
           data-phase={phase}
           className={`${styles.pathGroup} ${selected ? styles.pathSelected : ''} ${dim ? styles.pathDim : ''} ${phaseClass} ${mutedClass}`}
         >
-          {/* wide invisible hit path for easy selection */}
+          {/* wide invisible hit path for easy selection (full length) */}
           <path d={d} className={styles.pathHit} />
           {/* translucent casing under the colored line keeps thin paths readable on pitch markings (B-04) */}
-          <path d={d} className={styles.pathCasing} />
+          <path d={strokeD} className={styles.pathCasing} />
           <path
-            d={d}
+            d={strokeD}
             className={`${styles.path} ${segClass(seg)}`}
             style={{ stroke: color }}
             markerEnd={`url(#${markerId})`}

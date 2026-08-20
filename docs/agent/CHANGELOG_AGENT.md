@@ -705,3 +705,12 @@ Validation: typecheck/lint/test 134/build/harness/format PASS.
 Change: M7-01~08 재캡처(BASE 1:1, 콘솔 클린), 재생 중 long task(>50ms) 0건 관측, 감사(순수성/레거시/의존성/bezier) 전부 클린, manifest에 차이 요약. 계획 Status Completed — 브라우저 수용 체크리스트는 사용자 몫(EXTERNAL-VERIFICATION-PENDING).
 Validation: typecheck/lint/test 134/build/harness/format PASS (최종 게이트 아래 커밋에서 재실행).
 
+### CHG-20260820-064 — FIX — 홀더 이동 시 패스 동행·재생 5초 패딩 제거·화살촉 트림 (사용자 지시 3건)
+
+Problem: ① 공 보유+패스 상태에서 홀더를 옮기면 패스가 안 따라오고, 1단계 패스면 t=0에 공 상태가 travel이라 홀더 프레스가 공 드래그로 새어 소유가 풀림 ② compile의 MIN_SCENE_DURATION(5s) 바닥값 때문에 짧은 플레이도 5초 재생(느림) ③ 화살촉이 끝점의 엔티티/고스트에 가려짐.
+Change:
+- 프레스 홀더 판별에 t=0 폴백(initialHolderId) — 홀더 몸통 프레스가 항상 선수. 홀더 드래그 시 ball.home과 **패스 원점(wp0)** 동행(`moveBallPathOriginInDraft`, 단일/그룹). addStepPass가 만드는 소유가 carry 방향 상속(공 점프 제거). t=0 정지 상태 공은 possessed로 렌더(홀더 링 유지).
+- `playableEnd(compiled)` = 마지막 세그먼트 끝 — 재생/Space/GIF가 5초 패딩 대신 실제 끝까지만. 기본 속도 상향(선수 5→7, 패스 16→20 m/s).
+- 표시 경로 끝을 트림(선수 2.15m/공 1.15m, `trimPathEndD`+세그먼트 identity 캐시) — 화살촉이 토큰·고스트 밖에 뜸. 히트 경로는 원래 길이 유지.
+Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 홀더 +13.6m 드래그 후 상대 오프셋(−1.7,+0.9)·wp0=ball.home 유지·소유 유지, 18m 런 재생 5.0→**2.61s**, 화살촉 클리어런스 스크린샷, 콘솔 클린.
+

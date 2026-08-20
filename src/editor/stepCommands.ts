@@ -6,7 +6,7 @@
  */
 import type { Id, Path, TacticDocument, Waypoint } from '@/domain/types'
 import { GEN_PREFIX } from '@/engine/opponent'
-import { compile } from '@/engine/compile'
+import { carryOffset, compile } from '@/engine/compile'
 import { smoothWaypoints } from '@/engine/path'
 import { buildPathLUT } from '@/engine/path'
 import { stateAt } from '@/engine/stateAt'
@@ -133,12 +133,19 @@ export function addStepPass(
     const last = track.segments[track.segments.length - 1]
     const holder = passerFor(doc, track, holderHint)
     if (holder && !(last && last.kind === 'possessed' && last.holderId === holder)) {
+      // Inherit the CARRY DIRECTION from where the ball rests around the holder (user 2026-08-20):
+      // without this the possession falls back to the fixed right-foot offset and the ball jumps.
+      const holderHome = doc.players.find((p) => p.id === holder)?.home
+      const off = holderHome
+        ? carryOffset({ x: doc.ball.home.x - holderHome.x, y: doc.ball.home.y - holderHome.y })
+        : undefined
       track.segments.push({
         id: newId('seg'),
         kind: 'possessed',
         trigger: possessTrigger(last, 0),
         timing: { duration: 0 },
         holderId: holder,
+        ...(off ? { offset: off } : {}),
       })
     }
     track.segments.push({

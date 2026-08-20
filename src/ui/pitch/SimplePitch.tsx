@@ -7,6 +7,7 @@ import {
   findSegment,
   findTrack,
   lastKnownPosition,
+  moveBallPathOriginInDraft,
   moveBallStartInDraft,
   shiftEntityPathsInDraft,
   newIdFor,
@@ -459,13 +460,17 @@ export function SimplePitch() {
     // The ball paints ABOVE its holder, so it wins every overlapping press. Disambiguate by
     // visual-radius-normalized distance: pressing the player's body grabs the PLAYER (run/move),
     // pressing the little ball itself still grabs the BALL (pass) — user 2026-08-20.
+    // At t=0 a step-1 pass makes the resolved status 'travel', so fall back to the INITIAL holder
+    // (otherwise the press leaks to the ball and dragging the player rips the possession apart).
+    const pressHolderId =
+      resolved.ball.holderId ?? (ui.playback.t === 0 ? doc.ball.initialHolderId : undefined)
     let tokenEntityId = tokenEl?.getAttribute('data-entity') ?? null
-    if (tokenEntityId === doc.ball.id && resolved.ball.holderId) {
-      const hp = resolved.players[resolved.ball.holderId]?.pos
+    if (tokenEntityId === doc.ball.id && pressHolderId) {
+      const hp = resolved.players[pressHolderId]?.pos
       if (hp) {
         const dBall = Math.hypot(resolved.ball.pos.x - pt.x, resolved.ball.pos.y - pt.y)
         const dHolder = Math.hypot(hp.x - pt.x, hp.y - pt.y)
-        if (dBall / 0.9 > dHolder / 1.8) tokenEntityId = resolved.ball.holderId
+        if (dBall / 0.9 > dHolder / 1.8) tokenEntityId = pressHolderId
       }
     }
     const nearPlayer = ghostEl
@@ -670,9 +675,12 @@ export function SimplePitch() {
           }
           shiftEntityPathsInDraft(doc2, id, inc)
         }
-        // The held ball follows its dragged holder, keeping its side (not in the group itself).
-        if (g.ballOrigin)
+        // The held ball follows its dragged holder, keeping its side (not in the group itself),
+        // carrying the authored pass origin along with it.
+        if (g.ballOrigin) {
           doc2.ball.home = { x: doc2.ball.home.x + inc.x, y: doc2.ball.home.y + inc.y }
+          moveBallPathOriginInDraft(doc2, doc2.ball.home)
+        }
       })
       st.setDrag({ id: g.id, grab: g.grab, raw, guides: [], snapped: false })
       return
@@ -682,8 +690,13 @@ export function SimplePitch() {
     core.update((d) => {
       for (const [id, h] of g.group)
         setEntityHome(d as TacticDocument, id, { x: h.x + delta.x, y: h.y + delta.y })
-      // The held ball keeps its chosen side of the holder (user 2026-08-20).
-      if (g.ballOrigin) d.ball.home = { x: g.ballOrigin.x + delta.x, y: g.ballOrigin.y + delta.y }
+      // The held ball keeps its chosen side of the holder (user 2026-08-20) — and so does the
+      // authored pass ORIGIN, so the drawn line starts where the holder now stands.
+      if (g.ballOrigin) {
+        const bh = { x: g.ballOrigin.x + delta.x, y: g.ballOrigin.y + delta.y }
+        d.ball.home = bh
+        moveBallPathOriginInDraft(d as TacticDocument, bh)
+      }
       if (g.group.has(d.ball.id) && g.id === d.ball.id) {
         const tr = findTrack(d as TacticDocument, d.ball.id)
         if (!tr || tr.segments.length === 0) delete d.ball.initialHolderId
@@ -696,6 +709,12 @@ export function SimplePitch() {
     const g = gesture.current
     if (!g || g.pointerId !== e.pointerId) return
     endGestureRef.current(true)
+  }
+
+  // Dev-only QA hook: headless probes can inspect the real document/compiled state.
+  if (import.meta.env.DEV) {
+    ;(window as unknown as Record<string, unknown>).__stDoc = doc
+    ;(window as unknown as Record<string, unknown>).__stCompiled = compiled
   }
 
   // ---------- render ----------
@@ -932,8 +951,17 @@ export function SimplePitch() {
         pos={resolved.ball.pos}
         height={resolved.ball.height}
         spin={resolved.ball.spin}
-        ballStatus={resolved.ball.status}
-        holderColor={resolved.ball.holderId ? teamColorOf(doc, resolved.ball.holderId) : undefined}
+        ballStatus={
+          resolved.ball.status === 'travel' && ui.playback.t === 0 && !isPlaying
+            ? 'possessed'
+            : resolved.ball.status
+        }
+        holderColor={(() => {
+          const hid =
+            resolved.ball.holderId ??
+            (ui.playback.t === 0 && !isPlaying ? doc.ball.initialHolderId : undefined)
+          return hid ? teamColorOf(doc, hid) : undefined
+        })()}
         selected={selection.includes(doc.ball.id)}
         hovered={false}
         dragging={drag?.id === doc.ball.id}

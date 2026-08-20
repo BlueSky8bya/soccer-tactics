@@ -10,6 +10,19 @@ import type { PlaybackScope } from './uiStore'
  * exported actions below (RULE-03) so their semantics can never diverge.
  */
 
+/**
+ * Real end of the play: the last segment's compiled end. `compiled.duration` pads empty boards
+ * to MIN_SCENE_DURATION (5s) for the old timeline — playing that padding feels like lag
+ * (user 2026-08-20: 재생이 너무 느림).
+ */
+export function playableEnd(compiled: {
+  segmentTimes: Record<string, { start: number; end: number }>
+}): number {
+  let end = 0
+  for (const t of Object.values(compiled.segmentTimes)) if (t.end > end) end = t.end
+  return Math.max(0.2, end)
+}
+
 /** One clock advance, pure (tested in usePlayback.test.ts). */
 export function advanceClock(
   t: number,

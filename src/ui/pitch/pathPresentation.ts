@@ -5,6 +5,7 @@
  * hand the renderer a presentation copy and lock the first waypoint against dragging.
  */
 import type { Id, Path, TacticDocument, Vec2 } from '@/domain/types'
+import { buildPathLUT, pointAtDistance } from '@/engine/path'
 import type { CompiledTimeline } from '@/engine/compile'
 
 export interface AttachedPathStart {
@@ -149,4 +150,24 @@ export function deriveRestMutedIds(
     if (s.step !== currentStep) out[s.id] = true
   }
   return out
+}
+
+/**
+ * Display-only path with its END pulled back by `trimM` metres, so the arrowhead floats clear of
+ * the entity/ghost sitting on the endpoint (user 2026-08-20: 화살촉이 가려짐). Returns an SVG
+ * polyline `d`; null when the path is too short to trim. Hit-testing keeps the full path.
+ */
+export function trimPathEndD(path: Path, trimM: number): string | null {
+  const lut = buildPathLUT(path)
+  const usable = lut.length - trimM
+  if (usable < 1.2) return null
+  const step = 0.35
+  const pts: string[] = []
+  for (let d = 0; d <= usable + 1e-6; d += step) {
+    const p = pointAtDistance(lut, Math.min(d, usable))
+    pts.push(`${Math.round(p.x * 100) / 100} ${Math.round(p.y * 100) / 100}`)
+  }
+  const endP = pointAtDistance(lut, usable)
+  pts.push(`${Math.round(endP.x * 100) / 100} ${Math.round(endP.y * 100) / 100}`)
+  return `M ${pts.join(' L ')}`
 }
