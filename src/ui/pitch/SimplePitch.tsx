@@ -172,9 +172,16 @@ export function SimplePitch() {
   const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
   const flingDoneRef = useRef<(() => void) | null>(null)
   const flingKeyRef = useRef(0)
-  /** Net bulge FX at the catch moment — angle follows the incoming shot. */
-  const [netFx, setNetFx] = useState<{ pos: Vec2; angleDeg: number; key: number } | null>(null)
-  const netFxAtRef = useRef<{ t: number; pos: Vec2; angleDeg: number } | null>(null)
+  /** Player under the DRAGGED ball (≤2.6m) — lights up so "give" vs "ground" is obvious. */
+  const [dropTargetId, setDropTargetId] = useState<Id | null>(null)
+  /** Net bulge FX queue — one per netting contact, oriented along the mesh surface normal. */
+  const [netFx, setNetFx] = useState<{
+    pos: Vec2
+    angleDeg: number
+    strength: number
+    key: number
+  } | null>(null)
+  const netFxQueueRef = useRef<{ t: number; pos: Vec2; angleDeg: number; strength: number }[]>([])
   /** In-place 1-9 picker opened by clicking a step badge (faster than the action bar). */
   const [stepPicker, setStepPicker] = useState<{ segId: Id; at: Vec2 } | null>(null)
   /** One-shot expanding ring when the ball ATTACHES to a player (immersion feedback). */
@@ -312,6 +319,7 @@ export function SimplePitch() {
     const g = gesture.current
     gesture.current = null
     setPressedId(null)
+    setDropTargetId(null)
     const svg = svgRef.current
     if (!g) return
     if (svg && svg.hasPointerCapture(g.pointerId)) svg.releasePointerCapture(g.pointerId)
@@ -487,16 +495,14 @@ export function SimplePitch() {
       }
       if (fling && fling.duration > 0.05) {
         // roll the visual along the simulated path; settle/attach feedback fires on arrival
-        netFxAtRef.current = fling.goal
-          ? {
-              t: (fling.goal.impact ?? fling.goal).t,
-              pos: (fling.goal.impact ?? fling.goal).pos,
-              angleDeg: (() => {
-                const iv = fling.goal.impact?.v ?? fling.goal.v
-                return (Math.atan2(iv.y, iv.x) * 180) / Math.PI
-              })(),
-            }
-          : null
+        netFxQueueRef.current = fling.goal
+          ? fling.goal.impacts.map((imp) => ({
+              t: imp.t,
+              pos: imp.pos,
+              angleDeg: (Math.atan2(imp.normal.y, imp.normal.x) * 180) / Math.PI,
+              strength: Math.max(0.55, Math.min(1.35, imp.speed / 18)),
+            }))
+          : []
         flingDoneRef.current = settleAndAttach
         setFlingAnim({ points: fling.points, key: (flingKeyRef.current += 1) })
       } else {
@@ -523,15 +529,11 @@ export function SimplePitch() {
     const tick = () => {
       const el = (performance.now() - t0) / 1000
       if (el >= total) {
-        // the mesh contact can land on the very last step — flush its FX before finishing
-        const pending = netFxAtRef.current
+        // a mesh contact can land on the very last step — flush the queue before finishing
+        const pending = netFxQueueRef.current[0]
         if (pending) {
-          netFxAtRef.current = null
-          setNetFx({
-            pos: pending.pos,
-            angleDeg: pending.angleDeg,
-            key: (flingKeyRef.current += 1),
-          })
+          netFxQueueRef.current = []
+          setNetFx({ ...pending, key: (flingKeyRef.current += 1) })
           pulseKey.current++
           setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
           window.setTimeout(() => setNetFx(null), 800)
@@ -544,10 +546,10 @@ export function SimplePitch() {
         return
       }
       while (idx < pts.length - 2 && pts[idx + 1]!.t <= el) idx++
-      const nf = netFxAtRef.current
+      const nf = netFxQueueRef.current[0]
       if (nf && el >= nf.t) {
-        netFxAtRef.current = null
-        setNetFx({ pos: nf.pos, angleDeg: nf.angleDeg, key: (flingKeyRef.current += 1) })
+        netFxQueueRef.current = netFxQueueRef.current.slice(1)
+        setNetFx({ ...nf, key: (flingKeyRef.current += 1) })
         // the ball itself pops as the mesh takes it — part of the 촤르륵
         pulseKey.current++
         setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
@@ -558,7 +560,7 @@ export function SimplePitch() {
       const f = b.t > a.t ? (el - a.t) / (b.t - a.t) : 0
       setFlingPos({
         pos: { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f },
-        spin: (a.d + (b.d - a.d) * f) / 0.62,
+        spin: (a.d + (b.d - a.d) * f) / 0.68,
       })
       raf = requestAnimationFrame(tick)
     }
@@ -1030,6 +1032,12 @@ export function SimplePitch() {
     g.samples = g.samples ?? []
     g.samples.push({ t: e.timeStamp, x: raw.x, y: raw.y })
     if (g.samples.length > 10) g.samples.shift()
+    // who would RECEIVE the ball if dropped here (attach range) — light them up
+    const over = doc.players
+      .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - raw.x, pl.home.y - raw.y) }))
+      .filter((x) => x.dist <= 2.6)
+      .sort((a, b) => a.dist - b.dist)[0]
+    setDropTargetId((prev) => (prev === (over?.id ?? null) ? prev : (over?.id ?? null)))
     core.update((d) => {
       setEntityHome(d as TacticDocument, g.id, { x: origin.x + delta.x, y: origin.y + delta.y })
       const tr = findTrack(d as TacticDocument, d.ball.id)
@@ -1310,7 +1318,7 @@ export function SimplePitch() {
         <g
           key={netFx.key}
           className={styles.netFx}
-          transform={`translate(${netFx.pos.x} ${netFx.pos.y}) rotate(${netFx.angleDeg})`}
+          transform={`translate(${netFx.pos.x} ${netFx.pos.y}) rotate(${netFx.angleDeg}) scale(${netFx.strength})`}
         >
           {/* pocket: the mesh wraps the ball, stretches past, snaps back (elastic) */}
           <path d="M 0 -1.1 Q 1.9 0 0 1.1 Q 0.5 0 0 -1.1 Z" className={styles.netFxPocket} />
@@ -1412,7 +1420,7 @@ export function SimplePitch() {
             color={teamColorOf(doc, p.id)}
             number={p.number}
             label={p.label && p.role ? `${p.label}(${p.role})` : (p.label ?? p.role)}
-            selected={selection.includes(p.id)}
+            selected={selection.includes(p.id) || dropTargetId === p.id}
             hovered={hoverKey === `player:${p.id}`}
             dragging={drag?.id === p.id}
             pressed={pressedId === p.id && drag?.id !== p.id}
@@ -1485,13 +1493,13 @@ export function SimplePitch() {
               <g className={styles.ghostBall}>
                 {/* small invisible hit halo; visual matches the live ball size */}
                 <circle r={1.0} fill="transparent" stroke="none" />
-                <circle r={0.62} />
+                <circle r={0.68} />
                 <circle cx={0} cy={-0.3} r={0.15} className={styles.ghostBallDot} />
                 <circle cx={-0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
                 <circle cx={0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
               </g>
             ) : (
-              <circle r={1.35} style={{ fill: g.color }} />
+              <circle r={1.5} style={{ fill: g.color }} />
             )}
             {g.number !== undefined && (
               <text textAnchor="middle" dominantBaseline="central">

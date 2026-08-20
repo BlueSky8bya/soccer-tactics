@@ -2,9 +2,9 @@ import { memo, type ReactNode } from 'react'
 import type { Id, Vec2 } from '@/domain/types'
 import styles from './pitch.module.css'
 
-export const TOKEN_R = 1.2 // metres (visual) — user 2026-08-21: 실제 비율 쪽으로 축소 (가독 절충)
+export const TOKEN_R = 1.35 // metres (visual) — user 2026-08-21: 축소 후 재보정 (1.5→1.2→1.35)
 export const TOKEN_HIT_R = 2.2 // metres (hit area ≥ visual; ≥28px at typical sizes)
-export const BALL_R = 0.62
+export const BALL_R = 0.68
 
 export interface TokenProps {
   id: Id

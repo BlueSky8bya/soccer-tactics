@@ -192,7 +192,7 @@ export function drawFrame(
       ctx.stroke()
     }
     ctx.fillStyle = '#fff'
-    ctx.font = `700 ${Math.round(1.3 * k)}px system-ui, sans-serif`
+    ctx.font = `700 ${Math.round(1.45 * k)}px system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(String(p.number), pos.x * k, pos.y * k + 0.1 * k)

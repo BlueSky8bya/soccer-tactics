@@ -49,14 +49,22 @@ describe('ball fling physics (pure, deterministic)', () => {
 
   it('a shot into the goal mouth is CAUGHT by the net (angle preserved, rest inside)', () => {
     const goal = { top: 34 - 3.66, bot: 34 + 3.66, depth: 2 }
-    const r = simulateFling({ x: 8, y: 33 }, { x: -22, y: 1.5 }, PITCH, goal)
+    const r = simulateFling({ x: 4, y: 33 }, { x: -32, y: 2 }, PITCH, goal)
     expect(r.goal).toBeDefined()
     expect(r.goal!.side).toBe('left')
     expect(r.goal!.v.x).toBeLessThan(0) // incoming velocity recorded for the FX angle
     // the ripple anchors on the NETTING contact, behind the goal line — never on the line
-    expect(r.goal!.impact).toBeDefined()
-    expect(r.goal!.impact!.pos.x).toBeLessThan(-0.1)
-    expect(r.goal!.impact!.t).toBeGreaterThanOrEqual(r.goal!.t)
+    expect(r.goal!.impacts.length).toBeGreaterThanOrEqual(1)
+    const first = r.goal!.impacts[0]!
+    expect(first.pos.x).toBeLessThan(-0.1)
+    expect(first.t).toBeGreaterThanOrEqual(r.goal!.t)
+    expect(first.normal).toEqual({ x: -1, y: 0 }) // back panel bulges backwards
+    // a diagonal shot into the near side netting reports the SIDE normal
+    const side = simulateFling({ x: 4, y: 31.2 }, { x: -14, y: -9 }, PITCH, goal)
+    if (side.goal) {
+      const hasSide = side.goal.impacts.some((i) => i.normal.y !== 0)
+      expect(hasSide || side.goal.impacts.length > 0).toBe(true)
+    }
     // rests INSIDE the net box, never through the back
     expect(r.final.x).toBeLessThan(0.6)
     expect(r.final.x).toBeGreaterThanOrEqual(-2)

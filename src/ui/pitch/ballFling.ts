@@ -72,8 +72,9 @@ export interface FlingResult {
     pos: Vec2
     v: Vec2
     side: 'left' | 'right'
-    /** First contact with the actual NETTING (back/side mesh) — where the ripple belongs. */
-    impact?: { t: number; pos: Vec2; v: Vec2 }
+    /** Contacts with the actual NETTING (back panel AND side mesh), in order. The ripple fires
+     *  at each, oriented along the net's surface normal (the direction the mesh bulges). */
+    impacts: { t: number; pos: Vec2; normal: Vec2; speed: number }[]
   }
 }
 
@@ -106,7 +107,7 @@ export function simulateFling(
   let t = 0
   let d = 0
   let goalHit: FlingResult['goal'] | undefined
-  let netImpact: { t: number; pos: Vec2; v: Vec2 } | undefined
+  const impacts: NonNullable<FlingResult['goal']>['impacts'] = []
   let inNet = false
   const NET_REST = 0.05
   while (Math.hypot(v.x, v.y) > FLING_STOP_SPEED && t < MAX_T) {
@@ -125,30 +126,35 @@ export function simulateFling(
         pos: { x: side === 'left' ? 0 : L, y: p.y },
         v: { x: v.x, y: v.y },
         side,
+        impacts,
       }
     }
     if (inNet && goal) {
       // net box walls: back stanchion + side netting, nearly dead on impact
       const backL = -goal.depth + 0.15
       const backR = L + goal.depth - 0.15
-      const hit = (cx: number, cy: number) => {
-        if (!netImpact) netImpact = { t, pos: { x: cx, y: cy }, v: { x: v.x, y: v.y } }
+      // each netting panel reports its contact with the SURFACE NORMAL (bulge direction)
+      const hit = (cx: number, cy: number, nx: number, ny: number) => {
+        const speed = Math.hypot(v.x, v.y)
+        const prev = impacts[impacts.length - 1]
+        if (impacts.length < 3 && (!prev || t - prev.t > 0.08))
+          impacts.push({ t, pos: { x: cx, y: cy }, normal: { x: nx, y: ny }, speed })
       }
       if (p.x < backL) {
-        hit(backL, p.y)
+        hit(backL, p.y, -1, 0)
         p.x = 2 * backL - p.x
         v.x = -v.x * NET_REST
       } else if (p.x > backR) {
-        hit(backR, p.y)
+        hit(backR, p.y, 1, 0)
         p.x = 2 * backR - p.x
         v.x = -v.x * NET_REST
       }
       if (p.y < goal.top + 0.1) {
-        hit(p.x, goal.top + 0.1)
+        hit(p.x, goal.top + 0.1, 0, -1)
         p.y = 2 * (goal.top + 0.1) - p.y
         v.y = -v.y * NET_REST
       } else if (p.y > goal.bot - 0.1) {
-        hit(p.x, goal.bot - 0.1)
+        hit(p.x, goal.bot - 0.1, 0, 1)
         p.y = 2 * (goal.bot - 0.1) - p.y
         v.y = -v.y * NET_REST
       }
@@ -177,9 +183,15 @@ export function simulateFling(
     d += Math.hypot(p.x - px, p.y - py)
     points.push({ x: p.x, y: p.y, t, d })
   }
-  if (goalHit) {
+  if (goalHit && impacts.length === 0) {
     // soft shot that never reaches the mesh: the net still wraps it where it stops
-    goalHit.impact = netImpact ?? { t, pos: { x: p.x, y: p.y }, v: goalHit.v }
+    const sp = Math.hypot(goalHit.v.x, goalHit.v.y)
+    impacts.push({
+      t,
+      pos: { x: p.x, y: p.y },
+      normal: sp > 0 ? { x: goalHit.v.x / sp, y: goalHit.v.y / sp } : { x: -1, y: 0 },
+      speed: sp,
+    })
   }
   return { points, final: { x: p.x, y: p.y }, duration: t, ...(goalHit ? { goal: goalHit } : {}) }
 }

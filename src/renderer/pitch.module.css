@@ -162,7 +162,7 @@
   fill: #fff;
   font-family: inherit;
   font-weight: 600;
-  font-size: 1.35px;
+  font-size: 1.5px;
   text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;
@@ -173,7 +173,7 @@
   fill: rgba(255, 255, 255, 0.92);
   font-family: inherit;
   font-weight: 500;
-  font-size: 1.05px;
+  font-size: 1.15px;
   text-anchor: middle;
   pointer-events: none;
   paint-order: stroke;
@@ -518,7 +518,7 @@
 }
 
 .ghostToken text {
-  font-size: 1.3px;
+  font-size: 1.45px;
   font-weight: 700;
   fill: #fff;
   user-select: none;
