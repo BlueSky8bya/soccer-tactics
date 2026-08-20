@@ -218,6 +218,8 @@ export const ko = {
   'draw.pen': '펜',
   'draw.eraser': '지우개 (획 단위)',
   'draw.color': '색 {c}',
+  'draw.colors': '색 고르기',
+  'draw.customColor': '직접 고르기',
   'draw.width': '굵기 {w}',
   'draw.clearAll': '그림 전체 지우기',
   'draw.cleared': '그림 {n}개 지움',

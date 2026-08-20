@@ -87,7 +87,15 @@ export type Drawing =
   | { id: Id; kind: 'arrow'; from: Vec2; to: Vec2; style?: DrawingStyle; visible?: TimeRange }
   | { id: Id; kind: 'line'; points: Vec2[]; style?: DrawingStyle; visible?: TimeRange }
   | { id: Id; kind: 'zone'; shape: ZoneShape; style?: DrawingStyle; visible?: TimeRange }
-  | { id: Id; kind: 'freehand'; points: Vec2[]; style?: DrawingStyle; visible?: TimeRange }
+  | {
+      id: Id
+      kind: 'freehand'
+      points: Vec2[]
+      /** Per-point width factor 0..1 (VIC pen grammar): stylus pressure, or mouse-speed inverse. */
+      pressures?: number[]
+      style?: DrawingStyle
+      visible?: TimeRange
+    }
   | { id: Id; kind: 'text'; at: Vec2; text: string; style?: DrawingStyle; visible?: TimeRange }
 
 export type ZoneShape =

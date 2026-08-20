@@ -328,6 +328,7 @@
 }
 
 .annotHit {
+  fill: none; /* polyline defaults to a BLACK fill — a zigzag stroke became a filled blob */
   stroke: transparent;
   stroke-width: 14px;
   vector-effect: non-scaling-stroke;

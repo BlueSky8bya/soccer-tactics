@@ -9,6 +9,7 @@ import type { TacticDocument } from '@/domain/types'
 import { compile } from '@/engine/compile'
 import { pitchMarkings } from '@/engine/geometry'
 import { stateAt } from '@/engine/stateAt'
+import { penSegments } from '@/ui/pitch/inking'
 import { VISUAL } from '@/renderer/visualDefaults'
 
 export interface GifOptions {
@@ -83,20 +84,35 @@ export function drawFrame(
   k: number,
 ): void {
   drawPitch(ctx, doc, k)
-  // annotations under the tokens (PLAN-008): pen strokes belong to the board, not the play
+  // annotations under the tokens (PLAN-008): pen strokes belong to the board, not the play.
+  // Freehand renders with the VIC pen geometry (midpoint quadratics, pressure widths).
   for (const dr of doc.drawings) {
     if (dr.visible && (t < dr.visible.from || t > dr.visible.to)) continue
     if (dr.kind !== 'freehand' && dr.kind !== 'line') continue
     if (dr.points.length < 2) continue
-    ctx.beginPath()
-    ctx.moveTo(dr.points[0]!.x * k, dr.points[0]!.y * k)
-    for (let i = 1; i < dr.points.length; i++) ctx.lineTo(dr.points[i]!.x * k, dr.points[i]!.y * k)
-    ctx.strokeStyle = resolveColor(dr.style?.color, '#ffeb3b')
-    ctx.lineWidth = Math.max(1, ((dr.style?.width ?? 3) / 10) * k) // ≈ screen px at ~10px/m layout
+    ctx.strokeStyle = resolveColor(dr.style?.color, '#000000')
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.globalAlpha = dr.style?.opacity ?? 1
-    ctx.stroke()
+    const baseW = ((dr.style?.width ?? 5) / 10) * k // ≈ screen px at ~10px/m layout
+    if (dr.kind === 'freehand') {
+      for (const seg of penSegments(dr.points, dr.pressures)) {
+        // penSegments emits pitch-metre coordinates — scale via transform
+        const path = new Path2D(seg.d)
+        ctx.save()
+        ctx.scale(k, k)
+        ctx.lineWidth = Math.max(1 / k, (baseW * seg.f) / k)
+        ctx.stroke(path)
+        ctx.restore()
+      }
+    } else {
+      ctx.beginPath()
+      ctx.moveTo(dr.points[0]!.x * k, dr.points[0]!.y * k)
+      for (let i = 1; i < dr.points.length; i++)
+        ctx.lineTo(dr.points[i]!.x * k, dr.points[i]!.y * k)
+      ctx.lineWidth = Math.max(1, baseW)
+      ctx.stroke()
+    }
     ctx.globalAlpha = 1
   }
   const rs = stateAt(compiled, doc, t)

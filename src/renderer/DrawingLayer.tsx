@@ -1,6 +1,36 @@
 import { memo } from 'react'
 import type { Drawing, Id, Vec2 } from '@/domain/types'
+import { penSegments } from '@/ui/pitch/inking'
 import styles from './pitch.module.css'
+
+/**
+ * Variable-width pen stroke (VIC grammar): midpoint quadratic segments, each with its own
+ * pressure-scaled width. Widths are CSS px (non-scaling), exactly like the reference.
+ */
+export function PenStroke(p: {
+  points: readonly Vec2[]
+  pressures?: readonly number[]
+  color: string
+  width: number
+  opacity?: number
+}) {
+  return (
+    <g opacity={p.opacity}>
+      {penSegments(p.points, p.pressures).map((s, i) => (
+        <path
+          key={i}
+          d={s.d}
+          fill="none"
+          stroke={p.color}
+          strokeWidth={p.width * s.f}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      ))}
+    </g>
+  )
+}
 
 export interface DrawingLayerProps {
   drawings: readonly Drawing[]
@@ -111,8 +141,24 @@ export const DrawingLayer = memo(function DrawingLayer(p: DrawingLayerProps) {
               </>
             )
             break
-          case 'line':
           case 'freehand':
+            body = (
+              <>
+                <polyline
+                  points={dr.points.map((q) => `${q.x},${q.y}`).join(' ')}
+                  className={styles.annotHit}
+                />
+                <PenStroke
+                  points={dr.points}
+                  pressures={dr.pressures}
+                  color={color}
+                  width={dr.style?.width ?? 5}
+                  opacity={dr.style?.opacity}
+                />
+              </>
+            )
+            break
+          case 'line':
             body = (
               <>
                 <polyline

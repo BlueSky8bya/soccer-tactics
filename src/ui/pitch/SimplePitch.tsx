@@ -28,13 +28,14 @@ import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
 import type { PickSegment } from './pickTarget'
 import { addFreehand } from '@/editor/moreCommands'
+import { MIN_POINT_DIST_PX, mapPenPressure, mouseSpeedPressure, smoothPressure } from './inking'
 
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
 import { useUiStore } from '@/editor/uiStore'
 import { useCompiled, useResolvedState } from '@/editor/useCompiled'
 import { beautifyStroke, buildPathLUT, pointAtDistance } from '@/engine/path'
 import { stateAt } from '@/engine/stateAt'
-import { DrawingLayer } from '@/renderer/DrawingLayer'
+import { DrawingLayer, PenStroke } from '@/renderer/DrawingLayer'
 import { PathLayer } from '@/renderer/PathLayer'
 import { PitchMarkings } from '@/renderer/PitchMarkings'
 import styles from '@/renderer/pitch.module.css'
@@ -104,8 +105,17 @@ type Gesture =
       at: Vec2
       startClient: { x: number; y: number }
     }
-  /** Freehand annotation stroke (PLAN-008): pen collects points, eraser sweeps drawings. */
-  | { type: 'annot-pen'; pointerId: number; points: Vec2[] }
+  /** Freehand annotation stroke (PLAN-008): pen collects points + VIC pressure factors. */
+  | {
+      type: 'annot-pen'
+      pointerId: number
+      points: Vec2[]
+      pressures: number[]
+      /** Pressure dynamics (VIC strokeDynRef): last event time/client pos + smoothed factor. */
+      dyn: { t: number; x: number; y: number; f: number }
+      /** Client position of the last KEPT point (2px gate). */
+      lastKept: { x: number; y: number }
+    }
   | { type: 'annot-erase'; pointerId: number; began: boolean }
 
 /**
@@ -155,8 +165,8 @@ export function SimplePitch() {
   const [hoverKey, setHoverKey] = useState<string | null>(null)
   const hoverRaf = useRef<number | null>(null)
   const hoverPt = useRef<Vec2 | null>(null)
-  /** In-progress pen stroke (PLAN-008) — rendered as a live polyline preview. */
-  const [annotDraft, setAnnotDraft] = useState<Vec2[] | null>(null)
+  /** In-progress pen stroke (PLAN-008) — rendered live with the same pressure widths. */
+  const [annotDraft, setAnnotDraft] = useState<{ points: Vec2[]; pressures: number[] } | null>(null)
   /** Unbroken Alt chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
@@ -290,7 +300,12 @@ export function SimplePitch() {
     if (g.type === 'annot-pen') {
       setAnnotDraft(null)
       if (commit && g.points.length >= 2)
-        addFreehand(core, g.points, { color: st.annotate.color, width: st.annotate.width })
+        addFreehand(
+          core,
+          g.points,
+          { color: st.annotate.color, width: st.annotate.width },
+          g.pressures,
+        )
       return
     }
     if (g.type === 'annot-erase') {
@@ -580,8 +595,17 @@ export function SimplePitch() {
       if (e.button !== 0) return
       const p = clampToPitch(pt, doc.pitch)
       if (st.annotate.tool === 'pen') {
-        gesture.current = { type: 'annot-pen', pointerId: e.pointerId, points: [p] }
-        setAnnotDraft([p])
+        // VIC pen grammar: stylus starts at its mapped pressure, mouse/touch at 0.8.
+        const f0 = e.pointerType === 'pen' ? mapPenPressure(e.pressure) : 0.8
+        gesture.current = {
+          type: 'annot-pen',
+          pointerId: e.pointerId,
+          points: [p],
+          pressures: [f0],
+          dyn: { t: e.timeStamp, x: e.clientX, y: e.clientY, f: f0 },
+          lastKept: { x: e.clientX, y: e.clientY },
+        }
+        setAnnotDraft({ points: [p], pressures: [f0] })
       } else {
         gesture.current = { type: 'annot-erase', pointerId: e.pointerId, began: false }
         eraseAt(pt)
@@ -780,11 +804,20 @@ export function SimplePitch() {
     const st = useUiStore.getState()
 
     if (g.type === 'annot-pen') {
-      const p = clampToPitch(pt, doc.pitch)
-      const last = g.points[g.points.length - 1]!
-      if (Math.hypot(p.x - last.x, p.y - last.y) >= 0.3) {
-        g.points.push(p)
-        setAnnotDraft([...g.points])
+      // Pressure updates on EVERY event (VIC widthFactor); the point is kept only past the
+      // 2px gate — so speed keeps affecting thickness even between kept samples.
+      const dt = e.timeStamp - g.dyn.t
+      const f =
+        e.pointerType === 'pen'
+          ? smoothPressure(g.dyn.f, mapPenPressure(e.pressure), dt)
+          : mouseSpeedPressure(g.dyn.f, Math.hypot(e.clientX - g.dyn.x, e.clientY - g.dyn.y), dt)
+      g.dyn = { t: e.timeStamp, x: e.clientX, y: e.clientY, f }
+      const keptDist = Math.hypot(e.clientX - g.lastKept.x, e.clientY - g.lastKept.y)
+      if (keptDist >= MIN_POINT_DIST_PX) {
+        g.points.push(clampToPitch(pt, doc.pitch))
+        g.pressures.push(f)
+        g.lastKept = { x: e.clientX, y: e.clientY }
+        setAnnotDraft({ points: [...g.points], pressures: [...g.pressures] })
       }
       return
     }
@@ -1164,17 +1197,14 @@ export function SimplePitch() {
       <PitchMarkings pitch={doc.pitch} />
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />
       {annotDraft && (
-        <polyline
-          points={annotDraft.map((p) => `${p.x},${p.y}`).join(' ')}
-          fill="none"
-          stroke={ui.annotate.color}
-          strokeWidth={ui.annotate.width}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-          opacity={0.9}
-          pointerEvents="none"
-        />
+        <g pointerEvents="none">
+          <PenStroke
+            points={annotDraft.points}
+            pressures={annotDraft.pressures}
+            color={ui.annotate.color}
+            width={ui.annotate.width}
+          />
+        </g>
       )}
       {/* Routes hidden while the animation runs (user 2026-08-20): the moving tokens ARE the play. */}
       <g className={isPlaying ? styles.decorHidden : styles.decorShown}>

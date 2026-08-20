@@ -100,17 +100,24 @@ export function addArrow(
 }
 
 /**
- * Freehand pen stroke (PLAN-008). Points arrive already simplified (≥0.3m spacing, VIC
- * MIN_POINT_DIST grammar); one stroke = one undo step.
+ * Freehand pen stroke (PLAN-008). Points arrive already simplified (≥2 screen px, VIC
+ * MIN_POINT_DIST grammar) with per-point pressure factors; one stroke = one undo step.
  */
 export function addFreehand(
   core: EditorCore,
   points: Vec2[],
   style: { color: string; width: number },
+  pressures?: number[],
 ): Id {
   const id = newId('dr')
   core.transaction('Draw', (d) => {
-    d.drawings.push({ id, kind: 'freehand', points, style })
+    d.drawings.push({
+      id,
+      kind: 'freehand',
+      points,
+      ...(pressures ? { pressures } : {}),
+      style,
+    })
   })
   return id
 }

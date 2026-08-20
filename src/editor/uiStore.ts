@@ -153,7 +153,8 @@ export const useUiStore = create<UiState>((set) => ({
   selectedDrawingIds: [],
   drawDraft: null,
   textEdit: null,
-  annotate: { on: false, tool: 'pen', color: '#ffeb3b', width: 3 },
+  // VIC reference defaults: PEN_COLORS[0] black, PEN_WIDTHS[2] = 5px
+  annotate: { on: false, tool: 'pen', color: '#000000', width: 5 },
   onboardingDismissed:
     typeof localStorage !== 'undefined' && localStorage.getItem('st.onboardingDismissed') === '1',
 

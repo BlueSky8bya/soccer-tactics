@@ -1126,19 +1126,48 @@
   flex: none;
 }
 
-/* Draw bar (PLAN-008): colour swatches + width dots share the button chrome. */
+/* Draw bar (PLAN-008): VIC-style 2-row colour tray (17 + custom) and width dots. */
 .swatchBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.swatchDot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
+.colorTray {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, 16px);
+  gap: 4px;
+  align-self: center;
+}
+
+.colorCell {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
   border: 1px solid rgba(0, 0, 0, 0.25);
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+}
+
+.colorCellOn {
+  outline: 2px solid var(--st-accent, #2f8fff);
+  outline-offset: 1px;
+}
+
+.colorCustom {
+  background: conic-gradient(#f43f5e, #fbbf24, #a3e635, #22d3ee, #818cf8, #e879f9, #f43f5e);
   display: inline-block;
+}
+
+.colorInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .widthDot {

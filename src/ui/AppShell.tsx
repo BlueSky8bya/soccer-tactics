@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { removeDrawings } from '@/editor/moreCommands'
+import { PEN_COLORS, PEN_WIDTHS } from './pitch/inking'
 import { downloadBlob, exportGif } from './exportGif'
 import { UiIcon } from './UiIcon'
 import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
@@ -23,9 +24,6 @@ import { useEditorKeyboard } from './useEditorKeyboard'
  * Single simple mode (ADR-0009, user decision 2026-08-20): pitch + play + steps. No tool rail,
  * no inspector, no tracks. Everything is authored with the mouse on the pitch.
  */
-/** Pen palette / widths (PLAN-008 D-02): annotation colours distinct from team colours. */
-const DRAW_COLORS = ['#ffeb3b', '#ffffff', '#ff5252', '#40c4ff']
-const DRAW_WIDTHS = [2, 3.5, 6]
 
 export function AppShell() {
   const core = useEditor()
@@ -219,26 +217,43 @@ export function AppShell() {
               </button>
             </span>
             <span className={styles.barDivider} aria-hidden="true" />
-            <span className={styles.barGroup}>
-              {DRAW_COLORS.map((c) => (
+            {/* VIC 그림판식 2줄 색 트레이(17색) + 마지막 칸 '직접 고르기'(네이티브 색상판) */}
+            <span className={styles.colorTray} role="group" aria-label={t('draw.colors')}>
+              {PEN_COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
-                  className={`${styles.btn} ${styles.swatchBtn} ${
-                    ui.annotate.color === c ? styles.btnActive : ''
-                  }`}
+                  className={`${styles.colorCell} ${ui.annotate.color === c ? styles.colorCellOn : ''}`}
+                  style={{ background: c }}
                   onClick={() => ui.setAnnotate({ color: c, tool: 'pen' })}
                   title={t('draw.color', { c })}
                   aria-label={t('draw.color', { c })}
                   aria-pressed={ui.annotate.color === c}
-                >
-                  <span className={styles.swatchDot} style={{ background: c }} />
-                </button>
+                />
               ))}
+              <label
+                className={`${styles.colorCell} ${styles.colorCustom} ${
+                  PEN_COLORS.includes(ui.annotate.color) ? '' : styles.colorCellOn
+                }`}
+                title={t('draw.customColor')}
+                style={
+                  PEN_COLORS.includes(ui.annotate.color)
+                    ? undefined
+                    : { background: ui.annotate.color }
+                }
+              >
+                <input
+                  type="color"
+                  className={styles.colorInput}
+                  value={ui.annotate.color}
+                  onChange={(e) => ui.setAnnotate({ color: e.target.value, tool: 'pen' })}
+                  aria-label={t('draw.customColor')}
+                />
+              </label>
             </span>
             <span className={styles.barDivider} aria-hidden="true" />
             <span className={styles.barGroup}>
-              {DRAW_WIDTHS.map((w) => (
+              {PEN_WIDTHS.map((w) => (
                 <button
                   key={w}
                   type="button"
@@ -252,7 +267,10 @@ export function AppShell() {
                 >
                   <span
                     className={styles.widthDot}
-                    style={{ width: 4 + w * 2, height: 4 + w * 2 }}
+                    style={{
+                      width: Math.min(20, 3 + w),
+                      height: Math.min(20, 3 + w),
+                    }}
                   />
                 </button>
               ))}

@@ -849,3 +849,13 @@ Change:
 - 사용자 결정: 하단 애니메이션 바 ↔ 그리기 바 전환(D-01), 펜+지우개만·색/굵기 유지(D-02), 획 단위 지우개(D-03), 레이어 없음(D-04).
 - uiStore.annotate{on,tool,color,width}; AppShell 푸터 스왑 바(펜/지우개, 4색, 굵기 3단, 전체 지우기, X)·진입 버튼·D 토글; SimplePitch annot-pen/annot-erase 제스처(0.3m 단순화, 프리뷰 폴리라인, Esc 종료, 호버/보드 제스처 정지); addFreehand 커맨드(1획=1 undo); 획 단위 지우개(10px 폴리라인 판정, 1드래그=1 undo); DrawingLayer freehand 굵기/투명도 반영+히트 스트로크; GIF drawFrame에 주석 렌더; keymap 가이드 '자유 그리기' 그룹.
 Validation: typecheck/lint/test 146/build/harness/format PASS. Playwright annotate.cjs 7건 ALL PASS: 바 전환, 획 저장(freehand+style), 선수 위 드로잉에도 선수 안 끌림, 색/굵기 반영, 획 단위 지우개, Ctrl+Z 복원, Esc 후 바 복귀·보드 소생. 콘솔 클린.
+
+### CHG-20260821-082 — FIX/FEAT — 그리기: 검정 덩어리 버그 수정 + VIC 레퍼런스 문법 그대로 이식
+
+Problem: (1) 지그재그 획이 검정으로 채워진 덩어리로 렌더 — 히트용 polyline에 fill:none 누락(SVG polyline 기본 fill=black). (2) 사용자: "레퍼런스처럼 필압·디자인 똑같이 해달라니까 왜 창조했어" — 자체 4색/3굵기/균일 굵기는 VIC 문법 위반.
+Change:
+- pitch.module.css .annotHit에 fill:none — 덩어리 소멸.
+- 신규 src/ui/pitch/inking.ts — VIC 그대로: 팔레트 17색+직접 고르기(네이티브 색상판), 굵기 6단 [2,3,5,8,12,18], 스타일러스 필압(감마 0.65·플로어 0.12·시간 EMA τ12ms), 마우스 속도 역산(target=clamp(1−v/1.7, 0.3, 1), EMA 0.65/0.35, 시작 0.8), 점 간소화 2px, 조각 굵기 = width×(0.45+p×0.85), 중점 쿼드러틱 렌더 기하(head/body/tail).
+- Drawing freehand 스키마에 pressures?: number[](옵션, 하위호환). SimplePitch 펜 제스처가 이벤트마다 필압 갱신·2px 게이트로 점 채집. DrawingLayer/드래프트가 공용 PenStroke(조각별 stroke-width SVG path)로 렌더. GIF도 같은 penSegments 기하.
+- 툴바: 2줄 17색 트레이+무지개 '직접 고르기' 셀+6단 굵기. 기본값 검정/5px(레퍼런스 동일).
+Validation: typecheck/lint/test 152(+6 inking 골든: 감마·EMA·속도 역산·wOf·조각 기하)/build/harness/format PASS. Playwright inkref.cjs: 색 18칸·굵기 6·pressures 기록(0.63~0.89 변동)·fill 있는 요소 0(덩어리 회귀)·조각 63개 전부 상이한 굵기·컬러 피커 1 — ALL PASS, 콘솔 클린.
