@@ -888,3 +888,11 @@ Change:
 - 그리기 도구에 '선택'(커서 아이콘) 추가 — annotate.tool 'select'는 보드 포인터 그대로(선수/공 드래그·호버 프리뷰 동작), 그리기 바는 유지.
 - 단축키 표시: 종료 버튼에 Esc 칩, 도구 옆 희미한 "D 전환 · Ctrl+Z 취소" 힌트, keymap 가이드에 선택 도구 행.
 Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright drawmode2.cjs: 전환 전후 svg 크기 픽셀 동일, 배지 활성='그리기', 선택 도구로 선수 이동 성공, 이후 펜 정상, 복귀 시 재생 바·크기 동일 — ALL PASS, 콘솔 클린. (교훈: python 다중 hunk 스크립트는 assert 실패 시 전체 미적용 — 재적용으로 해결)
+
+### CHG-20260821-087 — UX — 골포스트 점 제거 + 포메이션 드롭다운 애플식 정돈
+
+Problem: (1) 골대·골라인 접점의 포스트 점 2개가 걸리적거림(사용자). (2) 포메이션 select가 네이티브 그대로 — 주변 카드 디자인과 어긋남.
+Change:
+- GoalNet(보드)·GIF에서 포스트 원 제거 — 크로스바·프레임·메시만.
+- .panelSelect: appearance none + 커스텀 셰브론(데이터 URI), surface-2 배경·라운드·호버/포커스 링, color-scheme light(팝업 밝게), option 색 지정.
+Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright: goalPost 요소 0, select computed appearance none·커스텀 배경 확인, 크롭 스크린샷 양쪽 검수.

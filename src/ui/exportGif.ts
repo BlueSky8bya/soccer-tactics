@@ -108,12 +108,6 @@ function drawPitch(ctx: CanvasRenderingContext2D, doc: TacticDocument, k: number
     ctx.moveTo(x * k, goalTop * k)
     ctx.lineTo(x * k, goalBot * k)
     ctx.stroke()
-    ctx.fillStyle = LINE
-    for (const py of [goalTop, goalBot]) {
-      ctx.beginPath()
-      ctx.arc(x * k, py * k, 0.3 * k, 0, Math.PI * 2)
-      ctx.fill()
-    }
   }
 }
 

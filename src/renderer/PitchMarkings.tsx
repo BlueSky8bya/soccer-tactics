@@ -108,7 +108,7 @@ export const PitchMarkings = memo(function PitchMarkings({ pitch }: { pitch: Pit
   )
 })
 
-/** One goal seen from above: meshed net box, side/back frame, crossbar, two posts. */
+/** One goal seen from above: meshed net box, side/back frame, crossbar. */
 function GoalNet({
   x,
   dir,
@@ -131,8 +131,6 @@ function GoalNet({
       <path d={`${outline} Z`} fill="url(#goal-net)" stroke="none" />
       <path d={outline} className={styles.goalFrame} />
       <line x1={x} y1={top} x2={x} y2={bot} className={styles.goalBar} />
-      <circle cx={x} cy={top} r={0.3} className={styles.goalPost} />
-      <circle cx={x} cy={bot} r={0.3} className={styles.goalPost} />
     </g>
   )
 }
