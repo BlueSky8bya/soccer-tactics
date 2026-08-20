@@ -709,11 +709,13 @@ export function SimplePitch() {
   }
 
   // Dev-only QA hook: headless probes can inspect the real document/compiled state.
-  // eslint-disable no-underscore-dangle
-  if (import.meta.env.DEV) {
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    // eslint-disable-next-line no-underscore-dangle
     ;(window as unknown as Record<string, unknown>).__stDoc = doc
+    // eslint-disable-next-line no-underscore-dangle
     ;(window as unknown as Record<string, unknown>).__stCompiled = compiled
-  }
+  }, [doc, compiled])
 
   // ---------- render ----------
   const drag = ui.drag
