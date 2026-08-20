@@ -99,6 +99,22 @@ export function addArrow(
   return id
 }
 
+/**
+ * Freehand pen stroke (PLAN-008). Points arrive already simplified (≥0.3m spacing, VIC
+ * MIN_POINT_DIST grammar); one stroke = one undo step.
+ */
+export function addFreehand(
+  core: EditorCore,
+  points: Vec2[],
+  style: { color: string; width: number },
+): Id {
+  const id = newId('dr')
+  core.transaction('Draw', (d) => {
+    d.drawings.push({ id, kind: 'freehand', points, style })
+  })
+  return id
+}
+
 export function addText(core: EditorCore, at: Vec2, text: string, color?: string): Id {
   const id = newId('dr')
   core.transaction('Add text', (d) => {

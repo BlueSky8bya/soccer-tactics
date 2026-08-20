@@ -83,6 +83,22 @@ export function drawFrame(
   k: number,
 ): void {
   drawPitch(ctx, doc, k)
+  // annotations under the tokens (PLAN-008): pen strokes belong to the board, not the play
+  for (const dr of doc.drawings) {
+    if (dr.visible && (t < dr.visible.from || t > dr.visible.to)) continue
+    if (dr.kind !== 'freehand' && dr.kind !== 'line') continue
+    if (dr.points.length < 2) continue
+    ctx.beginPath()
+    ctx.moveTo(dr.points[0]!.x * k, dr.points[0]!.y * k)
+    for (let i = 1; i < dr.points.length; i++) ctx.lineTo(dr.points[i]!.x * k, dr.points[i]!.y * k)
+    ctx.strokeStyle = resolveColor(dr.style?.color, '#ffeb3b')
+    ctx.lineWidth = Math.max(1, ((dr.style?.width ?? 3) / 10) * k) // ≈ screen px at ~10px/m layout
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.globalAlpha = dr.style?.opacity ?? 1
+    ctx.stroke()
+    ctx.globalAlpha = 1
+  }
   const rs = stateAt(compiled, doc, t)
   const teamColor = new Map(
     doc.teams.map((tm, i) => [

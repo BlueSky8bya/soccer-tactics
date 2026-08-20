@@ -74,6 +74,22 @@ export function useEditorKeyboard(): void {
         }
       }
 
+      // Draw mode (PLAN-008): only undo/redo (above), D-toggle and Esc (pitch handles it) apply —
+      // playback/step/delete keys are the board's language, and the board is asleep.
+      if (ui.annotate.on) {
+        if (key === 'd') {
+          e.preventDefault()
+          ui.setAnnotateOn(false)
+        }
+        return
+      }
+      if (key === 'd') {
+        e.preventDefault()
+        ui.returnToAuthoringStart()
+        ui.setAnnotateOn(true)
+        return
+      }
+
       switch (key) {
         case ' ': {
           if (isActivatableControl(e.target)) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
+import { removeDrawings } from '@/editor/moreCommands'
 import { downloadBlob, exportGif } from './exportGif'
 import { UiIcon } from './UiIcon'
 import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
@@ -22,9 +23,13 @@ import { useEditorKeyboard } from './useEditorKeyboard'
  * Single simple mode (ADR-0009, user decision 2026-08-20): pitch + play + steps. No tool rail,
  * no inspector, no tracks. Everything is authored with the mouse on the pitch.
  */
+/** Pen palette / widths (PLAN-008 D-02): annotation colours distinct from team colours. */
+const DRAW_COLORS = ['#ffeb3b', '#ffffff', '#ff5252', '#40c4ff']
+const DRAW_WIDTHS = [2, 3.5, 6]
+
 export function AppShell() {
   const core = useEditor()
-  const { canUndo, canRedo } = useEditorSnapshot()
+  const { doc, canUndo, canRedo } = useEditorSnapshot()
   const compiled = useCompiled()
   const ui = useUiStore()
   const playEnd = playableEnd(compiled)
@@ -188,60 +193,167 @@ export function AppShell() {
       <GuidePanel />
 
       <footer className={styles.bottomWrap}>
-        <div className={styles.simpleBar}>
-          <span className={styles.barGroup}>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
-              onClick={pb.toggle}
-              data-tour="play"
-              title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
-              aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
-            >
-              {ui.playback.playing ? (
-                <UiIcon name="pause" size={18} />
-              ) : (
-                <UiIcon name="play" size={18} filled />
-              )}
-            </button>
-            <button
-              type="button"
-              className={styles.btn}
-              onClick={pb.restart}
-              title={`${t('tl.restart')} (Home)`}
-              aria-label={t('tl.restart')}
-            >
-              <UiIcon name="home" />
-            </button>
-            <button
-              type="button"
-              className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
-              onClick={() => ui.setLoop(!ui.playback.loop)}
-              title={`${t('tl.loop')} (G)`}
-              aria-label={t('tl.loop')}
-              aria-pressed={ui.playback.loop}
-            >
-              <UiIcon name="loop" size={15} />
-            </button>
-            <button
-              type="button"
-              className={styles.btn}
-              onClick={exportPlayGif}
-              disabled={gifBusy || playEnd < 0.3}
-              title={t('gif.button')}
-              aria-label={t('gif.button')}
-            >
-              {gifBusy ? '…' : 'GIF'}
-            </button>
-          </span>
-          <span className={styles.barDivider} aria-hidden="true" />
-          <StepBar />
-          {ui.completion === 'held-result' && (
-            <span className={styles.heldResult} role="status">
-              {t('simple.heldResult')}
+        {ui.annotate.on ? (
+          /* Draw bar (PLAN-008 D-01): replaces the playback bar while the pen owns the pitch. */
+          <div className={styles.simpleBar}>
+            <span className={styles.barGroup}>
+              <button
+                type="button"
+                className={`${styles.btn} ${ui.annotate.tool === 'pen' ? styles.btnActive : ''}`}
+                onClick={() => ui.setAnnotate({ tool: 'pen' })}
+                title={t('draw.pen')}
+                aria-label={t('draw.pen')}
+                aria-pressed={ui.annotate.tool === 'pen'}
+              >
+                <UiIcon name="pen" />
+              </button>
+              <button
+                type="button"
+                className={`${styles.btn} ${ui.annotate.tool === 'eraser' ? styles.btnActive : ''}`}
+                onClick={() => ui.setAnnotate({ tool: 'eraser' })}
+                title={t('draw.eraser')}
+                aria-label={t('draw.eraser')}
+                aria-pressed={ui.annotate.tool === 'eraser'}
+              >
+                <UiIcon name="eraser" />
+              </button>
             </span>
-          )}
-        </div>
+            <span className={styles.barDivider} aria-hidden="true" />
+            <span className={styles.barGroup}>
+              {DRAW_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`${styles.btn} ${styles.swatchBtn} ${
+                    ui.annotate.color === c ? styles.btnActive : ''
+                  }`}
+                  onClick={() => ui.setAnnotate({ color: c, tool: 'pen' })}
+                  title={t('draw.color', { c })}
+                  aria-label={t('draw.color', { c })}
+                  aria-pressed={ui.annotate.color === c}
+                >
+                  <span className={styles.swatchDot} style={{ background: c }} />
+                </button>
+              ))}
+            </span>
+            <span className={styles.barDivider} aria-hidden="true" />
+            <span className={styles.barGroup}>
+              {DRAW_WIDTHS.map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  className={`${styles.btn} ${styles.swatchBtn} ${
+                    ui.annotate.width === w ? styles.btnActive : ''
+                  }`}
+                  onClick={() => ui.setAnnotate({ width: w, tool: 'pen' })}
+                  title={t('draw.width', { w })}
+                  aria-label={t('draw.width', { w })}
+                  aria-pressed={ui.annotate.width === w}
+                >
+                  <span
+                    className={styles.widthDot}
+                    style={{ width: 4 + w * 2, height: 4 + w * 2 }}
+                  />
+                </button>
+              ))}
+            </span>
+            <span className={styles.barDivider} aria-hidden="true" />
+            <span className={styles.barGroup}>
+              <button
+                type="button"
+                className={styles.btn}
+                disabled={doc.drawings.length === 0}
+                onClick={() => {
+                  const n = doc.drawings.length
+                  removeDrawings(
+                    core,
+                    doc.drawings.map((d) => d.id),
+                  )
+                  ui.flashToast(t('draw.cleared', { n }))
+                }}
+                title={t('draw.clearAll')}
+              >
+                {t('draw.clearAll')}
+              </button>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                onClick={() => ui.setAnnotateOn(false)}
+                title={t('draw.exit')}
+                aria-label={t('draw.exit')}
+              >
+                <UiIcon name="close" />
+              </button>
+            </span>
+          </div>
+        ) : (
+          <div className={styles.simpleBar}>
+            <span className={styles.barGroup}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
+                onClick={pb.toggle}
+                data-tour="play"
+                title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
+                aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
+              >
+                {ui.playback.playing ? (
+                  <UiIcon name="pause" size={18} />
+                ) : (
+                  <UiIcon name="play" size={18} filled />
+                )}
+              </button>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={pb.restart}
+                title={`${t('tl.restart')} (Home)`}
+                aria-label={t('tl.restart')}
+              >
+                <UiIcon name="home" />
+              </button>
+              <button
+                type="button"
+                className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
+                onClick={() => ui.setLoop(!ui.playback.loop)}
+                title={`${t('tl.loop')} (G)`}
+                aria-label={t('tl.loop')}
+                aria-pressed={ui.playback.loop}
+              >
+                <UiIcon name="loop" size={15} />
+              </button>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={exportPlayGif}
+                disabled={gifBusy || playEnd < 0.3}
+                title={t('gif.button')}
+                aria-label={t('gif.button')}
+              >
+                {gifBusy ? '…' : 'GIF'}
+              </button>
+              <button
+                type="button"
+                className={styles.btn}
+                onClick={() => {
+                  ui.returnToAuthoringStart()
+                  ui.setAnnotateOn(true)
+                }}
+                title={t('draw.enter')}
+                aria-label={t('draw.enter')}
+              >
+                <UiIcon name="pen" />
+              </button>
+            </span>
+            <span className={styles.barDivider} aria-hidden="true" />
+            <StepBar />
+            {ui.completion === 'held-result' && (
+              <span className={styles.heldResult} role="status">
+                {t('simple.heldResult')}
+              </span>
+            )}
+          </div>
+        )}
       </footer>
 
       {ui.toast && (

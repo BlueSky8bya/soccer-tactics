@@ -25,8 +25,9 @@ import {
   stepOf,
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
-import { ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
+import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
 import type { PickSegment } from './pickTarget'
+import { addFreehand } from '@/editor/moreCommands'
 
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
 import { useUiStore } from '@/editor/uiStore'
@@ -103,6 +104,9 @@ type Gesture =
       at: Vec2
       startClient: { x: number; y: number }
     }
+  /** Freehand annotation stroke (PLAN-008): pen collects points, eraser sweeps drawings. */
+  | { type: 'annot-pen'; pointerId: number; points: Vec2[] }
+  | { type: 'annot-erase'; pointerId: number; began: boolean }
 
 /**
  * Simple-mode pitch (ADR-0009). The whole gesture language:
@@ -151,6 +155,8 @@ export function SimplePitch() {
   const [hoverKey, setHoverKey] = useState<string | null>(null)
   const hoverRaf = useRef<number | null>(null)
   const hoverPt = useRef<Vec2 | null>(null)
+  /** In-progress pen stroke (PLAN-008) — rendered as a live polyline preview. */
+  const [annotDraft, setAnnotDraft] = useState<Vec2[] | null>(null)
   /** Unbroken Alt chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
@@ -280,6 +286,20 @@ export function SimplePitch() {
     if (!g) return
     if (svg && svg.hasPointerCapture(g.pointerId)) svg.releasePointerCapture(g.pointerId)
     const st = useUiStore.getState()
+
+    if (g.type === 'annot-pen') {
+      setAnnotDraft(null)
+      if (commit && g.points.length >= 2)
+        addFreehand(core, g.points, { color: st.annotate.color, width: st.annotate.width })
+      return
+    }
+    if (g.type === 'annot-erase') {
+      if (g.began) {
+        if (commit) core.commit()
+        else core.cancel()
+      }
+      return
+    }
 
     if (g.type === 'marquee') {
       setMarquee(null)
@@ -454,12 +474,19 @@ export function SimplePitch() {
     }
   }, [])
 
-  // Esc cancels any gesture
+  // Esc cancels any gesture; with no gesture it leaves draw mode (PLAN-008)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && gesture.current) {
+      if (e.key !== 'Escape') return
+      if (gesture.current) {
         e.preventDefault()
         endGestureRef.current(false)
+        return
+      }
+      const st = useUiStore.getState()
+      if (st.annotate.on) {
+        e.preventDefault()
+        st.setAnnotateOn(false)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -505,6 +532,34 @@ export function SimplePitch() {
     svgRef.current?.setPointerCapture(pointerId)
   }
 
+  /**
+   * Stroke-unit eraser (PLAN-008 D-03): any drawing whose outline passes within ~10 screen px of
+   * the pointer dies whole. One drag = one undo step (begin on first hit, commit at pointerup).
+   */
+  const eraseAt = (pt: Vec2) => {
+    const g = gesture.current
+    if (!g || g.type !== 'annot-erase') return
+    const svg = svgRef.current
+    const width = svg ? svg.getBoundingClientRect().width : 1
+    const tol = 10 * ((doc.pitch.length + 4) / Math.max(1, width))
+    const hit = core.getDocument().drawings.find((dr) => {
+      if (dr.kind === 'freehand' || dr.kind === 'line') return distToPolyline(pt, dr.points) <= tol
+      if (dr.kind === 'arrow') return distToPolyline(pt, [dr.from, dr.to]) <= tol
+      if (dr.kind === 'text')
+        return Math.hypot(dr.at.x - pt.x, dr.at.y - pt.y) <= Math.max(tol, 1.5)
+      return false // zones have no pen UI; the clear-all button covers them
+    })
+    if (!hit) return
+    if (!g.began) {
+      core.begin('Erase drawing')
+      g.began = true
+    }
+    core.update((d) => {
+      const dd = d as TacticDocument
+      dd.drawings = dd.drawings.filter((x) => x.id !== hit.id)
+    })
+  }
+
   const onPointerDown = (e: RPointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current
     if (!svg) return
@@ -518,6 +573,21 @@ export function SimplePitch() {
     if (stepPicker) {
       if (targetEl.closest('[data-step-picker]')) return
       setStepPicker(null)
+    }
+
+    // Draw mode (PLAN-008 D-01): the pointer belongs to the pen/eraser — board gestures stop.
+    if (st.annotate.on) {
+      if (e.button !== 0) return
+      const p = clampToPitch(pt, doc.pitch)
+      if (st.annotate.tool === 'pen') {
+        gesture.current = { type: 'annot-pen', pointerId: e.pointerId, points: [p] }
+        setAnnotDraft([p])
+      } else {
+        gesture.current = { type: 'annot-erase', pointerId: e.pointerId, began: false }
+        eraseAt(pt)
+      }
+      svg.setPointerCapture(e.pointerId)
+      return
     }
 
     const pressToken = (entityId: Id, additive = false) => {
@@ -708,6 +778,20 @@ export function SimplePitch() {
     if (!svg) return
     const pt = clientToPitch(svg, e.clientX, e.clientY)
     const st = useUiStore.getState()
+
+    if (g.type === 'annot-pen') {
+      const p = clampToPitch(pt, doc.pitch)
+      const last = g.points[g.points.length - 1]!
+      if (Math.hypot(p.x - last.x, p.y - last.y) >= 0.3) {
+        g.points.push(p)
+        setAnnotDraft([...g.points])
+      }
+      return
+    }
+    if (g.type === 'annot-erase') {
+      eraseAt(pt)
+      return
+    }
 
     if (g.type === 'marquee') {
       g.b = pt
@@ -1039,7 +1123,7 @@ export function SimplePitch() {
     }
     updateHoverRef.current = (e) => {
       // mouse only, authoring frame only, never during a gesture or a press (CR-07 conditions)
-      if (e.pointerType !== 'mouse' || viewingFrame || pressedId) return
+      if (e.pointerType !== 'mouse' || viewingFrame || pressedId || ui.annotate.on) return
       const svgEl = svgRef.current
       if (!svgEl) return
       hoverPt.current = clientToPitch(svgEl, e.clientX, e.clientY)
@@ -1075,9 +1159,23 @@ export function SimplePitch() {
       onPointerCancel={() => endGestureRef.current(false)}
       onPointerLeave={() => setHoverKey(null)}
       onContextMenu={(e) => e.preventDefault()}
+      style={ui.annotate.on ? { cursor: 'crosshair' } : undefined}
     >
       <PitchMarkings pitch={doc.pitch} />
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />
+      {annotDraft && (
+        <polyline
+          points={annotDraft.map((p) => `${p.x},${p.y}`).join(' ')}
+          fill="none"
+          stroke={ui.annotate.color}
+          strokeWidth={ui.annotate.width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+          opacity={0.9}
+          pointerEvents="none"
+        />
+      )}
       {/* Routes hidden while the animation runs (user 2026-08-20): the moving tokens ARE the play. */}
       <g className={isPlaying ? styles.decorHidden : styles.decorShown}>
         <PathLayer

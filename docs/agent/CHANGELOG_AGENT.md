@@ -840,3 +840,12 @@ Problem: 선수가 공을 끌고 이동(1단계)한 뒤 그 지점에서 패스(
 Change:
 - SimplePitch.tsx 캐리 공 잔상: 홀더 판정을 tm.end − 0.05s 샘플로, 위치는 이동 종착점 + 그 시점 캐리 오프셋으로 고정. 패스가 경계에서 출발해도 잔상 유지.
 Validation: typecheck/lint/test 146/build/harness/format PASS. Playwright dribblepass.cjs: 드리블 후 잔상 공 생성 → 그 잔상에서 Alt+드래그로 패스(원점 접합 0.00m, step 자동 2, 수신자 확정) → 패스 존재 상태에서도 잔상 공 유지, 콘솔 클린.
+
+### CHG-20260821-081 — FEAT — PLAN-008: 축구장 자유 그리기(펜·지우개)
+
+Problem: VIC Schedule Studio의 "일정 그림판"을 이 보드에 이식 요청. VIC은 canvas 픽셀 엔진(필압·destination-out·flood fill·레이어) — 그대로 이식하면 SVG 보드·EditorCore undo·GIF 내보내기와 전부 어긋남.
+Change:
+- VIC의 UX 문법만 차용, 구현은 기존 Drawing 도메인(스키마·DrawingLayer·moreCommands) 위 SVG 벡터로.
+- 사용자 결정: 하단 애니메이션 바 ↔ 그리기 바 전환(D-01), 펜+지우개만·색/굵기 유지(D-02), 획 단위 지우개(D-03), 레이어 없음(D-04).
+- uiStore.annotate{on,tool,color,width}; AppShell 푸터 스왑 바(펜/지우개, 4색, 굵기 3단, 전체 지우기, X)·진입 버튼·D 토글; SimplePitch annot-pen/annot-erase 제스처(0.3m 단순화, 프리뷰 폴리라인, Esc 종료, 호버/보드 제스처 정지); addFreehand 커맨드(1획=1 undo); 획 단위 지우개(10px 폴리라인 판정, 1드래그=1 undo); DrawingLayer freehand 굵기/투명도 반영+히트 스트로크; GIF drawFrame에 주석 렌더; keymap 가이드 '자유 그리기' 그룹.
+Validation: typecheck/lint/test 146/build/harness/format PASS. Playwright annotate.cjs 7건 ALL PASS: 바 전환, 획 저장(freehand+style), 선수 위 드로잉에도 선수 안 끌림, 색/굵기 반영, 획 단위 지우개, Ctrl+Z 복원, Esc 후 바 복귀·보드 소생. 콘솔 클린.

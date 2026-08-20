@@ -49,9 +49,18 @@ export const ANIM_BINDINGS: Binding[] = [
   { label: '단계 1~9', hint: '같은 번호는 같이, 다음 번호는 이어서' },
 ]
 
+/** 자유 그리기(주석) — PLAN-008. */
+export const DRAW_BINDINGS: Binding[] = [
+  { label: 'D', hint: '그리기 모드 켜기/끄기 (하단 바가 그리기 바로 전환)' },
+  { label: '드래그', hint: '펜: 자유 곡선 · 지우개: 스친 획 통째 삭제' },
+  { label: 'Esc', hint: '그리기 모드 종료' },
+  { label: 'Ctrl+Z', hint: '획 하나 되돌리기' },
+]
+
 export const KEYMAP_GROUPS: { title: string; items: Binding[] }[] = [
   { title: '배치', items: PLACE_BINDINGS },
   { title: '경로 그리기·다듬기', items: ANIM_BINDINGS },
+  { title: '자유 그리기', items: DRAW_BINDINGS },
   { title: '재생', items: Object.values(KEYMAP.playback) },
   { title: '편집', items: Object.values(KEYMAP.edit) },
 ]

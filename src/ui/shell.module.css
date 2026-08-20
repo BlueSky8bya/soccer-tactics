@@ -1126,6 +1126,27 @@
   flex: none;
 }
 
+/* Draw bar (PLAN-008): colour swatches + width dots share the button chrome. */
+.swatchBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.swatchDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  display: inline-block;
+}
+
+.widthDot {
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
 .playBtn {
   width: 44px;
   height: 44px;

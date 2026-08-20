@@ -10,6 +10,9 @@ const PATHS: Record<string, string> = {
   home: 'M11 19V5 M11 12l8-7v14z',
   loop: 'M17 3l4 4-4 4 M21 7H8a5 5 0 0 0-5 5 M7 21l-4-4 4-4 M3 17h13a5 5 0 0 0 5-5',
   help: 'M9.2 9a3 3 0 1 1 4.1 2.8c-1 .5-1.3 1-1.3 2.2 M12 17.5v.01',
+  pen: 'M17 3l4 4L8 20l-5 1 1-5L17 3z M14 6l4 4',
+  eraser: 'M7 21h13 M5 15l9-9 5 5-7 7H8l-3-3z M11 9l5 5',
+  close: 'M6 6l12 12 M18 6L6 18',
 }
 
 export function UiIcon({

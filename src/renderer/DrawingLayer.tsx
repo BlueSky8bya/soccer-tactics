@@ -114,11 +114,21 @@ export const DrawingLayer = memo(function DrawingLayer(p: DrawingLayerProps) {
           case 'line':
           case 'freehand':
             body = (
-              <polyline
-                points={dr.points.map((q) => `${q.x},${q.y}`).join(' ')}
-                className={styles.annotArrow}
-                style={{ stroke: color }}
-              />
+              <>
+                <polyline
+                  points={dr.points.map((q) => `${q.x},${q.y}`).join(' ')}
+                  className={styles.annotHit}
+                />
+                <polyline
+                  points={dr.points.map((q) => `${q.x},${q.y}`).join(' ')}
+                  className={styles.annotArrow}
+                  style={{
+                    stroke: color,
+                    strokeWidth: dr.style?.width ?? 3,
+                    opacity: dr.style?.opacity,
+                  }}
+                />
+              </>
             )
             break
         }

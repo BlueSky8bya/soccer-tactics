@@ -94,6 +94,13 @@ export interface UiState {
   selectedDrawingIds: Id[]
   drawDraft: { kind: 'rect' | 'ellipse' | 'arrow'; a: Vec2; b: Vec2 } | null
   textEdit: { at: Vec2; id?: Id; value: string } | null
+  /** Freehand annotation mode (PLAN-008): footer bar swaps to the draw bar, board gestures stop. */
+  annotate: {
+    on: boolean
+    tool: 'pen' | 'eraser'
+    color: string
+    width: number
+  }
 
   setTool: (tool: Tool) => void
   select: (ids: Id[]) => void
@@ -117,6 +124,8 @@ export interface UiState {
   selectDrawings: (ids: Id[]) => void
   setDrawDraft: (d: { kind: 'rect' | 'ellipse' | 'arrow'; a: Vec2; b: Vec2 } | null) => void
   setTextEdit: (t: { at: Vec2; id?: Id; value: string } | null) => void
+  setAnnotateOn: (on: boolean) => void
+  setAnnotate: (patch: Partial<Omit<UiState['annotate'], 'on'>>) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -144,6 +153,7 @@ export const useUiStore = create<UiState>((set) => ({
   selectedDrawingIds: [],
   drawDraft: null,
   textEdit: null,
+  annotate: { on: false, tool: 'pen', color: '#ffeb3b', width: 3 },
   onboardingDismissed:
     typeof localStorage !== 'undefined' && localStorage.getItem('st.onboardingDismissed') === '1',
 
@@ -211,6 +221,8 @@ export const useUiStore = create<UiState>((set) => ({
   selectDrawings: (selectedDrawingIds) => set({ selectedDrawingIds }),
   setDrawDraft: (drawDraft) => set({ drawDraft }),
   setTextEdit: (textEdit) => set({ textEdit }),
+  setAnnotateOn: (on) => set((s) => ({ annotate: { ...s.annotate, on } })),
+  setAnnotate: (patch) => set((s) => ({ annotate: { ...s.annotate, ...patch } })),
   setHelpOpen: (helpOpen) => {
     try {
       localStorage.setItem('st.helpOpen', helpOpen ? '1' : '0')

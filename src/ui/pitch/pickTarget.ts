@@ -85,7 +85,7 @@ export function stableKey(c: Candidate): string {
   }
 }
 
-function distToPolyline(pt: Vec2, pts: Vec2[]): number {
+export function distToPolyline(pt: Vec2, pts: Vec2[]): number {
   let best = Infinity
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1]!
