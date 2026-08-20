@@ -64,6 +64,14 @@ function samplePathPts(seg: { path: Path }): Vec2[] {
   return pts
 }
 
+/** Eraser cursor: a ring matching the 10px erase tolerance (user 2026-08-21), not a crosshair. */
+const ERASER_CURSOR =
+  'url("data:image/svg+xml;charset=utf-8,' +
+  '%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22%3E' +
+  '%3Ccircle cx=%2212%22 cy=%2212%22 r=%2210.5%22 fill=%22none%22 stroke=%22rgba(0,0,0,0.45)%22 stroke-width=%223%22/%3E' +
+  '%3Ccircle cx=%2212%22 cy=%2212%22 r=%2210.5%22 fill=%22rgba(255,255,255,0.12)%22 stroke=%22%23ffffff%22 stroke-width=%221.5%22/%3E' +
+  '%3C/svg%3E") 12 12, crosshair'
+
 const DRAG_THRESHOLD_PX = 4
 
 type Gesture =
@@ -1187,7 +1195,11 @@ export function SimplePitch() {
       onPointerCancel={() => endGestureRef.current(false)}
       onPointerLeave={() => setHoverKey(null)}
       onContextMenu={(e) => e.preventDefault()}
-      style={ui.annotate.on && ui.annotate.tool !== 'select' ? { cursor: 'crosshair' } : undefined}
+      style={
+        ui.annotate.on && ui.annotate.tool !== 'select'
+          ? { cursor: ui.annotate.tool === 'eraser' ? ERASER_CURSOR : 'crosshair' }
+          : undefined
+      }
     >
       <PitchMarkings pitch={doc.pitch} />
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />

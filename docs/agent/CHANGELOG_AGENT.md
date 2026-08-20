@@ -914,3 +914,11 @@ Change:
 - 모드 배지 D 칩을 "누르면 갈 곳" 세그먼트에 표시(그리기 중엔 애니메이션 쪽에 D).
 - Esc의 그리기 모드 종료 제거 — 획 취소만. keymap 가이드에서 Esc 종료 행 삭제.
 Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright liftsel.cjs 6건 ALL PASS(리프트·팝·복귀·칩 위치·D 왕복·Esc 유지), 콘솔 클린.
+
+### CHG-20260821-090 — UX — 사이드 패널 확장(260/304px)·글자 확대 + 지우개 원형 커서
+
+Problem: (1) 좌 212·우 244px 사이드가 좁고 글자 10.5~12px — 답답함(사용자). (2) 지우개 커서가 십자 — 지울 반경이 안 보임.
+Change:
+- simple 그리드 212/244 → 260/304px. sideRight 12→13px, guideHint 12.5→13.5, guideTitle·sectionLabel 11→12, kbd 11.5→12.5, panelBtn 34px/12 → 37px/13, panelPrimary 38/13 → 42/14, panelCard 패딩 13→15, panelHintLine 11.5→12.5.
+- 지우개 도구 커서 = 지우개 판정 반경(10px)에 맞는 지름 21px 링(SVG data URI, 흰 링+어두운 외곽) — 펜은 십자 유지, 선택은 기본.
+Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright(1920×950): 사이드 260/304 실측, 오버플로 0, 도구별 커서 crosshair/url(ring)/auto 확인, 스크린샷 검수, 콘솔 클린.
