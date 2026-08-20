@@ -217,3 +217,36 @@ describe('AppShell (simple mode, ADR-0009)', () => {
     expect(times.length).toBeGreaterThan(1)
   })
 })
+
+describe('session A/B variants (PLAN-005 M5)', () => {
+  it('clone → B active with an independent doc; switch stops playback and clears selection', async () => {
+    markTourSeen()
+    const { App } = await import('@/app/App')
+    render(<App />)
+    // A active, B missing (disabled) until cloned
+    const bBtn = screen.getByRole('button', { name: 'B' })
+    expect((bBtn as HTMLButtonElement).disabled).toBe(true)
+    await act(async () => {
+      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
+    })
+    await act(async () => {
+      screen.getByRole('button', { name: /B안 복제|→ B안 복제/ }).click()
+    })
+    expect((screen.getByRole('button', { name: 'B' }) as HTMLButtonElement).disabled).toBe(false)
+    expect(
+      (screen.getByRole('button', { name: 'B' }) as HTMLButtonElement).getAttribute('aria-pressed'),
+    ).toBe('true')
+    // switching back stops playback and clears selection
+    useUiStore.setState((st) => ({
+      playback: { ...st.playback, playing: true, t: 2 },
+      selection: ['someone'],
+    }))
+    await act(async () => {
+      screen.getByRole('button', { name: 'A' }).click()
+    })
+    const ui = useUiStore.getState()
+    expect(ui.playback.playing).toBe(false)
+    expect(ui.playback.t).toBe(0)
+    expect(ui.selection).toEqual([])
+  })
+})

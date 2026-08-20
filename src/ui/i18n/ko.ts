@@ -227,6 +227,11 @@ export const ko = {
   'simple.heldResult': '결과 화면 — ↺(Home)으로 원위치, 편집하면 자동 복귀',
   'simple.stepLimit':
     '9단계가 마지막이에요 — 이 동작은 추가되지 않았어요. 단계를 정리하거나 기존 단계(1~9)에 그리세요.',
+  'variant.label': 'A/B 변형',
+  'variant.switchTo': '{v}안 보기',
+  'variant.clone': '→ {v}안 복제',
+  'variant.cloneHint': '지금 판을 다른 안으로 복제해서 비교 (새로고침하면 사라져요)',
+  'variant.cloned': '{v}안으로 복제됨 — 위 A/B로 전환',
   'sab.label': '선택한 움직임',
   'sab.ball': '공',
   'sab.pass': '패스',

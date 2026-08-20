@@ -459,3 +459,12 @@ Change (모두 UI-only·순수 helper, 문서/엔진 불변):
 - StepBar: 재생 중 진행 중인 단계 chip에 `aria-current="step"` + 시각 링.
 Validation: typecheck/lint/test 111(pathPresentation +4)/build/harness/format PASS; Playwright(m4.cjs): 재생 중 phase active/future→past/active 전환, aria-current chip 표시, casing 2, 배지 간격 확보, 콘솔 클린. 감쇠 수치의 최종 체감(A-05)은 사용자 브라우저 확인 대기.
 
+### CHG-20260820-040 — FEAT — 세션 한정 A/B 변형 (PLAN-005 M5, A-03a)
+
+Problem: A안을 복제해 B안과 빠르게 비교·독립 수정할 수 없었다(A-07). 저장 기능 재도입 없이(RULE-05) 세션 안에서만.
+Change:
+- 신규 `variantSession.ts`: `VariantSession` — A/B 각각 독립 EditorCore(문서+undo history), 메모리 전용. clone=현재 문서로 새 core 생성(fresh history) 후 전환. schema/JSON/localStorage 접점 없음.
+- `EditorContext`에 `VariantProvider`/`useVariantSession` seam; `App`이 세션 수명 소유, 전환 시 `key`로 에디터 서브트리 remount(stale 구독 원천 차단).
+- AppShell 헤더: `A | B` chip(+aria-pressed)과 `→ B안 복제` — 전환/복제 시 재생 정지·선택 해제, 복제 toast. 저장/파일 용어 없음, 새로고침이면 소멸.
+Validation: typecheck/lint/test 115(variantSession 3, AppShell A/B 1 신규)/build/harness/format PASS; Playwright(m5.cjs): A 1개→복제 B 1개→B 추가 2개→A 복귀 1개→A undo 0개·B 2개 유지, 새로고침 후 B 비활성·빈 판, 콘솔 클린.
+

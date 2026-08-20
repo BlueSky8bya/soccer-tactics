@@ -1,9 +1,27 @@
 import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react'
+import type { VariantSession } from './variantSession'
 import { createEmptyDocument } from '@/domain'
 import { EditorCore, type EditorSnapshot } from './editorCore'
 import { seedDefaultTeams } from './commands'
 
 const EditorCtx = createContext<EditorCore | null>(null)
+const VariantCtx = createContext<VariantSession | null>(null)
+
+/** Session A/B seam (PLAN-005 M5): AppShell reads/clones/switches through this. */
+export function VariantProvider({
+  session,
+  children,
+}: {
+  session: VariantSession
+  children: ReactNode
+}) {
+  return <VariantCtx.Provider value={session}>{children}</VariantCtx.Provider>
+}
+
+/** Null outside a VariantProvider (tests render AppShell without one — the A/B UI hides). */
+export function useVariantSession(): VariantSession | null {
+  return useContext(VariantCtx)
+}
 
 export function EditorProvider({ core, children }: { core?: EditorCore; children: ReactNode }) {
   const value = useMemo(() => {

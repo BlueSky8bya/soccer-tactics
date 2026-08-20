@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { setDocumentTitle } from '@/editor/commands'
-import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
+import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
@@ -30,7 +30,24 @@ export function AppShell() {
   const titleBefore = useRef('')
   const setReducedMotion = useUiStore((s) => s.setReducedMotion)
   const startTour = useUiStore((s) => s.startTour)
+  const variants = useVariantSession()
   useEditorKeyboard()
+
+  const switchVariant = (id: 'A' | 'B') => {
+    if (!variants || !variants.has(id) || variants.activeId === id) return
+    // Switching stops playback and drops the selection - they belong to the old board (M5).
+    ui.returnToAuthoringStart()
+    ui.clearSelection()
+    variants.switchTo(id)
+  }
+  const cloneVariant = () => {
+    if (!variants) return
+    const target = variants.activeId === 'A' ? 'B' : 'A'
+    ui.returnToAuthoringStart()
+    ui.clearSelection()
+    variants.cloneActiveTo(target)
+    ui.flashToast(t('variant.cloned', { v: target }))
+  }
 
   useEffect(() => {
     document.documentElement.dataset.theme = 'light' // overrides any stored dark preference
@@ -73,6 +90,31 @@ export function AppShell() {
         />
         <span className={styles.hintInline}>{t('simple.topHint')}</span>
         <span className={styles.spacer} />
+        {variants && (
+          <span className={styles.group} role="group" aria-label={t('variant.label')}>
+            {(['A', 'B'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={`${styles.btn} ${variants.activeId === v ? styles.btnActive : ''}`}
+                onClick={() => switchVariant(v)}
+                disabled={!variants.has(v)}
+                aria-pressed={variants.activeId === v}
+                title={t('variant.switchTo', { v })}
+              >
+                {v}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={cloneVariant}
+              title={t('variant.cloneHint')}
+            >
+              {t('variant.clone', { v: variants.activeId === 'A' ? 'B' : 'A' })}
+            </button>
+          </span>
+        )}
         <span className={styles.group}>
           <button
             type="button"
