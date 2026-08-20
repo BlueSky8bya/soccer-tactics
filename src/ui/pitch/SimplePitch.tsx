@@ -415,6 +415,18 @@ export function SimplePitch() {
     const ghostEl = targetEl.closest('[data-ghost]') as SVGElement | null
     const segEl = targetEl.closest('[data-segment]') as SVGElement | null
     const tokenEl = targetEl.closest('[data-entity]') as SVGGElement | null
+    // The ball paints ABOVE its holder, so it wins every overlapping press. Disambiguate by
+    // visual-radius-normalized distance: pressing the player's body grabs the PLAYER (run/move),
+    // pressing the little ball itself still grabs the BALL (pass) — user 2026-08-20.
+    let tokenEntityId = tokenEl?.getAttribute('data-entity') ?? null
+    if (tokenEntityId === doc.ball.id && resolved.ball.holderId) {
+      const hp = resolved.players[resolved.ball.holderId]?.pos
+      if (hp) {
+        const dBall = Math.hypot(resolved.ball.pos.x - pt.x, resolved.ball.pos.y - pt.y)
+        const dHolder = Math.hypot(hp.x - pt.x, hp.y - pt.y)
+        if (dBall / 0.9 > dHolder / 1.8) tokenEntityId = resolved.ball.holderId
+      }
+    }
     const nearPlayer = ghostEl
       ? doc.players.find((pl) => {
           const pos = resolved.players[pl.id]?.pos ?? pl.home
@@ -477,14 +489,14 @@ export function SimplePitch() {
       case 'draw-from-token': {
         // Shift+drag on the token = draw a movement from its ORIGINAL spot.
         st.returnToAuthoringStart()
-        const entityId = tokenEl!.getAttribute('data-entity')!
+        const entityId = tokenEntityId!
         const startPos =
           entityId === doc.ball.id ? resolved.ball.pos : (resolved.players[entityId]?.pos ?? pt)
         startDraw(entityId, e.pointerId, startPos)
         return
       }
       case 'press-token':
-        pressToken(tokenEl!.getAttribute('data-entity')!)
+        pressToken(tokenEntityId!)
         return
       case 'bend-path': {
         // Path drag is ALWAYS bend (C-01) - group moves use live token drags only.

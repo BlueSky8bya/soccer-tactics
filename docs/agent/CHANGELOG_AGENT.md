@@ -553,3 +553,11 @@ Problem: ① 인라인 단계 피커가 다른 경로의 배지/토큰에 가려
 Change: 피커를 SVG 마지막 child로 이동(항상 최상위); 좌측 열 212px·우측 244px, panelBtn 높이 34·패딩 12·12.5px 통일, select 높이 30·전체 너비, 라벨 열 44px.
 Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright: 피커=svg last child 확인+스크린샷(배지 위에 렌더), 좌측 패널 스크린샷 육안 확인, 콘솔 클린.
 
+### CHG-20260820-046 — FIX — 보유 선수 프레스 시 공 가로채기 해소·액션 바 라벨 줄바꿈 (사용자 지시 2건)
+
+Problem: ① 공을 보유한 선수를 Shift+드래그하면 위에 그려진 공이 프레스를 가로채 런 대신 패스가 그려짐 ② 선택 액션 바 "단계" 라벨이 세로로 줄바꿈.
+Change:
+- 공이 보유 상태일 때 토큰 프레스를 **시각 반경 정규화 거리**로 판정: 선수 몸통(1.8m 기준)을 누르면 선수(런/이동), 발 옆의 작은 공(0.9m 기준)을 직접 누르면 공(패스). draw/이동/선택 모두 동일 규칙.
+- `.playerCard label`에 white-space: nowrap.
+Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright: 보유 상태에서 중심 드래그=move 1/travel 0, 공 드래그=travel 1, 라벨 높이 30px(1줄), 콘솔 클린.
+

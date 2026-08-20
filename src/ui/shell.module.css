@@ -1291,6 +1291,7 @@
   align-items: center;
   gap: 4px;
   color: var(--st-text-2);
+  white-space: nowrap;
 }
 
 .playerCard input,
