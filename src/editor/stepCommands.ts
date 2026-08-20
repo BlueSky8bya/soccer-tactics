@@ -92,7 +92,9 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
         if (seg.trigger.type !== 'at') continue
         const first = seg.path.waypoints[0]
         if (!first) continue
-        const rs = stateAt(cm0, draft, Math.max(0, seg.trigger.t - 0.02))
+        // 1ms before launch: a chained pass must sample the PREVIOUS flight's true end, not a
+        // mid-flight point (−0.02 landed 0.5m short at pass→pass boundaries — 2026-08-21)
+        const rs = stateAt(cm0, draft, Math.max(0, seg.trigger.t - 0.001))
         const launch = rs.ball.pos
         const dx = launch.x - first.p.x
         const dy = launch.y - first.p.y

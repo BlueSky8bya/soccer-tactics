@@ -1222,15 +1222,33 @@ export function SimplePitch() {
       const tm = compiled.segmentTimes[sg.id]
       if (!tm) continue
       const rs = stateAt(compiled, doc, tm.end + 0.05)
-      if (rs.ball.holderId !== sg.receiverId) continue
-      const rest = rs.ball.pos
       const hp = rs.players[sg.receiverId]?.pos
       if (!hp) continue
+      let rest: Vec2 | null = null
+      if (rs.ball.holderId === sg.receiverId) {
+        rest = rs.ball.pos
+      } else {
+        // the next pass fires IMMEDIATELY (step boundary): connect to its visible tail instead
+        const next = bt.segments.find(
+          (n) =>
+            n.kind === 'travel' &&
+            !n.id.startsWith('gen-') &&
+            n.id !== sg.id &&
+            (compiled.segmentTimes[n.id]?.start ?? Infinity) >= tm.end - 0.02 &&
+            (compiled.segmentTimes[n.id]?.start ?? Infinity) <= tm.end + 0.15,
+        )
+        if (next && next.kind === 'travel') {
+          const lutN = buildPathLUT(next.path)
+          const tail = pointAtDistance(lutN, Math.min(0.55, lutN.length / 2))
+          if (Math.hypot(tail.x - hp.x, tail.y - hp.y) <= 3.4) rest = tail
+        }
+      }
+      if (!rest) continue
       const lut = buildPathLUT(sg.path)
       const tip = pointAtDistance(lut, Math.max(0, lut.length - 1.15)) // visible arrow tip
       const d1 = Math.hypot(tip.x - hp.x, tip.y - hp.y)
       const d2 = Math.hypot(rest.x - hp.x, rest.y - hp.y)
-      if (d1 > 4.2 || d2 > 3.4 || d1 < 0.3 || d2 < 0.3) continue
+      if (d1 > 4.2 || d2 > 3.6 || d1 < 0.3 || d2 < 0.3) continue
       const chord = Math.hypot(rest.x - tip.x, rest.y - tip.y)
       if (chord < 0.35) continue // tip already lands on the ball
       // the arc clears the token edge with padding, bowing AWAY from the player

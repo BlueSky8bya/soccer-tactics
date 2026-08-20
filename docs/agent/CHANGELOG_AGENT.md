@@ -1068,3 +1068,12 @@ Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright midorb
 Problem: 릴레이 호가 '연속 패스 쌍'에만 그려져 단일 도착(사진: 화살촉과 공 고스트가 끊겨 보임)에는 부재(사용자 재신고).
 Change: passLinks를 수신자 있는 모든 패스로 일반화 — 트림된 화살촉 끝 → 실제 안착점(stateAt: 전방 휴식·핀 반영)을 선수 테두리+0.55m 패딩을 지키는 호로 연결(반경 ≥1.9m, 선수 바깥으로 볼록). 쌍 조건 제거.
 Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright: 단일 대각 패스 → 호 1개 렌더 확인, 콘솔 클린.
+
+### CHG-20260821-109 — FIX — 패스↔패스 정션 호 + 꼬리 트림 + 발사 샘플 정밀화
+
+Problem(사용자): (1) 패스1→패스2 정션에서 호 부재(끊김). (2) 패스2 꼬리가 패스1 화살촉 위에 겹침.
+Change:
+- 근본: 원점=발사 스냅의 샘플이 발사 −0.02s(이전 패스 '비행 중' 지점, 0.56m 부족)였음 → −0.001s로 정밀화. 이 오차가 호 가드(3.4m) 초과의 원인.
+- 도착 호에 경계 폴백: 다음 패스가 즉시 발사되는 정션은 안착 대신 다음 패스의 보이는 꼬리(0.55m 지점)로 연결. d2 가드 3.4→3.6.
+- 공 패스 표시를 꼬리 0.55m 시작-트림(trimPathEndD에 startTrim 파라미터) — 체인 패스가 이전 화살촉을 덮지 않음. 히트는 전체 경로 유지.
+Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright chainarc.cjs: 정션 호 2개(중간+도착), 꼬리 갭 0.55m, 스크린샷 검수 — ALL PASS, 콘솔 클린.

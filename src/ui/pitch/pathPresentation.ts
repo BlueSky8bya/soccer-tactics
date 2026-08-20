@@ -176,13 +176,14 @@ export function deriveRestMutedIds(
  * the entity/ghost sitting on the endpoint (user 2026-08-20: 화살촉이 가려짐). Returns an SVG
  * polyline `d`; null when the path is too short to trim. Hit-testing keeps the full path.
  */
-export function trimPathEndD(path: Path, trimM: number): string | null {
+export function trimPathEndD(path: Path, trimM: number, startTrimM = 0): string | null {
   const lut = buildPathLUT(path)
+  const from = Math.min(startTrimM, Math.max(0, lut.length - trimM - 1.2))
   const usable = lut.length - trimM
-  if (usable < 1.2) return null
+  if (usable - from < 1.2) return null
   const step = 0.35
   const pts: string[] = []
-  for (let d = 0; d <= usable + 1e-6; d += step) {
+  for (let d = from; d <= usable + 1e-6; d += step) {
     const p = pointAtDistance(lut, Math.min(d, usable))
     pts.push(`${Math.round(p.x * 100) / 100} ${Math.round(p.y * 100) / 100}`)
   }

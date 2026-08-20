@@ -34,12 +34,13 @@ function displayD(
   fullD: string,
   trimM: number,
   cacheable: boolean,
+  startTrimM = 0,
 ): string {
   if (cacheable) {
     const hit = trimCache.get(seg)
     if (hit) return hit
   }
-  const d = trimPathEndD(path, trimM) ?? fullD
+  const d = trimPathEndD(path, trimM, startTrimM) ?? fullD
   if (cacheable) trimCache.set(seg, d)
   return d
 }
@@ -83,7 +84,9 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
           : seg.path
       const d = pathToSvgD(shown)
       // Arrowhead clearance: player ends host a 1.7m ghost, ball ends a small ball ghost.
-      const strokeD = displayD(seg, shown, d, isBall ? 1.15 : 2.15, !att)
+      // ball passes also trim their TAIL 0.55m so a chained pass never sits on the previous
+      // arrowhead (user 2026-08-21: 화살표와 꽁무늬 겹침)
+      const strokeD = displayD(seg, shown, d, isBall ? 1.15 : 2.15, !att, isBall ? 0.55 : 0)
       const selected = p.selectedSegmentId === seg.id
       const emphasized = selected || entitySelected
       const phase = p.pathPhase?.[seg.id]
