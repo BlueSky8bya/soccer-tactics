@@ -7,8 +7,8 @@ import {
   findSegment,
   findTrack,
   lastKnownPosition,
-  moveBallPathOriginInDraft,
   moveBallStartInDraft,
+  shiftBallAnchorsForPlayerInDraft,
   shiftEntityPathsInDraft,
   newIdFor,
   sceneOf,
@@ -284,6 +284,10 @@ export function SimplePitch() {
       core.cancel()
       st.setDrag(null)
       return
+    }
+    if (g.started && !(g.id === doc.ball.id && g.group.size === 1)) {
+      // player drag commit: pass lengths may have changed with their anchors — re-derive timings
+      core.update((d) => relayoutStepsInDraft(d as TacticDocument))
     }
     if (g.id === doc.ball.id && g.group.size === 1) {
       // Move the ball's starting spot: on a player → that player holds it; grass → loose there.
@@ -659,13 +663,16 @@ export function SimplePitch() {
     }
     g.lastPt = pt
     const raw = clampToPitch({ x: pt.x + g.grab.x, y: pt.y + g.grab.y }, doc.pitch)
-    if (g.group.size > 1) {
-      // Group drag: translate homes AND every authored path (ball included) together.
+    if (g.group.size > 1 || g.id !== doc.ball.id) {
+      // Player drags (single or marquee group): translate homes AND whole authored paths in
+      // parallel — curves keep their exact shape (user 2026-08-20: 과도하게 꺾임 해결). The ball
+      // anchors owned by each moved player (incoming pass end / outgoing pass origin) follow too.
       const prev = g.prevRaw ?? g.group.get(g.id) ?? g.home
       const inc = { x: raw.x - prev.x, y: raw.y - prev.y }
       g.prevRaw = raw
       core.update((d) => {
         const doc2 = d as TacticDocument
+        const ballInGroup = g.group.has(doc2.ball.id)
         for (const [id] of g.group) {
           if (id === doc2.ball.id)
             doc2.ball.home = { x: doc2.ball.home.x + inc.x, y: doc2.ball.home.y + inc.y }
@@ -674,33 +681,23 @@ export function SimplePitch() {
             if (pl) pl.home = { x: pl.home.x + inc.x, y: pl.home.y + inc.y }
           }
           shiftEntityPathsInDraft(doc2, id, inc)
+          // future-ball anchors of this player (skip when the ball track itself is in the group)
+          if (id !== doc2.ball.id && !ballInGroup) shiftBallAnchorsForPlayerInDraft(doc2, id, inc)
         }
-        // The held ball follows its dragged holder, keeping its side (not in the group itself),
-        // carrying the authored pass origin along with it.
-        if (g.ballOrigin) {
+        // The resting held ball keeps its chosen side of the dragged holder.
+        if (g.ballOrigin && !ballInGroup)
           doc2.ball.home = { x: doc2.ball.home.x + inc.x, y: doc2.ball.home.y + inc.y }
-          moveBallPathOriginInDraft(doc2, doc2.ball.home)
-        }
       })
       st.setDrag({ id: g.id, grab: g.grab, raw, guides: [], snapped: false })
       return
     }
+    // Ball alone: absolute move; the drop decides holder/loose in endGesture.
     const origin = g.group.get(g.id) ?? g.home
     const delta = { x: raw.x - origin.x, y: raw.y - origin.y }
     core.update((d) => {
-      for (const [id, h] of g.group)
-        setEntityHome(d as TacticDocument, id, { x: h.x + delta.x, y: h.y + delta.y })
-      // The held ball keeps its chosen side of the holder (user 2026-08-20) — and so does the
-      // authored pass ORIGIN, so the drawn line starts where the holder now stands.
-      if (g.ballOrigin) {
-        const bh = { x: g.ballOrigin.x + delta.x, y: g.ballOrigin.y + delta.y }
-        d.ball.home = bh
-        moveBallPathOriginInDraft(d as TacticDocument, bh)
-      }
-      if (g.group.has(d.ball.id) && g.id === d.ball.id) {
-        const tr = findTrack(d as TacticDocument, d.ball.id)
-        if (!tr || tr.segments.length === 0) delete d.ball.initialHolderId
-      }
+      setEntityHome(d as TacticDocument, g.id, { x: origin.x + delta.x, y: origin.y + delta.y })
+      const tr = findTrack(d as TacticDocument, d.ball.id)
+      if (!tr || tr.segments.length === 0) delete d.ball.initialHolderId
     })
     st.setDrag({ id: g.id, grab: g.grab, raw, guides: [], snapped: false })
   }

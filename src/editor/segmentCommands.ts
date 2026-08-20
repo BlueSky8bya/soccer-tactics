@@ -466,6 +466,40 @@ export function shiftEntityPathsInDraft(doc: TacticDocument, entityId: Id, delta
   }
 }
 
+/**
+ * Shift the ball anchors that BELONG to a player (user 2026-08-20): passes they will RECEIVE
+ * (travel end) and passes they will make AFTERWARDS (next travel's origin, via the possession
+ * they hold). Waypoint + both handles translate together so curves keep their exact shape.
+ */
+export function shiftBallAnchorsForPlayerInDraft(
+  doc: TacticDocument,
+  playerId: Id,
+  inc: Vec2,
+): void {
+  const track = findTrack(doc, doc.ball.id)
+  if (!track) return
+  const shiftWp = (w: Waypoint) => {
+    w.p = { x: w.p.x + inc.x, y: w.p.y + inc.y }
+    if (w.handleIn) w.handleIn = { x: w.handleIn.x + inc.x, y: w.handleIn.y + inc.y }
+    if (w.handleOut) w.handleOut = { x: w.handleOut.x + inc.x, y: w.handleOut.y + inc.y }
+  }
+  for (let i = 0; i < track.segments.length; i++) {
+    const seg = track.segments[i]!
+    if (seg.kind !== 'travel') continue
+    // pass INTO the player → its end (the future ball) travels with them
+    if (seg.receiverId === playerId) {
+      const last = seg.path.waypoints[seg.path.waypoints.length - 1]
+      if (last) shiftWp(last)
+    }
+    // pass FROM the player (they hold it just before) → its origin travels with them
+    const prev = track.segments[i - 1]
+    if (prev && prev.kind === 'possessed' && prev.holderId === playerId) {
+      const first = seg.path.waypoints[0]
+      if (first) shiftWp(first)
+    }
+  }
+}
+
 /** Move the ball's authored pass ORIGIN (first waypoint + handles) to `to` — target stays put. */
 export function moveBallPathOriginInDraft(doc: TacticDocument, to: Vec2): void {
   const track = findTrack(doc, doc.ball.id)

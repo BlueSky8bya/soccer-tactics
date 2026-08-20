@@ -714,3 +714,11 @@ Change:
 - 표시 경로 끝을 트림(선수 2.15m/공 1.15m, `trimPathEndD`+세그먼트 identity 캐시) — 화살촉이 토큰·고스트 밖에 뜸. 히트 경로는 원래 길이 유지.
 Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 홀더 +13.6m 드래그 후 상대 오프셋(−1.7,+0.9)·wp0=ball.home 유지·소유 유지, 18m 런 재생 5.0→**2.61s**, 화살촉 클리어런스 스크린샷, 콘솔 클린.
 
+### CHG-20260820-065 — FIX — 미래 보유자 이동 시 공 앵커 동행·곡선 경로 평행이동 (사용자 지시)
+
+Problem: ① 패스를 받을(또는 받은 뒤 이어 찰) 선수를 옮겨도 패스 끝/재패스 원점이 제자리 ② 곡선 경로를 가진 선수를 옮기면 시작점만 붙어가 경로가 과도하게 꺾임.
+Change:
+- `shiftBallAnchorsForPlayerInDraft`: 선수 이동 시 그 선수가 **받을 패스의 끝** + **이어 찰 패스의 원점**(직전 소유 기준)을 같은 delta로 동행(핸들 포함). 커밋 시 relayout으로 타이밍 재계산.
+- 선수 드래그(단일 포함)를 그룹과 동일한 **경로 전체 평행이동**으로 통일 — 경유점+양 핸들이 같이 움직여 곡선 형태 완전 보존. 공 단독 드래그만 기존 절대 이동(드롭이 보유/루즈 결정) 유지.
+Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 수신자 +11.4,+5.7m 드래그 후 패스 끝 delta 불일치 **0.00m**·수신자 유지, 곡선 런 드래그 후 형태 시그니처(구간 거리) 동일, 콘솔 클린.
+
