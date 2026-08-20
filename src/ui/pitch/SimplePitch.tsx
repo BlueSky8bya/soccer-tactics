@@ -70,7 +70,7 @@ type Gesture =
        *  the resting ball keeps its chosen side and travels with the player. */
       ballOrigin?: Vec2
     }
-  | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2 }
+  | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2; additive: boolean }
   | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[] }
   | {
       type: 'bend'
@@ -198,7 +198,7 @@ export function SimplePitch() {
       const y2 = Math.max(g.a.y, g.b.y)
       if ((x2 - x1) * (y2 - y1) < 1) return // a click, not a box
       const hit = (v: Vec2) => v.x >= x1 && v.x <= x2 && v.y >= y1 && v.y <= y2
-      const ids = new Set<Id>()
+      const ids = new Set<Id>(g.additive ? st.selection : [])
       for (const pl of doc.players) if (hit(resolved.players[pl.id]?.pos ?? pl.home)) ids.add(pl.id)
       if (hit(resolved.ball.pos)) ids.add(doc.ball.id)
       // A box that crosses an authored path grabs that entity too (공 경로도 묶이게) —
@@ -571,11 +571,14 @@ export function SimplePitch() {
         svg.setPointerCapture(e.pointerId)
         return
       }
-      case 'marquee':
-        st.clearSelection()
-        gesture.current = { type: 'marquee', pointerId: e.pointerId, a: pt, b: pt }
+      case 'marquee': {
+        // Shift+marquee ADDS the boxed entities to the current selection (user 2026-08-20).
+        const additive = e.shiftKey
+        if (!additive) st.clearSelection()
+        gesture.current = { type: 'marquee', pointerId: e.pointerId, a: pt, b: pt, additive }
         svg.setPointerCapture(e.pointerId)
         return
+      }
       case 'add-home-player':
       case 'add-away-player':
         st.clearSelection()

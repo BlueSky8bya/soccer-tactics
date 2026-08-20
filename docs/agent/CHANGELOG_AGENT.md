@@ -743,3 +743,10 @@ Change:
 Problem: Shift가 누르기 불편 — 왼쪽 Alt가 편하다는 사용자 결정.
 Change: 경로 작성 계열 전부 Alt로 교체 — 토큰/고스트 드로우, 지그재그 체인(Alt 유지), 고스트 활성 표시(drawKeyHeld). gestureIntent의 수정자 필드를 `draw`로 일반화(호출부가 Alt 바인딩). Alt keydown/up preventDefault로 브라우저 메뉴 포커스 차단. 안내(조작법/투어/? 오버레이) 전부 갱신. Shift+드래그는 이제 일반 이동과 동일. ADR-0009 v4 항목 갱신.
 Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: Alt+드래그=경로 1개, Shift+드래그=이동(경로 불생성), Alt 체인 2leg steps [1,2], 콘솔 클린.
+
+### CHG-20260820-067 — FEAT — Shift+마퀴 = 선택에 추가 (사용자 지시)
+
+Problem: 마퀴가 항상 선택을 교체 — 떨어져 있는 여러 무리를 한 선택으로 묶을 수 없음.
+Change: Alt 전환으로 비게 된 Shift를 활용 — **Shift+빈 잔디 드래그 = 기존 선택에 박스 합집합**(교체 없음, 경로 교차 포함 규칙 동일). 일반 마퀴는 기존대로 교체. 조작법에 행 추가.
+Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 박스1=2명 → Shift+박스2=5(합집합) → 일반 박스=교체, 콘솔 클린.
+
