@@ -89,6 +89,12 @@ pickTargets(input: {
 | 성능 | hover 스로틀 + long task 측정 | >50ms 0건 |
 | 전체 게이트 | typecheck/lint/test/build/harness/format | PASS |
 
+## Plan Reversal Log
+
+| ID | Previous Plan / Assumption | New Evidence | Replacement |
+|---|---|---|---|
+| REV-01 | 히트 판정은 DOM 페인트 순서 + 개별 예외 패치로 충분하다는 가정(PLAN-005 M3 유산) | 사용자 스크린샷: 6종 중첩 지점에서 원하는 대상 선택 불가, 예외 패치 2건 누적 | 순수 기하 후보 스코어링(pickTargets)으로 구조 교체. 기존 예외 규칙은 스코어에 흡수·삭제 |
+
 ## Rollback
 
 M1(히트 치환)·M2(호버)·M3(순환) 독립 커밋. pickTarget은 추가 모듈이라 호출부 복원으로 즉시 롤백.
