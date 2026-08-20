@@ -30,8 +30,8 @@ export const PASS_SPEED_PRESETS = [
   { id: 'firm', label: '보통', speed: 16 },
   { id: 'driven', label: '강하게', speed: 22 },
 ] as const
-export const DEFAULT_PLAYER_SPEED = 7 // m/s — user 2026-08-20: 재생이 너무 느림
-export const DEFAULT_PASS_SPEED = 20
+export const DEFAULT_PLAYER_SPEED = 10 // m/s — user 2026-08-20: 재생이 너무 느림
+export const DEFAULT_PASS_SPEED = 28
 
 export function sceneOf(doc: TacticDocument, sceneIndex = 0) {
   return doc.scenes[sceneIndex] ?? doc.scenes[0]!

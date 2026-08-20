@@ -53,7 +53,7 @@ describe('ball fling physics (pure, deterministic)', () => {
     expect(a.final).toEqual(b.final)
     // capped: distance bounded by v_max/k
     const dist = a.points[a.points.length - 1]!.d
-    expect(dist).toBeLessThanOrEqual(FLING_MAX_SPEED / 1.9 + 1)
+    expect(dist).toBeLessThanOrEqual(FLING_MAX_SPEED / 2.4 + 1)
     // spin data monotonic
     for (let i = 1; i < a.points.length; i++)
       expect(a.points[i]!.d).toBeGreaterThanOrEqual(a.points[i - 1]!.d)

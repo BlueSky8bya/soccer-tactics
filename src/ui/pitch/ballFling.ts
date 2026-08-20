@@ -11,11 +11,11 @@ export const FLING_MIN_SPEED = 10
 /** If the pointer rested longer than this before release, it is a PLACE, not a throw. */
 export const FLING_STALE_MS = 120
 /** Speed cap — a wild swipe still lands on the pitch, not in the car park. */
-export const FLING_MAX_SPEED = 26
+export const FLING_MAX_SPEED = 30
 /** Exponential drag coefficient k: v(t) = v0·e^(−kt) — grass rolling feel. */
-export const FLING_DRAG_K = 1.9
+export const FLING_DRAG_K = 2.4
 /** Rolling stops below this speed. */
-export const FLING_STOP_SPEED = 0.6
+export const FLING_STOP_SPEED = 1.5
 /** Wall bounce energy retention (pitch boundary). */
 export const FLING_RESTITUTION = 0.55
 const DT = 1 / 120

@@ -4,7 +4,7 @@ import type { TacticDocument } from '@/domain/types'
 import { carryOffset, compile } from '@/engine/compile'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
-import { findTrack, makePath } from './segmentCommands'
+import { DEFAULT_PLAYER_SPEED, findTrack, makePath } from './segmentCommands'
 import {
   addStepPass,
   addStepRun,
@@ -338,7 +338,7 @@ describe('same step ends together (user 2026-08-20 최종)', () => {
     expect(tLong.start).toBe(0)
     // both end together at the slowest member's natural duration (28m / 7m/s = 4s)
     expect(tShort.end).toBeCloseTo(tLong.end, 1)
-    expect(tLong.end - tLong.start).toBeCloseTo(28 / 7, 1)
+    expect(tLong.end - tLong.start).toBeCloseTo(28 / DEFAULT_PLAYER_SPEED, 1)
     // the NEXT step starts right after
     expect(cm.segmentTimes[next]!.start).toBeCloseTo(tLong.end, 1)
   })

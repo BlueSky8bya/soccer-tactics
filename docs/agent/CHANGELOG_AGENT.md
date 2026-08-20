@@ -940,3 +940,11 @@ Change:
 - 신규 src/ui/pitch/ballFling.ts(순수·결정론): 릴리즈 속도 추정(최근 110ms 창, 릴리즈 전 120ms 정지 시 배치로 간주), 지수 감쇠 굴림(k=1.9), 경기장 경계 반발 0.55 바운스, 속도 상한 26m/s, 120Hz 고정 적분. 최종 정지점만 문서 커밋(moveBallStartInDraft 재사용 — 선수 2.6m 내 정지 시 보유 스냅). 엔진/도메인 불변(ADR-0006 D1: 인터페이스 모션은 UI).
 - SimplePitch: 공 단독 드래그에 속도 샘플(최근 10), 릴리즈 ≥10m/s면 시뮬 궤적을 rAF로 재생(굴린 거리→스핀), 도착 시 안착 스프링·보유 연출·토스트. reduced-motion은 즉시 점프.
 Validation: typecheck/lint/test 156(+4 골든: 속도 추정·정지 배치 구분·감속 정지·경계 바운스·상한·결정론)/build/harness/format PASS. Playwright: 플릭 23.9m 굴러감(중간 프레임 검증), 250ms 멈춘 뒤 놓기=제자리 배치, 부착 일관성(2.6m ⟺ holder) — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-093 — TUNE — 재생·패스·던지기 전반 속도 상향 (사용자: 너무 느려)
+
+Change:
+- 기본 속도: 선수 7 → 10 m/s, 패스 20 → 28 m/s (단계 동시 종료 규칙상 전체 재생 페이스 직결).
+- 던지기: 상한 26→30 m/s, 감쇠 k 1.9→2.4, 정지 속도 0.6→1.5 m/s — 굼뜬 저속 꼬리 제거, 스냅한 정지감.
+- 속도 결합 테스트(28/7 하드코드)를 DEFAULT_PLAYER_SPEED 참조로 교정.
+Validation: typecheck/lint/test 156/build/harness/format PASS.
