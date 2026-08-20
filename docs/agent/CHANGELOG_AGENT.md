@@ -633,3 +633,11 @@ Change:
 - 심도: 피치 프레임 3중 그림자·라운드 20px, 카드/부유 바 blur 강화+흰 헤어라인+2중 그림자, 재생 버튼 그라디언트+글로우+호버 리프트.
 Validation: 위 게이트 동일 PASS; Playwright: 재생 중 y 진폭 1.1px 관측(결정적), 스크린샷 육안, 콘솔 클린.
 
+### CHG-20260820-055 — UX — 공을 발끝 거리로·부착 "탁!" 링 플래시 (사용자 지시)
+
+Problem: 보유 공이 선수 원판을 덮어 선수 클릭을 뺏고, 공을 대줬을 때 붙었다는 순간 피드백이 약함.
+Change:
+- carryOffset 반경 [0.8,1.6] → **[1.6,2.1]m**(기본 오프셋 1.45,0.95) — 공이 원판 밖 발끝에 위치, 등번호·클릭 안 가림. 관련 테스트 3곳 기대값 갱신.
+- 부착 순간: 기존 펄스+토스트에 **확장 링 플래시**(0.55s bounce ease, onAnimationEnd 자동 제거, reduced-motion 즉시) 추가.
+Validation: typecheck/lint/test 122/build/harness/format PASS; Playwright: 링 발화·자동 소거, 부착 후 중앙 클릭=선수 카드, 스크린샷 육안(공이 가장자리), 콘솔 클린.
+

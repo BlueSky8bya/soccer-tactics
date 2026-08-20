@@ -109,6 +109,8 @@ export function SimplePitch() {
   const [ballDrop, setBallDrop] = useState<{ from: Vec2; key: number } | null>(null)
   /** In-place 1-9 picker opened by clicking a step badge (faster than the action bar). */
   const [stepPicker, setStepPicker] = useState<{ segId: Id; at: Vec2 } | null>(null)
+  /** One-shot expanding ring when the ball ATTACHES to a player (immersion feedback). */
+  const [attachFx, setAttachFx] = useState<{ id: Id; key: number } | null>(null)
   /** Unbroken Shift chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
@@ -292,7 +294,8 @@ export function SimplePitch() {
       const dy = at.y - settled.y
       if (Math.hypot(dx, dy) > 0.05)
         setBallDrop((prev) => ({ from: { x: dx, y: dy }, key: (prev?.key ?? 0) + 1 }))
-      // Unmistakable ATTACH feedback (user 2026-08-20): pulse both tokens + say who holds it.
+      // Unmistakable ATTACH feedback (user 2026-08-20): pop both tokens, flash an expanding
+      // ring at the player, and say who holds it — the little "탁!" moment matters.
       if (near) {
         pulseKey.current++
         setPulses((prev) => ({
@@ -300,6 +303,7 @@ export function SimplePitch() {
           [near.p.id]: pulseKey.current,
           [doc.ball.id]: pulseKey.current,
         }))
+        setAttachFx({ id: near.p.id, key: pulseKey.current })
         ui.flashToast(t('ball.attached', { n: near.p.number }))
       }
     } else {
@@ -737,7 +741,8 @@ export function SimplePitch() {
           if (received) {
             const tmEnd = compiled.segmentTimes[(sg as { id: Id }).id]?.end
             const after = tmEnd !== undefined ? stateAt(compiled, doc, tmEnd + 0.05) : null
-            pos = after && after.ball.holderId ? after.ball.pos : { x: end.x + 1.1, y: end.y + 0.7 }
+            pos =
+              after && after.ball.holderId ? after.ball.pos : { x: end.x + 1.45, y: end.y + 0.95 }
           }
           const out = [
             {
@@ -971,6 +976,20 @@ export function SimplePitch() {
             <circle cx={drag.raw.x} cy={drag.raw.y} r={1.0} className={styles.ballGhostDot} />
           </g>
         )}
+      {attachFx &&
+        (() => {
+          const hp = resolved.players[attachFx.id]?.pos
+          return hp ? (
+            <g
+              key={attachFx.key}
+              className={styles.attachFx}
+              transform={`translate(${hp.x}, ${hp.y})`}
+              onAnimationEnd={() => setAttachFx(null)}
+            >
+              <circle r={1.9} className={styles.attachFxRing} />
+            </g>
+          ) : null
+        })()}
       {stepPicker && !viewingFrame && (
         <g
           data-step-picker="true"

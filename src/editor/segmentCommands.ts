@@ -397,10 +397,10 @@ export function giveBallToInDraft(doc: TacticDocument, playerId: Id | null): voi
   const p = doc.players.find((x) => x.id === playerId)
   if (!p) return
   doc.ball.initialHolderId = playerId
-  doc.ball.home = { x: p.home.x + 1.1, y: p.home.y + 0.7 }
+  doc.ball.home = { x: p.home.x + 1.45, y: p.home.y + 0.95 }
   const track0 = findTrack(doc, doc.ball.id)
   const first0 = track0?.segments[0]
-  if (first0 && first0.kind === 'possessed') first0.offset = { x: 1.1, y: 0.7 }
+  if (first0 && first0.kind === 'possessed') first0.offset = { x: 1.45, y: 0.95 }
   // An authored opening possession (possessed @0) is the truth at t=0 — retarget it too,
   // otherwise "공 주기" looks like it did nothing (QA r4 C-3).
   const track = findTrack(doc, doc.ball.id)

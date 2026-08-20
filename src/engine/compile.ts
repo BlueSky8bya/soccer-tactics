@@ -17,7 +17,7 @@ import { EASINGS, buildPathLUT, pointAtDistance, type PathLUT } from './path'
 
 export const DEFAULT_SPEED = 4.5 // m/s (jog/run) when a move has speed timing but no value
 export const MIN_SCENE_DURATION = 5 // seconds shown when the timeline is empty
-export const BALL_OFFSET: Vec2 = { x: 1.1, y: 0.7 } // possessed ball relative to holder (m)
+export const BALL_OFFSET: Vec2 = { x: 1.45, y: 0.95 } // possessed ball at the holder's foot (m)
 
 /**
  * Carry direction: clamp a holder→ball vector to a natural dribbling radius. The holder can carry
@@ -27,7 +27,9 @@ export const BALL_OFFSET: Vec2 = { x: 1.1, y: 0.7 } // possessed ball relative t
 export function carryOffset(v: Vec2): Vec2 {
   const len = Math.hypot(v.x, v.y)
   if (len < 0.05) return BALL_OFFSET
-  const r = Math.max(0.8, Math.min(1.6, len))
+  // Foot distance: far enough that the ball never sits ON the player disc (r 1.7 + ball 0.75),
+  // close enough to read as "held" (user 2026-08-20: 공이 선수를 가리면 클릭을 뺏는다).
+  const r = Math.max(1.6, Math.min(2.1, len))
   return { x: (v.x / len) * r, y: (v.y / len) * r }
 }
 

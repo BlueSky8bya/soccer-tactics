@@ -561,3 +561,38 @@
   fill: rgba(10, 30, 16, 0.22);
   pointer-events: none;
 }
+
+/* one-shot "탁!" ring when the ball attaches to a player */
+.attachFx {
+  pointer-events: none;
+}
+
+.attachFxRing {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.34;
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: attach-pop 0.55s cubic-bezier(0.22, 1.4, 0.36, 1) forwards;
+}
+
+@keyframes attach-pop {
+  0% {
+    transform: scale(0.55);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.5);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attachFxRing {
+    animation-duration: 0.01s;
+  }
+}

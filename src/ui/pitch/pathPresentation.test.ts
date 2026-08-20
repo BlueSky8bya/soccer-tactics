@@ -18,9 +18,9 @@ describe('deriveAttachedPathStart', () => {
     expect(a).not.toBeNull()
     expect(a!.holderId).toBe('b1')
     // compiled start = holder pos at 1.2s + ball offset; authored first waypoint is (40,34)
-    expect(a!.p.x).toBeCloseTo(40 + 1.1, 3)
-    expect(a!.p.y).toBeCloseTo(34 + 0.7, 3)
-    expect(a!.delta.x).toBeCloseTo(1.1, 3)
+    expect(a!.p.x).toBeCloseTo(40 + 1.45, 3)
+    expect(a!.p.y).toBeCloseTo(34 + 0.95, 3)
+    expect(a!.delta.x).toBeCloseTo(1.45, 3)
   })
   it('returns null for a move, unresolved travel, or travel without preceding possession', () => {
     const doc = buildScenarioA()
