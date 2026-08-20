@@ -64,3 +64,72 @@ export function presentPathWithAttachedStart(path: Path, attached: AttachedPathS
     ],
   }
 }
+
+// ---------------------------------------------------------------------------
+// PLAN-005 M4: crowded-pitch focus. All pure, document never mutated (RULE-01).
+
+export type PathPhase = 'past' | 'active' | 'future'
+
+/** Segments whose compiled window contains `t` (the movements happening NOW). */
+export function deriveActiveSegmentIds(
+  segmentTimes: Record<Id, { start: number; end: number }>,
+  t: number,
+): Set<Id> {
+  const out = new Set<Id>()
+  for (const [id, w] of Object.entries(segmentTimes)) {
+    if (t >= w.start - 1e-9 && t <= w.end + 1e-9) out.add(id)
+  }
+  return out
+}
+
+/** past / active / future for one segment at time `t`. */
+export function derivePathPhase(
+  w: { start: number; end: number } | undefined,
+  t: number,
+): PathPhase {
+  if (!w) return 'future'
+  if (t > w.end + 1e-9) return 'past'
+  if (t < w.start - 1e-9) return 'future'
+  return 'active'
+}
+
+/**
+ * Ghost opacity from the GLOBAL step order (A-05a): the further a movement's step is from the
+ * step being authored, the fainter its ghost — with a floor so context never fully disappears.
+ * `stepRank` is the movement step's index in the sorted list of used steps.
+ */
+export function ghostOpacityForStep(stepRank: number, boosted: boolean): number {
+  const base = Math.max(0.18, 0.55 - stepRank * 0.11)
+  return boosted ? Math.min(0.85, base + 0.2) : base
+}
+
+/**
+ * Deterministic, bounded step-badge placement (B-03): anchor at the path midpoint, lifted; when a
+ * badge would land within `minGap` of an already placed one, try a fixed candidate ring instead.
+ */
+export function placeStepBadges(
+  anchors: { id: Id; at: Vec2 }[],
+  minGap = 2.6,
+): { id: Id; at: Vec2 }[] {
+  const placed: Vec2[] = []
+  const CANDIDATES: Vec2[] = [
+    { x: 0, y: -1.9 },
+    { x: 0, y: 1.9 },
+    { x: 2.4, y: -1.9 },
+    { x: -2.4, y: -1.9 },
+    { x: 2.4, y: 1.9 },
+  ]
+  return anchors.map((a) => {
+    let best: Vec2 = { x: a.at.x, y: a.at.y - 1.9 }
+    for (const c of CANDIDATES) {
+      const cand = { x: a.at.x + c.x, y: a.at.y + c.y }
+      const clash = placed.some((q) => Math.hypot(q.x - cand.x, q.y - cand.y) < minGap)
+      if (!clash) {
+        best = cand
+        break
+      }
+    }
+    placed.push(best)
+    return { id: a.id, at: best }
+  })
+}

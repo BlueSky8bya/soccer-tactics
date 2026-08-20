@@ -18,6 +18,8 @@ export interface PathLayerProps {
   draft?: { points: Vec2[]; color: string; dashed: boolean } | null
   /** Dim unrelated paths while editing/playing. */
   dimOthers?: boolean
+  /** Playback focus (PLAN-005 M4): per-segment phase; active paths pop, past/future recede. */
+  pathPhase?: Readonly<Record<Id, 'past' | 'active' | 'future'>>
 }
 
 function segClass(seg: Segment): string | undefined {
@@ -60,17 +62,29 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
       const d = pathToSvgD(shown)
       const selected = p.selectedSegmentId === seg.id
       const emphasized = selected || entitySelected
-      const dim = p.dimOthers && !emphasized
+      const phase = p.pathPhase?.[seg.id]
+      const dim = p.dimOthers && !emphasized && !phase
+      const phaseClass =
+        phase === 'active'
+          ? styles.pathActive
+          : phase === 'past'
+            ? styles.pathPast
+            : phase === 'future'
+              ? styles.pathFuture
+              : ''
       const markerId = isBall ? 'arrow-ball' : `arrow-${track.entityId}`
       items.push(
         <g
           key={seg.id}
           data-segment={seg.id}
           data-entity-of={track.entityId}
-          className={`${styles.pathGroup} ${selected ? styles.pathSelected : ''} ${dim ? styles.pathDim : ''}`}
+          data-phase={phase}
+          className={`${styles.pathGroup} ${selected ? styles.pathSelected : ''} ${dim ? styles.pathDim : ''} ${phaseClass}`}
         >
           {/* wide invisible hit path for easy selection */}
           <path d={d} className={styles.pathHit} />
+          {/* translucent casing under the colored line keeps thin paths readable on pitch markings (B-04) */}
+          <path d={d} className={styles.pathCasing} />
           <path
             d={d}
             className={`${styles.path} ${segClass(seg)}`}

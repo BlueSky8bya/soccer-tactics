@@ -471,3 +471,31 @@
   stroke-dasharray: 0.7 0.45;
   pointer-events: none;
 }
+
+.pathCasing {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 4.2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* Playback focus (PLAN-005 M4): the running movement pops, the rest recede but stay legible. */
+.pathActive .path {
+  stroke-width: 3.4px;
+}
+
+.pathActive .pathCasing {
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 6px;
+}
+
+.pathPast {
+  opacity: 0.22;
+}
+
+.pathFuture {
+  opacity: 0.45;
+}

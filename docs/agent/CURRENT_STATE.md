@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-08-20 (세션 12, PLAN-005 M1·M2·M3 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제. 커밋됨, 사용자 브라우저 확인 대기)
+Last Updated: 2026-08-20 (세션 12, PLAN-005 M1~M4 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제. 커밋됨, 사용자 브라우저 확인 대기)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 

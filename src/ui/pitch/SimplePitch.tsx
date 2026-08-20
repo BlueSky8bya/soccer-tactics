@@ -37,7 +37,12 @@ import { clientToPitch } from '@/renderer/pointer'
 import { t } from '../i18n'
 import { teamColorOf } from '../teamColor'
 import { AnimatedToken } from './AnimatedToken'
-import { deriveAttachedPathStart } from './pathPresentation'
+import {
+  deriveAttachedPathStart,
+  derivePathPhase,
+  ghostOpacityForStep,
+  placeStepBadges,
+} from './pathPresentation'
 
 const DRAG_THRESHOLD_PX = 4
 
@@ -624,15 +629,36 @@ export function SimplePitch() {
     : ''
   const attachedStart = deriveAttachedPathStart(doc, compiled, ui.selectedSegmentId)
 
+  // Playback focus (M4): classify every path as past/active/future for the current frame.
+  const pathPhase: Record<Id, 'past' | 'active' | 'future'> = {}
+  if (viewingFrame) {
+    for (const tr of sceneTracks(doc))
+      for (const sg of tr.segments) {
+        if (!('path' in sg)) continue
+        pathPhase[sg.id] = derivePathPhase(compiled.segmentTimes[sg.id], ui.playback.t)
+      }
+  }
+
   // Ghosts: where each entity stands after each authored movement (fading with order).
   // Shift+drag a ghost → the next movement starts from that spot.
+  // Used steps sorted → a movement's ghost fades with its step's GLOBAL rank (A-05a), so at 22
+  // players the earliest upcoming positions stay strongest. Selected entities stay boosted.
+  const usedSteps = [
+    ...new Set(
+      sceneTracks(doc)
+        .flatMap((tr) => tr.segments)
+        .filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
+        .map((sg) => stepOf(sg as { step?: number })),
+    ),
+  ].sort((a, b) => a - b)
   const ghosts = doc.scenes[0]
     ? sceneTracks(doc).flatMap((tr) => {
         const segs = tr.segments.filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
-        return segs.flatMap((sg, i) => {
+        return segs.flatMap((sg) => {
           const path = (sg as { path: { waypoints: { p: Vec2 }[] } }).path
           const end = path.waypoints[path.waypoints.length - 1]!.p
-          const opacity = Math.max(0.22, 0.55 - i * 0.11)
+          const rank = usedSteps.indexOf(stepOf(sg as { step?: number }))
+          const opacity = ghostOpacityForStep(rank < 0 ? 0 : rank, selection.includes(tr.entityId))
           // A pass that lands ON a receiver: draw the ball ghost at the receiver's FEET (like a held
           // ball), so the player centre stays grabbable for the receiver's own run.
           const received =
@@ -679,9 +705,9 @@ export function SimplePitch() {
       })
     : []
 
-  // Step badges at authored path ends
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
-  const badges = doc.scenes[0]
+  // placeStepBadges nudges overlapping badges apart deterministically (B-03).
+  const badgeAnchors = doc.scenes[0]
     ? doc.scenes[0].timeline.tracks.flatMap((tr) =>
         tr.segments
           .filter((s) => 'path' in s && !s.id.startsWith('gen-'))
@@ -692,12 +718,14 @@ export function SimplePitch() {
             return {
               id: s.id,
               step: stepOf(s as { step?: number }),
-              end: mid,
+              at: mid,
               entityId: tr.entityId,
             }
           }),
       )
     : []
+  const badgeSpots = new Map(placeStepBadges(badgeAnchors).map((b) => [b.id, b.at]))
+  const badges = badgeAnchors.map((b) => ({ ...b, end: badgeSpots.get(b.id) ?? b.at }))
 
   return (
     <svg
@@ -731,6 +759,7 @@ export function SimplePitch() {
             : null
         }
         dimOthers={isPlaying}
+        pathPhase={viewingFrame ? pathPhase : undefined}
       />
       {/* step badges */}
       {!viewingFrame &&
@@ -738,7 +767,7 @@ export function SimplePitch() {
           <g
             key={b.id}
             className={styles.stepBadge}
-            transform={`translate(${b.end.x}, ${b.end.y - 1.9})`}
+            transform={`translate(${b.end.x}, ${b.end.y})`}
             onPointerDown={(e) => {
               // Select only (C-02): the exact step is set in the selection action bar or with 1-9.
               e.stopPropagation()

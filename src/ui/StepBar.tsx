@@ -1,4 +1,5 @@
 import { useEditorSnapshot } from '@/editor/EditorContext'
+import { useCompiled } from '@/editor/useCompiled'
 import { MAX_STEP, stepCounts, stepWindow } from '@/editor/stepCommands'
 import { playWindow } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
@@ -18,6 +19,24 @@ export function StepBar() {
   const setPlaying = useUiStore((s) => s.setPlaying)
   const counts = stepCounts(doc)
   const currentUsed = counts[currentStep - 1]! > 0
+  const compiled = useCompiled()
+  const playingT = useUiStore((s) => (s.playback.playing ? s.playback.t : null))
+  // Which step is running NOW (aria-current, M4) — derived from compiled times, no recompiles.
+  let activeStep: number | null = null
+  if (playingT !== null && doc.scenes[0]) {
+    outer: for (const tr of doc.scenes[0].timeline.tracks)
+      for (const sg of tr.segments) {
+        if (!('path' in sg) || sg.id.startsWith('gen-')) continue
+        const w = compiled.segmentTimes[sg.id]
+        if (w && playingT >= w.start - 1e-9 && playingT <= w.end + 1e-9) {
+          activeStep = Math.max(
+            1,
+            Math.min(MAX_STEP, Math.round((sg as { step?: number }).step ?? 1)),
+          )
+          break outer
+        }
+      }
+  }
 
   const preview = (n: number) => {
     setCurrentStep(n)
@@ -49,6 +68,7 @@ export function StepBar() {
           onClick={() => preview(n)}
           title={t('simple.stepPick', { n, c: counts[n - 1]! })}
           aria-pressed={currentStep === n}
+          aria-current={activeStep === n ? 'step' : undefined}
         >
           {n}
           {counts[n - 1]! > 0 && <span className={styles.stepCount}>{counts[n - 1]}</span>}

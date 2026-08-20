@@ -1268,3 +1268,9 @@
   max-width: 70vw;
   text-align: center;
 }
+
+/* Step running right now during playback (M4) */
+.stepChip[aria-current='step'] {
+  box-shadow: 0 0 0 3px var(--st-accent-soft);
+  border-color: var(--st-accent);
+}

@@ -449,3 +449,13 @@ Change:
 - A-04 보류에 따라 route handle·ghost handle 분리는 구현하지 않음(Shift 유지).
 Validation: typecheck/lint/test 107(gestureIntent 6 신규)/build/harness/format PASS; Playwright(m3.cjs): 소유자 선택 중 경로 드래그 bbox h 0→90(휘기)·홈 0px(이동 없음), 그룹 토큰 드래그 60,40(홈+경로), 체인 8→9 후 3번째 leg 차단(segments 불변)+toast 표시, 콘솔 클린.
 
+### CHG-20260820-039 — UX — 재생 중 active 경로 강조·전역 고스트 감쇠·배지 충돌 회피 (PLAN-005 M4)
+
+Problem: 재생 중 지금 움직이는 경로를 찾기 어려웠고(B-01, dimOthers는 selection만 인지), 고스트 농도가 entity별 순번이라 22명일 때 계층이 무너지며(B-02/FRAG-04), 배지가 겹칠 수 있고(B-03), 얇은 경로가 피치 라인에 묻혔다(B-04).
+Change (모두 UI-only·순수 helper, 문서/엔진 불변):
+- pathPresentation: `deriveActiveSegmentIds`/`derivePathPhase`(past·active·future), `ghostOpacityForStep`(전역 step rank 감쇠, 바닥 0.18, 선택 부스트), `placeStepBadges`(결정적 후보 링, 2.6m 간격, 4m 한계).
+- PathLayer: `pathPhase` prop — active는 casing 강조·선 굵게, past 0.22·future 0.45로 후퇴. 반투명 흰 casing을 모든 경로 밑에 렌더(B-04). 렌더러는 표시 전용 유지.
+- SimplePitch: viewingFrame(재생·정지 frame·preview)에서 compiled segmentTimes로 phase 계산해 전달; 고스트 opacity를 전역 rank로; 배지 위치는 placeStepBadges 경유.
+- StepBar: 재생 중 진행 중인 단계 chip에 `aria-current="step"` + 시각 링.
+Validation: typecheck/lint/test 111(pathPresentation +4)/build/harness/format PASS; Playwright(m4.cjs): 재생 중 phase active/future→past/active 전환, aria-current chip 표시, casing 2, 배지 간격 확보, 콘솔 클린. 감쇠 수치의 최종 체감(A-05)은 사용자 브라우저 확인 대기.
+
