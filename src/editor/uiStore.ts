@@ -84,9 +84,9 @@ export interface UiState {
   /** Transient status line ("다운로드 시작" …), shown by DocMenu; auto-clears. */
   toast: string | null
   flashToast: (msg: string, ms?: number) => void
-  /** Interactive first-visit tour (src/ui/tour). `step` indexes TOUR_STEPS. */
-  tour: { active: boolean; step: number }
-  startTour: (step?: number) => void
+  /** Interactive first-visit tour (src/ui/tour). `step` indexes the active step set. */
+  tour: { active: boolean; step: number; set: 'main' | 'mini' }
+  startTour: (step?: number, set?: 'main' | 'mini') => void
   setTourStep: (step: number) => void
   endTour: () => void
   selectedSegmentId: Id | null
@@ -146,7 +146,7 @@ export const useUiStore = create<UiState>((set) => ({
   rangeStart: 0,
   rangeEnd: null,
   completion: 'idle',
-  tour: { active: false, step: 0 },
+  tour: { active: false, step: 0, set: 'main' },
   toast: null,
   currentStep: 1,
   animMode: false,
@@ -210,9 +210,9 @@ export const useUiStore = create<UiState>((set) => ({
     set({ toast: msg })
     setTimeout(() => set((s) => (s.toast === msg ? { toast: null } : {})), ms)
   },
-  startTour: (step = 0) => set({ tour: { active: true, step } }),
+  startTour: (step = 0, set_ = 'main') => set({ tour: { active: true, step, set: set_ } }),
   setTourStep: (step) => set((s) => ({ tour: { ...s.tour, step } })),
-  endTour: () => set({ tour: { active: false, step: 0 } }),
+  endTour: () => set({ tour: { active: false, step: 0, set: 'main' } }),
   setPlaying: (playing) =>
     set((s) => ({
       // Pause HOLDS the frame (A-02); returning to the authoring start is explicit

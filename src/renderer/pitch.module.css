@@ -499,3 +499,25 @@
 .pathFuture {
   opacity: 0.45;
 }
+
+/* Editing decorations (ghosts/badges) fade at playback boundaries instead of popping (D-02). */
+.decorShown,
+.decorHidden {
+  transition: opacity 160ms ease;
+}
+
+.decorShown {
+  opacity: 1;
+}
+
+.decorHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decorShown,
+  .decorHidden {
+    transition: none;
+  }
+}

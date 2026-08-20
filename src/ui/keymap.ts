@@ -33,7 +33,7 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: '선수 클릭', hint: '등번호·이름·포지션 편집' },
 ]
 
-/** 애니메이션 모드에서만. */
+/** 경로 그리기·다듬기·재생. */
 export const ANIM_BINDINGS: Binding[] = [
   { label: 'Shift+드래그', hint: '선수는 이동 경로, 공은 패스' },
   { label: '흐린 토큰 Shift+드래그', hint: '그 위치에서 이어서 그리기' },
@@ -46,7 +46,7 @@ export const ANIM_BINDINGS: Binding[] = [
 
 export const KEYMAP_GROUPS: { title: string; items: Binding[] }[] = [
   { title: '배치', items: PLACE_BINDINGS },
-  { title: '애니메이션 모드', items: ANIM_BINDINGS },
+  { title: '경로 그리기·다듬기', items: ANIM_BINDINGS },
   { title: '재생', items: Object.values(KEYMAP.playback) },
   { title: '편집', items: Object.values(KEYMAP.edit) },
 ]

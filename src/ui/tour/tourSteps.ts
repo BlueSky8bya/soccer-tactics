@@ -8,6 +8,8 @@ export interface TourContext {
   timelineExpanded: boolean
   autoReactOpen: boolean
   animMode: boolean
+  /** Playback scope of the last started playback (mini tour: '이 단계만'). */
+  playScope: 'all' | 'step' | 'from-step'
 }
 
 export interface TourStep {
@@ -110,12 +112,43 @@ export const TOUR_STEPS: TourStep[] = [
 ]
 
 /** Index of the first step at or after `from` that is not already done (terminal steps always count). */
-export function nextPendingStep(from: number, ctx: TourContext): number {
-  for (let i = from; i < TOUR_STEPS.length; i++) {
-    const s = TOUR_STEPS[i]!
+export function nextPendingStep(from: number, ctx: TourContext, steps = TOUR_STEPS): number {
+  for (let i = from; i < steps.length; i++) {
+    const s = steps[i]!
     if (s.terminal) return i
     if (s.available && !s.available(ctx)) continue
     if (!s.done(ctx)) return i
   }
-  return TOUR_STEPS.length - 1
+  return steps.length - 1
 }
+
+/**
+ * Opt-in mini tour (PLAN-005 M6, C-04): the EDIT loop — bend something, replay only that step,
+ * undo if you dislike it. Started from the guide panel; never auto-shown.
+ */
+export const MINI_TOUR_STEPS: TourStep[] = [
+  {
+    id: 'mini-bend',
+    title: '경로 살짝 구부리기',
+    body: '아무 경로나 중간을 잡아 당겨 보세요. 곡선이 됩니다. (경로가 없으면 선수를 Shift+드래그로 하나 만들고요)',
+    kbd: '경로 드래그',
+    target: () => '[data-segment]',
+    done: (ctx) => ctx.doc !== ctx.entry,
+  },
+  {
+    id: 'mini-step-replay',
+    title: '바꾼 단계만 다시 보기',
+    body: '아래 단계 칩 옆 [▶ 이 단계만]을 누르면 그 단계만 재생돼요. 전체를 기다릴 필요가 없어요.',
+    target: () => '[class*="stepActions"] button',
+    done: (ctx) => ctx.hasPlayed && ctx.playScope === 'step',
+  },
+  {
+    id: 'mini-undo',
+    title: '마음에 안 들면 되돌리기',
+    body: 'Ctrl+Z 한 번이면 마지막 수정이 통째로 돌아갑니다. 실험은 부담 없이!',
+    kbd: 'Ctrl+Z',
+    target: () => null,
+    done: () => false,
+    terminal: true,
+  },
+]

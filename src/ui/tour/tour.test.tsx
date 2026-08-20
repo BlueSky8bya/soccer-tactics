@@ -10,7 +10,7 @@ import { makePath } from '@/editor/segmentCommands'
 import { useUiStore } from '@/editor/uiStore'
 import { AppShell } from '../AppShell'
 import { hasSeenTour, markTourSeen, resetTourSeen } from './tourStorage'
-import { TOUR_STEPS, nextPendingStep } from './tourSteps'
+import { MINI_TOUR_STEPS, TOUR_STEPS, nextPendingStep } from './tourSteps'
 
 beforeAll(() => {
   if (!window.matchMedia) {
@@ -35,7 +35,7 @@ beforeAll(() => {
 beforeEach(() => {
   resetTourSeen()
   useUiStore.setState({
-    tour: { active: false, step: 0 },
+    tour: { active: false, step: 0, set: 'main' as const },
     animMode: false,
     hasPlayed: false,
     timelineExpanded: false,
@@ -82,6 +82,7 @@ describe('tourSteps', () => {
       timelineExpanded: false,
       autoReactOpen: false,
       animMode: true,
+      playScope: 'all' as const,
     }
     // players empty -> step 0 (place) pending
     expect(nextPendingStep(0, ctx)).toBe(0)
@@ -140,5 +141,29 @@ describe('interactive tour (first visit)', () => {
     await wait(600)
     // step 0 (fill pitch) auto-completes → step 1
     expect(useUiStore.getState().tour.step).toBe(1)
+  })
+})
+
+describe('opt-in mini tour (PLAN-005 M6, C-04)', () => {
+  it('has the edit-loop steps and its replay step completes on a scoped step playback', () => {
+    expect(MINI_TOUR_STEPS.map((s) => s.id)).toEqual(['mini-bend', 'mini-step-replay', 'mini-undo'])
+    const doc = createEmptyDocument({ id: 'd', now: '2026-08-19T00:00:00.000Z' })
+    const base = {
+      doc,
+      entry: doc,
+      hasPlayed: true,
+      timelineExpanded: false,
+      autoReactOpen: false,
+      animMode: false,
+    }
+    const replay = MINI_TOUR_STEPS[1]!
+    expect(replay.done({ ...base, playScope: 'all' })).toBe(false)
+    expect(replay.done({ ...base, playScope: 'step' })).toBe(true)
+    // terminal step never auto-advances
+    expect(MINI_TOUR_STEPS[2]!.terminal).toBe(true)
+    // bend step completes on any document change
+    const doc2 = createEmptyDocument({ id: 'e', now: '2026-08-19T00:00:00.000Z' })
+    expect(MINI_TOUR_STEPS[0]!.done({ ...base, playScope: 'all' })).toBe(false)
+    expect(MINI_TOUR_STEPS[0]!.done({ ...base, doc: doc2, playScope: 'all' })).toBe(true)
   })
 })

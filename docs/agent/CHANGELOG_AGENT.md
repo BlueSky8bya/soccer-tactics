@@ -468,3 +468,14 @@ Change:
 - AppShell 헤더: `A | B` chip(+aria-pressed)과 `→ B안 복제` — 전환/복제 시 재생 정지·선택 해제, 복제 toast. 저장/파일 용어 없음, 새로고침이면 소멸.
 Validation: typecheck/lint/test 115(variantSession 3, AppShell A/B 1 신규)/build/harness/format PASS; Playwright(m5.cjs): A 1개→복제 B 1개→B 추가 2개→A 복귀 1개→A undo 0개·B 2개 유지, 새로고침 후 B 비활성·빈 판, 콘솔 클린.
 
+### CHG-20260820-041 — UX — 이유 있는 피드백·미니 투어·모션 폴리시 (PLAN-005 M6)
+
+Problem: 짧은 드래그가 조용히 무시됐고(C-03), 기본 투어가 만들기까지만 가르치며(C-04), 재생 경계에서 고스트/배지가 한 frame에 사라지고(D-02), 공 드롭 스프링이 배선되지 않았고(D-03), 안내가 제거된 "애니메이션 모드"를 전제했다(DOC-05).
+Change:
+- finishDraw 1.5m 미만 → `너무 짧아요` toast(문서 불변, C-03).
+- 옵트인 미니 투어 `MINI_TOUR_STEPS`(굽히기→이 단계만 재생→Ctrl+Z), 조작법 패널 버튼으로 시작. tour state에 set('main'|'mini'), TourContext에 playScope 추가. 기본 투어는 그대로 5단계.
+- 고스트/배지를 마운트 유지 + `.decorShown/.decorHidden` opacity 160ms 페이드(D-02), hidden은 pointer-events none, prefers-reduced-motion이면 즉시(D-05).
+- 공 드래그 커밋 시 보유자 스냅 오프셋을 `AnimatedToken dropFrom` 스프링으로 수렴(D-03, 문서 좌표는 즉시 확정, reduced-motion은 스프링 immediate 기존 지원).
+- 안내 언어: "애니메이션 모드" 그룹 → "경로 그리기·다듬기"(DOC-05).
+Validation: typecheck/lint/test 116(mini tour 1 신규)/build/harness/format PASS; Playwright(m6.cjs): 짧은 드래그 toast+segments 0, 재생 중 decorHidden 2·복귀 후 decorShown 2, 미니 투어 3단계 자동 진행(굽히기→단계 재생→되돌리기), M1 회귀 재실행 PASS, 콘솔 클린. 드롭 스프링 체감은 사용자 브라우저 확인 대기.
+

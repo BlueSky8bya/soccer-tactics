@@ -106,9 +106,18 @@ function Row({ b }: { b: Binding }) {
 
 /** Right panel: always-visible gesture guide, split by mode. */
 export function GuidePanel() {
+  const startTour = useUiStore((s) => s.startTour)
   return (
     <aside className={styles.sideRight} aria-label={t('panel.guide')}>
       <div className={styles.sectionLabel}>{t('panel.guide')}</div>
+      <button
+        type="button"
+        className={`${styles.btn} ${styles.panelBtn}`}
+        onClick={() => startTour(0, 'mini')}
+        title={t('tour.mini')}
+      >
+        {t('tour.mini')}
+      </button>
       <div className={styles.guideGroup}>
         <div className={styles.guideTitle}>{t('panel.place')}</div>
         {PLACE_BINDINGS.map((b) => (

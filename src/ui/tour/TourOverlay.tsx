@@ -4,7 +4,7 @@ import { useUiStore } from '@/editor/uiStore'
 import { t } from '../i18n'
 import styles from '../shell.module.css'
 import { markTourSeen } from './tourStorage'
-import { TOUR_STEPS, nextPendingStep, type TourContext } from './tourSteps'
+import { MINI_TOUR_STEPS, TOUR_STEPS, nextPendingStep, type TourContext } from './tourSteps'
 
 interface Rect {
   x: number
@@ -28,24 +28,34 @@ export function TourOverlay() {
   const shortcutsOpen = useUiStore((s) => s.shortcutsOpen)
   if (!tour.active || shortcutsOpen) return null
   // key = step index → each step mounts fresh (captures its own entry document, rect, timers).
-  return <TourStepView key={tour.step} stepIndex={tour.step} />
+  return <TourStepView key={`${tour.set}-${tour.step}`} stepIndex={tour.step} stepSet={tour.set} />
 }
 
-function TourStepView({ stepIndex }: { stepIndex: number }) {
+function TourStepView({ stepIndex, stepSet }: { stepIndex: number; stepSet: 'main' | 'mini' }) {
+  const STEPS = stepSet === 'mini' ? MINI_TOUR_STEPS : TOUR_STEPS
   const core = useEditor()
   const { doc } = useEditorSnapshot()
   const hasPlayed = useUiStore((s) => s.hasPlayed)
   const timelineExpanded = useUiStore((s) => s.timelineExpanded)
   const autoReactOpen = useUiStore((s) => s.autoReactOpen)
   const animMode = useUiStore((s) => s.animMode)
+  const playScope = useUiStore((s) => s.playScope)
   const reducedMotion = useUiStore((s) => s.reducedMotion)
   const setTourStep = useUiStore((s) => s.setTourStep)
   const endTour = useUiStore((s) => s.endTour)
 
-  const step = TOUR_STEPS[stepIndex] ?? TOUR_STEPS[TOUR_STEPS.length - 1]!
+  const step = STEPS[stepIndex] ?? STEPS[STEPS.length - 1]!
   // Document when this step became active — "done" means "changed since you got here".
   const [entry] = useState(doc)
-  const ctx: TourContext = { doc, entry, hasPlayed, timelineExpanded, autoReactOpen, animMode }
+  const ctx: TourContext = {
+    doc,
+    entry,
+    hasPlayed,
+    timelineExpanded,
+    autoReactOpen,
+    animMode,
+    playScope,
+  }
   const done = !step.terminal && step.done(ctx)
 
   const ctxRef = useRef(ctx)
@@ -57,6 +67,7 @@ function TourStepView({ stepIndex }: { stepIndex: number }) {
     const d = core.getDocument()
     const u = useUiStore.getState()
     const next: TourContext = {
+      playScope: u.playScope,
       doc: d,
       entry: d,
       hasPlayed: u.hasPlayed,
@@ -64,8 +75,8 @@ function TourStepView({ stepIndex }: { stepIndex: number }) {
       autoReactOpen: u.autoReactOpen,
       animMode: u.animMode,
     }
-    setTourStep(nextPendingStep(stepIndex + 1, next))
-  }, [core, setTourStep, stepIndex])
+    setTourStep(nextPendingStep(stepIndex + 1, next, STEPS))
+  }, [core, setTourStep, stepIndex, STEPS])
 
   // Auto-advance shortly after the action was performed (the ✓ state shows meanwhile).
   useEffect(() => {
@@ -241,7 +252,7 @@ function TourStepView({ stepIndex }: { stepIndex: number }) {
       >
         <div className={styles.tourHead}>
           <span className={styles.tourProgress}>
-            {t('tour.title')} · {stepIndex + 1}/{TOUR_STEPS.length}
+            {t('tour.title')} · {stepIndex + 1}/{STEPS.length}
           </span>
           <button type="button" className={styles.linkBtn} onClick={finish} title={t('tour.skip')}>
             {t('tour.skip')}
@@ -271,7 +282,7 @@ function TourStepView({ stepIndex }: { stepIndex: number }) {
           </div>
         </div>
         <div className={styles.tourDots} aria-hidden="true">
-          {TOUR_STEPS.map((s, i) => (
+          {STEPS.map((s, i) => (
             <span
               key={s.id}
               className={`${styles.tourDot} ${i < stepIndex ? styles.tourDotDone : ''} ${i === stepIndex ? styles.tourDotNow : ''}`}

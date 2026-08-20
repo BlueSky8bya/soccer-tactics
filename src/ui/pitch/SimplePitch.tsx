@@ -98,6 +98,8 @@ export function SimplePitch() {
   const [shiftHeld, setShiftHeld] = useState(false)
   /** While drawing: the target (player now / any future ghost) the stroke end is snapped to. */
   const [snapPos, setSnapPos] = useState<Vec2 | null>(null)
+  /** Ball drop feedback (D-03): UI-only offset spring from the release point to the settled home. */
+  const [ballDrop, setBallDrop] = useState<{ from: Vec2; key: number } | null>(null)
   /** Unbroken Shift chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
@@ -138,7 +140,11 @@ export function SimplePitch() {
         i ? acc + Math.hypot(w.p.x - waypoints[i - 1]!.p.x, w.p.y - waypoints[i - 1]!.p.y) : 0,
       0,
     )
-    if (length < 1.5) return
+    if (length < 1.5) {
+      // Too short to mean anything - say WHY nothing happened instead of a silent no-op (C-03).
+      ui.flashToast(t('simple.tooShort'))
+      return
+    }
     const step =
       chain.current && chain.current.entityId === entityId ? chain.current.step : st.currentStep
     // Chain past the last step: block BEFORE creating anything and say why (A-05).
@@ -268,6 +274,12 @@ export function SimplePitch() {
         .sort((a, b) => a.dist - b.dist)[0]
       core.update((dd) => moveBallStartInDraft(dd as TacticDocument, at, near?.p.id ?? null))
       core.commit()
+      // The ball may have snapped to a holder: animate the last few pixels (document is already final).
+      const settled = core.getDocument().ball.home
+      const dx = at.x - settled.x
+      const dy = at.y - settled.y
+      if (Math.hypot(dx, dy) > 0.05)
+        setBallDrop((prev) => ({ from: { x: dx, y: dy }, key: (prev?.key ?? 0) + 1 }))
     } else {
       core.commit()
     }
@@ -761,9 +773,9 @@ export function SimplePitch() {
         dimOthers={isPlaying}
         pathPhase={viewingFrame ? pathPhase : undefined}
       />
-      {/* step badges */}
-      {!viewingFrame &&
-        badges.map((b) => (
+      {/* step badges - kept mounted, faded out while viewing a frame (D-02) */}
+      <g className={viewingFrame ? styles.decorHidden : styles.decorShown}>
+        {badges.map((b) => (
           <g
             key={b.id}
             className={styles.stepBadge}
@@ -782,6 +794,7 @@ export function SimplePitch() {
             </text>
           </g>
         ))}
+      </g>
       {doc.players.map((p) => {
         const rp = resolved.players[p.id]
         return (
@@ -814,8 +827,8 @@ export function SimplePitch() {
         selected={selection.includes(doc.ball.id)}
         hovered={false}
         dragging={drag?.id === doc.ball.id}
-        dropFrom={null}
-        dropKey={0}
+        dropFrom={ballDrop?.from ?? null}
+        dropKey={ballDrop?.key ?? 0}
         pulseKey={pulses[doc.ball.id]}
       />
       {snapPos && ui.pathDraft && (
@@ -832,9 +845,9 @@ export function SimplePitch() {
           className={styles.marquee}
         />
       )}
-      {/* ghosts: future positions (Shift+drag to continue from there) */}
-      {!viewingFrame &&
-        ghosts.map((g) => (
+      {/* ghosts: future positions - kept mounted, faded while viewing a frame (D-02) */}
+      <g className={viewingFrame ? styles.decorHidden : styles.decorShown}>
+        {ghosts.map((g) => (
           <g
             key={g.id}
             className={styles.ghostToken}
@@ -864,6 +877,7 @@ export function SimplePitch() {
             )}
           </g>
         ))}
+      </g>
       {drag &&
         drag.id === doc.ball.id &&
         Math.hypot(drag.raw.x - resolved.ball.pos.x, drag.raw.y - resolved.ball.pos.y) > 0.6 && (
