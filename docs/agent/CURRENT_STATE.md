@@ -6,7 +6,7 @@ Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness
 
 ## Current Objective
 
-PLAN-20260821-005 (Codex 계획·Claude 구현, 승인 2026-08-20 "A-04 보류, 나머지는 계획대로") **M1~M7 전부 구현·AGENT-VERIFIED**. 다음: 사용자 브라우저 체감 확인(아래 체크리스트) → 피드백 반영.
+PLAN-20260821-006 (대대적 리디자인, 승인 2026-08-20) 진행 중 — **M0(기준 증거)·M1(시맨틱 토큰·재질 계층) 완료**, 다음 M2(첫 3초 shell 계층). PLAN-005는 완료·배포됨(Vercel 자동 배포, GitHub push 상시 위임).
 
 ### PLAN-005 요약 (2026-08-20, 커밋 d246f43…)
 

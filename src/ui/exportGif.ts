@@ -9,6 +9,7 @@ import type { TacticDocument } from '@/domain/types'
 import { compile } from '@/engine/compile'
 import { pitchMarkings } from '@/engine/geometry'
 import { stateAt } from '@/engine/stateAt'
+import { VISUAL } from '@/renderer/visualDefaults'
 
 export interface GifOptions {
   /** Tactical seconds per real second in the GIF (time compression). */
@@ -19,11 +20,11 @@ export interface GifOptions {
   onProgress?: (done: number, total: number) => void
 }
 
-const GRASS = '#4aab6d'
-const GRASS_ALT = '#45a266'
-const LINE = 'rgba(255,255,255,0.9)'
-const TOKEN_R = 1.7
-const BALL_R = 0.75
+const GRASS = VISUAL.pitchGrass
+const GRASS_ALT = VISUAL.pitchGrassAlt
+const LINE = VISUAL.pitchLine
+const TOKEN_R = VISUAL.tokenRadiusM
+const BALL_R = VISUAL.ballRadiusM
 
 function drawPitch(ctx: CanvasRenderingContext2D, doc: TacticDocument, k: number): void {
   const m = pitchMarkings(doc.pitch)
@@ -91,14 +92,14 @@ export function drawFrame(
   const b = rs.ball.pos
   ctx.beginPath()
   ctx.arc(b.x * k, b.y * k, BALL_R * k, 0, Math.PI * 2)
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = VISUAL.ballFill
   ctx.fill()
   ctx.lineWidth = Math.max(1, 0.12 * k)
   ctx.strokeStyle = 'rgba(20,24,32,0.7)'
   ctx.stroke()
   ctx.beginPath()
   ctx.arc(b.x * k, b.y * k, BALL_R * 0.35 * k, 0, Math.PI * 2)
-  ctx.fillStyle = 'rgba(20,24,32,0.6)'
+  ctx.fillStyle = VISUAL.ballDetail
   ctx.fill()
 }
 

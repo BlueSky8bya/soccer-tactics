@@ -29,16 +29,17 @@ export interface SpringState {
   velocity: number
 }
 
+/**
+ * Semantic spring roles (PLAN-006 M1): press(quick ack) / pickup(lift) / drop(settle) /
+ * overlay(panel & toast). UI-only scalars — tactical coordinates never go through these.
+ */
 export const SPRINGS = {
-  selection: { duration: 0.18, bounce: 0 },
-  tool: { duration: 0.2, bounce: 0 },
+  press: { duration: 0.18, bounce: 0 },
   pickup: { duration: 0.22, bounce: 0.1 },
   drop: { duration: 0.35, bounce: 0.25 },
-  timelineSnap: { duration: 0.3, bounce: 0.2 },
-  panelIn: { duration: 0.3, bounce: 0.1 },
-  panelOut: { duration: 0.22, bounce: 0 },
-  timelineExpand: { duration: 0.32, bounce: 0.15 },
-  miniBar: { duration: 0.24, bounce: 0.15 },
+  overlay: { duration: 0.3, bounce: 0.1 },
+  /* legacy aliases (migrated consumers should use the four roles above) */
+  selection: { duration: 0.18, bounce: 0 },
   toast: { duration: 0.4, bounce: 0.3 },
 } as const satisfies Record<string, SpringConfig>
 

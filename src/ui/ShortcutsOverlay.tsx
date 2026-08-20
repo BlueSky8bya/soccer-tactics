@@ -11,7 +11,7 @@ export function ShortcutsOverlay() {
   const open = useUiStore((s) => s.shortcutsOpen)
   const setOpen = useUiStore((s) => s.setShortcutsOpen)
   const el = useRef<HTMLDivElement>(null)
-  const anim = useSpringAnimator(0, SPRINGS.panelIn, (v) => {
+  const anim = useSpringAnimator(0, SPRINGS.overlay, (v) => {
     const node = el.current
     if (!node) return
     node.style.opacity = String(Math.max(0, Math.min(1, v)))

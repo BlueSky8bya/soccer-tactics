@@ -43,16 +43,39 @@
   --st-radius-l: 16px;
   --st-radius-pill: 999px;
 
-  /* Shadows */
-  --st-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --st-shadow-2: 0 4px 14px rgba(16, 24, 40, 0.1);
-  --st-shadow-3: 0 16px 40px rgba(16, 24, 40, 0.16);
+  /* Depth — four semantic levels (PLAN-006 M1): rest < raised < drag < overlay.
+     Only ONE overlay-level surface may be visible at a time. */
+  --st-depth-rest: 0 0 0 1px var(--st-border), 0 1px 2px rgba(16, 24, 40, 0.05);
+  --st-depth-raised: 0 6px 18px rgba(16, 24, 40, 0.1);
+  --st-depth-drag: 0 12px 28px rgba(16, 24, 40, 0.18);
+  --st-depth-overlay: 0 20px 56px rgba(16, 24, 40, 0.22);
 
-  /* Interface motion (UI only — never tactical motion). CSS fallbacks for opacity/color. */
-  --st-motion-fast: 120ms;
-  --st-motion-base: 200ms;
-  --st-motion-slow: 320ms;
-  --st-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Legacy shadows (aliases during M1 migration — consumers move to --st-depth-*) */
+  --st-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --st-shadow-2: var(--st-depth-raised);
+  --st-shadow-3: var(--st-depth-overlay);
+
+  /* Radius roles: control 8 / card 14 / stage 20 / pill */
+  --st-radius-control: 8px;
+  --st-radius-card: 14px;
+  --st-radius-stage: 20px;
+
+  /* Interface motion (UI only — never tactical motion). Semantic durations + easings:
+     instant(hover/focus color) < feedback(press/release) < transition(panel/cross-fade)
+     < settle(drop/selection) < emphasis(one-shot confirm, 480ms cap). */
+  --st-motion-instant: 80ms;
+  --st-motion-feedback: 140ms;
+  --st-motion-transition: 220ms;
+  --st-motion-settle: 320ms;
+  --st-motion-emphasis: 480ms;
+  --st-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --st-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --st-ease-pop: cubic-bezier(0.22, 1.4, 0.36, 1);
+
+  /* Legacy motion aliases */
+  --st-motion-fast: var(--st-motion-feedback);
+  --st-motion-base: var(--st-motion-transition);
+  --st-motion-slow: var(--st-motion-settle);
 
   /* Hit targets (ADR-0006 D3) */
   --st-hit-token: 28px;
@@ -83,6 +106,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --st-motion-instant: 0ms;
+    --st-motion-feedback: 0ms;
+    --st-motion-transition: 0ms;
+    --st-motion-settle: 0ms;
+    --st-motion-emphasis: 0ms;
     --st-motion-fast: 0ms;
     --st-motion-base: 0ms;
     --st-motion-slow: 0ms;

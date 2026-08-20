@@ -641,3 +641,15 @@ Change:
 - 부착 순간: 기존 펄스+토스트에 **확장 링 플래시**(0.55s bounce ease, onAnimationEnd 자동 제거, reduced-motion 즉시) 추가.
 Validation: typecheck/lint/test 122/build/harness/format PASS; Playwright: 링 발화·자동 소거, 부착 후 중앙 클릭=선수 카드, 스크린샷 육안(공이 가장자리), 콘솔 클린.
 
+### CHG-20260820-056 — REFACTOR — PLAN-006 M0·M1: 기준 증거 + 시맨틱 토큰·재질 계층
+
+Problem: (M0) 리디자인 비교 기준 없음. (M1) blur 남용(AUD-01), CSS 임의값(AUD-02), depth 평탄(AUD-03), 모션 값 제각각(AUD-07), 화면·GIF 상수 분리(AUD-06).
+Change:
+- M0: BASE-01~08 스크린샷 + manifest를 `docs/agent/evidence/PLAN-20260821-006/`에 고정(콘솔 클린). Ambiguity A-01~A-06 사용자 확정(전부 (a), A-03은 절충 — bob 유지+다수 이동 시 감쇠 예정).
+- M1 tokens.css: 시맨틱 **depth 4단계**(rest/raised/drag/overlay), **radius 역할**(control 8/card 14/stage 20/pill), **모션 의미**(instant 80/feedback 140/transition 220/settle 320/emphasis 480 + standard/out/pop easing), reduced-motion 전부 0ms. 구 토큰은 alias 유지.
+- A-04a 적용: 헤더·패널 카드 **solid**(blur 제거), blur는 footer 바+오버레이 1종만. pitchFrame·toast·decor 페이드·attach 링·tour spotlight 모두 토큰 소비, module CSS에서 cubic-bezier 0.
+- `renderer/visualDefaults.ts`: 화면·GIF 공용 시각 상수(AUD-06) — exportGif가 소비.
+- SPRINGS를 의미 역할(press/pickup/drop/overlay)로 정리(레거시 alias 유지, ShortcutsOverlay 이행).
+- 신규 `designTokens.test.ts` 4건: 토큰 정의·reduced 커버리지·bezier 0·blur 상한(A-04a).
+Validation: typecheck/lint/test 126(+4)/build/harness/format PASS; 스크린샷 비교(BASE-01 대비 카드 solid·피치 단일 depth), 콘솔 클린.
+
