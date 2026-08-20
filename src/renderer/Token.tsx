@@ -70,10 +70,6 @@ export const Token = memo(function Token(p: TokenProps) {
       <>
         {/* soft ground shadow — lifts the piece off the grass (design polish 2026-08-20) */}
         <ellipse cx={0.22} cy={0.3} rx={r * 1.02} ry={r * 0.62} className={styles.tokenShadow} />
-        {p.selected && (
-          <circle r={r + 0.7} className={styles.selectionRing} style={{ stroke: p.color }} />
-        )}
-        {!p.selected && p.hovered && <circle r={r + 0.5} className={styles.hoverRing} />}
         {p.moving && p.heading !== undefined && (
           <path
             d={`M ${r + 0.2} -0.55 L ${r + 1.1} 0 L ${r + 0.2} 0.55 Z`}
@@ -82,7 +78,12 @@ export const Token = memo(function Token(p: TokenProps) {
             style={{ fill: p.color }}
           />
         )}
-        <circle r={r} className={styles.tokenBody} style={{ fill: p.color }} />
+        {/* selection = the token's own border thickens (no extra outer ring — user 2026-08-21) */}
+        <circle
+          r={r}
+          className={`${styles.tokenBody} ${p.selected ? styles.tokenBodySelected : ''}`}
+          style={{ fill: p.color }}
+        />
         {p.awayKeyline && <circle r={r - 0.42} className={styles.awayKeyline} />}
         <text className={styles.tokenNumber}>{p.number}</text>
         {p.label && (
@@ -110,15 +111,8 @@ export const Token = memo(function Token(p: TokenProps) {
           className={styles.ballShadow}
           style={{ opacity: Math.max(0.12, 0.42 - h * 0.05) }}
         />
-        {p.selected && (
-          <circle r={r + 0.8} className={styles.selectionRing} style={{ stroke: '#ffffff' }} />
-        )}
-        {!p.selected && p.hovered && <circle r={r + 0.6} className={styles.hoverRing} />}
-        {p.ballStatus === 'possessed' && p.holderColor && (
-          <circle r={r + 0.42} className={styles.holderRing} style={{ stroke: p.holderColor }} />
-        )}
         <g transform={`scale(${scale})`}>
-          <circle r={r} className={styles.ball} />
+          <circle r={r} className={`${styles.ball} ${p.selected ? styles.ballSelected : ''}`} />
           <g transform={`rotate(${spinDeg}) scale(${r})`}>
             <BallPattern />
           </g>

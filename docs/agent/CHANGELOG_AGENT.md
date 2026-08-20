@@ -872,3 +872,9 @@ Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright: net f
 
 Change: GoalNet(보드)·GIF 골대의 0.8m 테이퍼 제거 — 골라인에서 뒤 2m까지 직각 상자. 메시·포스트·크로스바 불변.
 Validation: typecheck/test 152 PASS, Playwright 골대 요소 카운트 동일 + 확대 스크린샷 직사각 확인.
+
+### CHG-20260821-085 — UX — 토큰 바깥 링 전부 제거 (사용자: 거추장)
+
+Problem: 선택 링(선수 팀색/공 흰색)·호버 예고 링·소유 링(공 주변 팀색)이 전부 토큰 테두리 밖 별도 원 — 공 잔상 몇 개만 있어도 화면이 어수선.
+Change: Token.tsx에서 selectionRing/hoverRing/holderRing 요소 제거(+CSS). 선택 피드백은 토큰 자체 테두리 두께 증가로 대체(선수 2→3.5px, 공 1.2→2.4px) — 바깥 기하 추가 0. 호버 예고는 경로·고스트 하이라이트로 유지(PLAN-007 A-02 토큰 링 부분만 폐기). CHG-055의 소유 링 명시 폐기(가까운 오프셋 배치가 부착감 전달).
+Validation: typecheck/lint/test 152/build/format PASS. Playwright: 선택 상태에서 링 요소 0, tokenBodySelected 적용 확인, 콘솔 클린.

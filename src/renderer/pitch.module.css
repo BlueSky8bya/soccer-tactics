@@ -117,21 +117,13 @@
   stroke-width: 0.25px;
 }
 
-.selectionRing {
-  fill: none;
-  stroke: var(--st-accent); /* overridden inline: ball = white, player = team colour */
-  stroke-width: 2.5px;
-  vector-effect: non-scaling-stroke;
-  pointer-events: none;
-  filter: drop-shadow(0 0 0.6px rgba(255, 255, 255, 0.9));
+/* Selection = the piece's own border thickens; NO outer rings (user 2026-08-21: 거추장). */
+.tokenBodySelected {
+  stroke-width: 3.5px;
 }
 
-.hoverRing {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.7);
-  stroke-width: 1.5px;
-  vector-effect: non-scaling-stroke;
-  pointer-events: none;
+.ballSelected {
+  stroke-width: 2.4px;
 }
 
 .ball {
@@ -571,14 +563,6 @@
 
 .stepPickerItemActive text {
   fill: #fff;
-}
-
-/* Possessed ball: a snug team-color ring says "attached to this player", not loose on the grass. */
-.holderRing {
-  fill: none;
-  stroke-width: 0.28;
-  opacity: 0.95;
-  pointer-events: none;
 }
 
 .tokenShadow {
