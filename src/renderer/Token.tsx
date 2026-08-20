@@ -24,6 +24,8 @@ export interface TokenProps {
   height?: number
   spin?: number
   ballStatus?: 'possessed' | 'travel' | 'loose'
+  /** Away players wear an inner keyline (A-02a): team identity survives CVD/grayscale. */
+  awayKeyline?: boolean
   /** Team color of the holder while possessed — the "attached" ring (user 2026-08-20). */
   holderColor?: string
   /**
@@ -81,6 +83,7 @@ export const Token = memo(function Token(p: TokenProps) {
           />
         )}
         <circle r={r} className={styles.tokenBody} style={{ fill: p.color }} />
+        {p.awayKeyline && <circle r={r - 0.42} className={styles.awayKeyline} />}
         <text className={styles.tokenNumber}>{p.number}</text>
         {p.label && (
           <text className={styles.tokenLabel} y={r + 1.6}>

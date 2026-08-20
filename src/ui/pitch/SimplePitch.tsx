@@ -41,6 +41,7 @@ import { AnimatedToken } from './AnimatedToken'
 import {
   deriveAttachedPathStart,
   derivePathPhase,
+  deriveRestMutedIds,
   ghostOpacityForStep,
   placeStepBadges,
 } from './pathPresentation'
@@ -700,6 +701,24 @@ export function SimplePitch() {
     : ''
   const attachedStart = deriveAttachedPathStart(doc, compiled, ui.selectedSegmentId)
 
+  // A-05a rest hierarchy: paths outside the CURRENT step recede (0.55) but stay readable.
+  const stepMuted = !viewingFrame
+    ? deriveRestMutedIds(
+        sceneTracks(doc).flatMap((tr) =>
+          tr.segments
+            .filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
+            .map((sg) => ({ id: sg.id, step: stepOf(sg as { step?: number }) })),
+        ),
+        ui.currentStep,
+        ui.selectedSegmentId,
+      )
+    : undefined
+
+  // A-03: how many players are running right now (bob attenuation input).
+  const movingCount = isPlaying
+    ? doc.players.reduce((n, p) => n + (resolved.players[p.id]?.moving ? 1 : 0), 0)
+    : 0
+
   // Playback focus (M4): classify every path as past/active/future for the current frame.
   const pathPhase: Record<Id, 'past' | 'active' | 'future'> = {}
   if (viewingFrame) {
@@ -840,6 +859,7 @@ export function SimplePitch() {
           }
           dimOthers={false}
           pathPhase={viewingFrame ? pathPhase : undefined}
+          stepMuted={stepMuted}
         />
       </g>
       {/* step badges - kept mounted, faded out while viewing a frame (D-02) */}
@@ -869,8 +889,10 @@ export function SimplePitch() {
         const rp = resolved.players[p.id]
         // Bouncy run feel (user 2026-08-20): a tiny deterministic bob derived from TACTICAL time —
         // pure f(t), so scrubbing/replay stay exact and the engine stays untouched.
+        // A-03 compromise: amplitude auto-attenuates when MANY players run at once (22-player calm).
+        const bobAmp = movingCount <= 4 ? 0.22 : Math.max(0.08, 0.22 * (4 / movingCount))
         const bob =
-          rp?.moving && isPlaying ? -Math.abs(Math.sin(ui.playback.t * 6.5 + pi * 1.3)) * 0.22 : 0
+          rp?.moving && isPlaying ? -Math.abs(Math.sin(ui.playback.t * 6.5 + pi * 1.3)) * bobAmp : 0
         const pos0 = rp?.pos ?? p.home
         return (
           <AnimatedToken
@@ -878,6 +900,7 @@ export function SimplePitch() {
             id={p.id}
             kind="player"
             pos={bob ? { x: pos0.x, y: pos0.y + bob } : pos0}
+            awayKeyline={p.teamId === doc.teams[1]?.id}
             color={teamColorOf(doc, p.id)}
             number={p.number}
             label={p.label && p.role ? `${p.label}(${p.role})` : (p.label ?? p.role)}

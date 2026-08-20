@@ -3,6 +3,7 @@ import { compile } from '@/engine/compile'
 import { buildScenarioA } from '@/presets/scenarios'
 import {
   deriveActiveSegmentIds,
+  deriveRestMutedIds,
   deriveAttachedPathStart,
   derivePathPhase,
   ghostOpacityForStep,
@@ -95,5 +96,22 @@ describe('playback focus helpers (PLAN-005 M4)', () => {
       const dd = Math.hypot(placed[i]!.at.x - anchors[i]!.at.x, placed[i]!.at.y - anchors[i]!.at.y)
       expect(dd).toBeLessThanOrEqual(4)
     }
+  })
+})
+
+describe('rest step hierarchy (PLAN-006 M3b, A-05a)', () => {
+  const segs = [
+    { id: 'a', step: 1 },
+    { id: 'b', step: 2 },
+    { id: 'c', step: 2 },
+  ]
+  it('mutes paths outside the current step; current step and selection stay vivid', () => {
+    expect(deriveRestMutedIds(segs, 2, null)).toEqual({ a: true })
+    expect(deriveRestMutedIds(segs, 1, null)).toEqual({ b: true, c: true })
+    // selected segment never mutes even from another step
+    expect(deriveRestMutedIds(segs, 2, 'a')).toEqual({})
+  })
+  it('is deterministic', () => {
+    expect(deriveRestMutedIds(segs, 2, null)).toEqual(deriveRestMutedIds(segs, 2, null))
   })
 })

@@ -73,6 +73,7 @@ export function drawFrame(
   drawPitch(ctx, doc, k)
   const rs = stateAt(compiled, doc, t)
   const teamColor = new Map(doc.teams.map((tm) => [tm.id, tm.color]))
+  const awayTeamId = doc.teams[1]?.id
   for (const p of doc.players) {
     const pos = rs.players[p.id]?.pos ?? p.home
     ctx.beginPath()
@@ -82,6 +83,14 @@ export function drawFrame(
     ctx.lineWidth = Math.max(1, 0.16 * k)
     ctx.strokeStyle = 'rgba(255,255,255,0.85)'
     ctx.stroke()
+    if (p.teamId === awayTeamId) {
+      // away inner keyline (A-02a) — same cue as on screen
+      ctx.beginPath()
+      ctx.arc(pos.x * k, pos.y * k, (TOKEN_R - 0.42) * k, 0, Math.PI * 2)
+      ctx.lineWidth = Math.max(1, 0.14 * k)
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+      ctx.stroke()
+    }
     ctx.fillStyle = '#fff'
     ctx.font = `700 ${Math.round(1.6 * k)}px system-ui, sans-serif`
     ctx.textAlign = 'center'

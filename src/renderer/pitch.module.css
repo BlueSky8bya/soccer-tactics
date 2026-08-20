@@ -596,3 +596,16 @@
     animation-duration: 0.01s;
   }
 }
+
+/* A-02a: away team inner keyline — identity beyond color (CVD/grayscale) */
+.awayKeyline {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.16;
+  pointer-events: none;
+}
+
+/* A-05a: rest paths outside the current step recede but stay readable */
+.pathStepMuted {
+  opacity: 0.55;
+}

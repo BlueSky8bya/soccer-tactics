@@ -670,3 +670,12 @@ Problem: 보유 공이 아직 선수와 붙어 보이고, 토큰 그라데이션
 Change: carryOffset [1.6,2.1]→**[2.0,2.6]m**(기본 1.75,1.15 — 관련 상수·테스트 일괄 갱신), 토큰 gloss 그라데이션 제거 → **단색**+지면 그림자만(M3a 선결정으로 계획 Decision Log 기록).
 Validation: typecheck/lint/test 127/build/harness/format PASS; Playwright: 간격 확대·gradient 요소 0, 스크린샷 육안(플랫 단색), 콘솔 클린.
 
+### CHG-20260820-059 — UX — PLAN-006 M3: 22명 판독성 (away 키라인·rest 단계 계층·bob 감쇠)
+
+Problem: 팀 구분이 색뿐(CVD 취약), 대기 화면에서 모든 경로가 같은 대비로 경쟁, 22명 동시 이동 시 bob이 떨림(AUD-05, A-02/A-03/A-05).
+Change:
+- **A-02a**: away 선수 안쪽 흰 키라인(화면 Token + GIF 렌더러 동일 — parity 유지).
+- **A-05a**: 대기(t=0) 화면에서 현재 단계 외 경로 opacity 0.55(선택 세그먼트는 항상 선명) — 순수 helper deriveRestMutedIds(+테스트 2).
+- **A-03 절충 구현**: run bob 진폭이 동시 이동 4명까지 0.22m, 그 이상 4/n 비례 감쇠(하한 0.08) — 결정적 f(t) 유지.
+Validation: typecheck/lint/test 129(+2)/build/harness/format PASS; Playwright: away 키라인 11개, 단계 전환 시 mute 플래그 [true,false]↔[false,true], 콘솔 클린.
+

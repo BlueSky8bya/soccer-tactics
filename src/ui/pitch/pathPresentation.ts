@@ -133,3 +133,20 @@ export function placeStepBadges(
     return { id: a.id, at: best }
   })
 }
+
+/**
+ * Rest-view hierarchy (A-05a): every authored path stays visible, but paths OUTSIDE the current
+ * authoring step recede. The selected segment never mutes. Pure and deterministic.
+ */
+export function deriveRestMutedIds(
+  segs: { id: Id; step: number }[],
+  currentStep: number,
+  selectedSegmentId: Id | null,
+): Record<Id, boolean> {
+  const out: Record<Id, boolean> = {}
+  for (const s of segs) {
+    if (s.id === selectedSegmentId) continue
+    if (s.step !== currentStep) out[s.id] = true
+  }
+  return out
+}

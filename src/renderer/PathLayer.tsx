@@ -20,6 +20,8 @@ export interface PathLayerProps {
   dimOthers?: boolean
   /** Playback focus (PLAN-005 M4): per-segment phase; active paths pop, past/future recede. */
   pathPhase?: Readonly<Record<Id, 'past' | 'active' | 'future'>>
+  /** Rest hierarchy (PLAN-006 M3b, A-05a): true = outside the current authoring step, recedes. */
+  stepMuted?: Readonly<Record<Id, boolean>>
 }
 
 function segClass(seg: Segment): string | undefined {
@@ -72,6 +74,7 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
             : phase === 'future'
               ? styles.pathFuture
               : ''
+      const mutedClass = !selected && p.stepMuted?.[seg.id] ? styles.pathStepMuted : ''
       const markerId = isBall ? 'arrow-ball' : `arrow-${track.entityId}`
       items.push(
         <g
@@ -79,7 +82,7 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
           data-segment={seg.id}
           data-entity-of={track.entityId}
           data-phase={phase}
-          className={`${styles.pathGroup} ${selected ? styles.pathSelected : ''} ${dim ? styles.pathDim : ''} ${phaseClass}`}
+          className={`${styles.pathGroup} ${selected ? styles.pathSelected : ''} ${dim ? styles.pathDim : ''} ${phaseClass} ${mutedClass}`}
         >
           {/* wide invisible hit path for easy selection */}
           <path d={d} className={styles.pathHit} />
