@@ -694,3 +694,9 @@ Problem: 재생 중에도 좌우 패널·헤더가 같은 대비로 남아 시�
 Change: shell에 data-playing 부착 — 재생 중 헤더·양 패널 opacity 0.45로 물러남(위치 이동 없음, transition 토큰, 정지/종료 시 복귀). 경로 숨김·GIF parity·A/B/C 즉시 교체는 기존 유지.
 Validation: typecheck/lint/test 134(+1)/build/harness/format PASS; Playwright: 재생 중 패널 0.45 → held에서 1로 복귀(attr true→false 확인), 콘솔 클린.
 
+### CHG-20260820-062 — A11Y — PLAN-006 M6: 포커스 가시성·forced-colors
+
+Problem: 단계/전술안 칩·버전 배지가 .btn 포커스 링 밖, 고대비 모드 무대응.
+Change: stepChip/variantChip/versionBadge focus-visible 아웃라인, forced-colors에서 컨트롤 보더(ButtonText)·포커스(Highlight) 보장. 토스트(status)·컴파일 오류(alert)·GIF 진행(status)의 역할 구분은 기존 유지 확인.
+Validation: typecheck/lint/test 134/build/harness/format PASS.
+

@@ -1494,3 +1494,25 @@
 .shell .top {
   transition: opacity var(--st-motion-transition) var(--st-ease-standard);
 }
+
+/* M6: keyboard focus is visible on every control, not only .btn */
+.stepChip:focus-visible,
+.variantChip:focus-visible,
+.versionBadge:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 1px;
+}
+
+/* M6: forced-colors (high contrast) — keep control boundaries and focus */
+@media (forced-colors: active) {
+  .btn,
+  .stepChip,
+  .panelSelect {
+    border: 1px solid ButtonText;
+  }
+
+  .btn:focus-visible,
+  .stepChip:focus-visible {
+    outline: 2px solid Highlight;
+  }
+}
