@@ -181,7 +181,8 @@ export function pickTargets(input: PickInput): PickResult {
         (c): c is Extract<Candidate, { kind: 'segment' }> => c.kind === 'segment',
       ),
     },
-    fingerprint: out.map(stableKey).join('|'),
+    // canonical (rank-independent): selection-driven reordering must not break cycling (CR-09)
+    fingerprint: out.map(stableKey).sort().join('|'),
   }
 }
 

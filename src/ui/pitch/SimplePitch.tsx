@@ -26,7 +26,7 @@ import {
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
-import type { PickGhost, PickSegment } from './pickTarget'
+import type { PickSegment } from './pickTarget'
 
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
 import { useUiStore } from '@/editor/uiStore'
@@ -118,6 +118,16 @@ export function SimplePitch() {
   const ui = useUiStore()
   const svgRef = useRef<SVGSVGElement>(null)
   const gesture = useRef<Gesture | null>(null)
+  /** Re-click cycling (PLAN-007 M3, CR-06): applied on NO-DRAG pointerup only. */
+  const cycleRef = useRef<{
+    clientX: number
+    clientY: number
+    fingerprint: string
+    index: number
+    at: number
+    docRev: number
+    resultKey: string | null
+  } | null>(null)
   /** Last pointerdown pick (PLAN-007): cycling input + adapter data for the intent switch. */
   const lastPickRef = useRef<{
     pick: ReturnType<typeof pickTargets>
@@ -137,6 +147,10 @@ export function SimplePitch() {
   const [attachFx, setAttachFx] = useState<{ id: Id; key: number } | null>(null)
   /** Token currently pressed (pointer down, drag not started) — quick lift ack (M4). */
   const [pressedId, setPressedId] = useState<Id | null>(null)
+  /** Hover preview (PLAN-007 M2): what a plain press would pick — highlight only (A-02). */
+  const [hoverKey, setHoverKey] = useState<string | null>(null)
+  const hoverRaf = useRef<number | null>(null)
+  const hoverPt = useRef<Vec2 | null>(null)
   /** Unbroken Alt chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
@@ -202,6 +216,60 @@ export function SimplePitch() {
     // Deliberately NOT selected: picking the next step chip must never retarget what was just drawn.
     st.selectSegment(null)
     ui.flashToast(t('simple.added', { n: step }))
+  }
+
+  /**
+   * No-drag pointerup cycling (PLAN-007 M3, A-01: 6px / 1.2s, immediate invalidation on any
+   * fingerprint or document change). A repeated plain click on the same crowded spot selects the
+   * NEXT overlapping candidate; a drag keeps its original anchor untouched (CR-06).
+   */
+  const maybeCycle = () => {
+    const last = lastPickRef.current
+    if (!last || last.pick.ordered.length < 2) {
+      cycleRef.current = null
+      return
+    }
+    const now = performance.now()
+    const rev = core.getRevision()
+    const st2 = useUiStore.getState()
+    // What THIS click's normal handling selected (the down handlers already ran).
+    const currentKey = st2.selectedSegmentId
+      ? `segment:${st2.selectedSegmentId}`
+      : st2.selection.length === 1
+        ? (st2.selection[0] === doc.ball.id ? 'ball:' : 'player:') + st2.selection[0]
+        : null
+    const prev = cycleRef.current
+    // Cycle ONLY when this is a true re-click: same spot, same candidates, same document, AND the
+    // previous click's result is still what's selected (an Escape or a new intent resets — the
+    // golden possession pick must never be stolen).
+    const samePress =
+      prev &&
+      Math.hypot(last.clientX - prev.clientX, last.clientY - prev.clientY) <= 6 &&
+      now - prev.at <= 1200 &&
+      prev.fingerprint === last.pick.fingerprint &&
+      prev.docRev === rev &&
+      prev.resultKey !== null &&
+      prev.resultKey === currentKey
+    const index = samePress ? (prev!.index + 1) % last.pick.ordered.length : 0
+    let resultKey = currentKey
+    if (samePress) {
+      const cand = last.pick.ordered[index]!
+      if (cand.kind === 'player' || cand.kind === 'ball') st2.select([cand.id])
+      else st2.selectSegment(cand.segId)
+      resultKey =
+        cand.kind === 'player' || cand.kind === 'ball'
+          ? `${cand.kind}:${cand.id}`
+          : `segment:${cand.segId}`
+    }
+    cycleRef.current = {
+      clientX: last.clientX,
+      clientY: last.clientY,
+      fingerprint: last.pick.fingerprint,
+      index,
+      at: now,
+      docRev: rev,
+      resultKey,
+    }
   }
 
   const endGestureImpl = (commit: boolean) => {
@@ -282,7 +350,10 @@ export function SimplePitch() {
     }
 
     if (g.type === 'bend') {
-      if (!g.started) return // plain click = select only
+      if (!g.started) {
+        if (commit) maybeCycle()
+        return // plain click = select only
+      }
       if (!commit) {
         core.cancel()
         return
@@ -301,6 +372,7 @@ export function SimplePitch() {
     // token: plain Ctrl+CLICK (no drag) on a selected member toggles it OFF (multi-select).
     if (!g.started) {
       if (commit && g.additive && g.wasSelected) st.select(st.selection.filter((id) => id !== g.id))
+      else if (commit && !g.additive) maybeCycle()
       return
     }
     const drag = st.drag
@@ -441,6 +513,7 @@ export function SimplePitch() {
     svg.focus({ preventScroll: true })
     const st = useUiStore.getState()
 
+    setHoverKey(null)
     // In-place step picker swallows its own presses; anything else closes it.
     if (stepPicker) {
       if (targetEl.closest('[data-step-picker]')) return
@@ -488,30 +561,13 @@ export function SimplePitch() {
     // Geometric candidates replace DOM paint-order routing (PLAN-007 M1). Interactive DOM
     // controls (badge, picker) were already handled above; everything else is picked from
     // positions, so overlapping siblings all compete on distance — not on z-order.
+    // pickNowRef carries the current render's inputs (assigned in an effect after they exist).
     const livePlayers = doc.players.map((pl) => ({
       id: pl.id,
       pos: resolved.players[pl.id]?.pos ?? pl.home,
     }))
     const liveBall = { id: doc.ball.id, pos: resolved.ball.pos }
-    const pickGhosts: PickGhost[] = ghosts.map((g) => ({
-      entityId: g.entityId,
-      segId: g.segId,
-      kind: g.kind === 'ball' ? 'ball' : 'player',
-      pos: g.pos,
-      step: g.step,
-    }))
-    const svgRect = svg.getBoundingClientRect()
-    const pick = pickTargets({
-      players: livePlayers,
-      ball: liveBall,
-      ghosts: viewingFrame ? [] : pickGhosts, // decorations are hidden while viewing a frame
-      segments: pickSegments,
-      pt,
-      metresPerPixel: (doc.pitch.length + 4) / Math.max(1, svgRect.width),
-      currentStep: ui.currentStep,
-      selection: st.selection,
-      selectedSegmentId: st.selectedSegmentId,
-    })
+    const pick = pickNowRef.current(pt)
     const ov = pick.overlaps
     const ghostTop = ov.ghosts[0] ?? null
     const segTop = ov.segments[0] ?? null
@@ -640,9 +696,14 @@ export function SimplePitch() {
     }
   }
 
+  const updateHoverRef = useRef<(e: RPointerEvent<SVGSVGElement>) => void>(() => {})
+
   const onPointerMove = (e: RPointerEvent<SVGSVGElement>) => {
     const g = gesture.current
-    if (!g || g.pointerId !== e.pointerId) return
+    if (!g || g.pointerId !== e.pointerId) {
+      if (!g) updateHoverRef.current(e)
+      return
+    }
     const svg = svgRef.current
     if (!svg) return
     const pt = clientToPitch(svg, e.clientX, e.clientY)
@@ -705,6 +766,7 @@ export function SimplePitch() {
     }
 
     // token drag
+    if (g.started) cycleRef.current = null
     if (!g.started) {
       const dx = e.clientX - g.startClient.x
       const dy = e.clientY - g.startClient.y
@@ -934,6 +996,63 @@ export function SimplePitch() {
   const badgeSpots = new Map(placeStepBadges(badgeAnchors).map((b) => [b.id, b.at]))
   const badges = badgeAnchors.map((b) => ({ ...b, end: badgeSpots.get(b.id) ?? b.at }))
 
+  // PLAN-007: pick with the CURRENT render's inputs (hover rAF + cycling reuse this).
+  const pickNowRef = useRef<(pt: Vec2) => ReturnType<typeof pickTargets>>(() => ({
+    ordered: [],
+    overlaps: { players: [], ball: null, ghosts: [], segments: [] },
+    fingerprint: '',
+  }))
+  useEffect(() => {
+    pickNowRef.current = (pt: Vec2) => {
+      const svg = svgRef.current
+      const width = svg ? svg.getBoundingClientRect().width : 1
+      return pickTargets({
+        players: doc.players.map((pl) => ({
+          id: pl.id,
+          pos: resolved.players[pl.id]?.pos ?? pl.home,
+        })),
+        ball: { id: doc.ball.id, pos: resolved.ball.pos },
+        ghosts: viewingFrame
+          ? []
+          : ghosts.map((g) => ({
+              entityId: g.entityId,
+              segId: g.segId,
+              kind: g.kind === 'ball' ? ('ball' as const) : ('player' as const),
+              pos: g.pos,
+              step: g.step,
+            })),
+        segments: pickSegments,
+        pt,
+        metresPerPixel: (doc.pitch.length + 4) / Math.max(1, width),
+        currentStep: ui.currentStep,
+        selection: ui.selection,
+        selectedSegmentId: ui.selectedSegmentId,
+      })
+    }
+    updateHoverRef.current = (e) => {
+      // mouse only, authoring frame only, never during a gesture or a press (CR-07 conditions)
+      if (e.pointerType !== 'mouse' || viewingFrame || pressedId) return
+      const svgEl = svgRef.current
+      if (!svgEl) return
+      hoverPt.current = clientToPitch(svgEl, e.clientX, e.clientY)
+      if (hoverRaf.current !== null) return // coalesce to one pick per frame
+      hoverRaf.current = requestAnimationFrame(() => {
+        hoverRaf.current = null
+        const hp = hoverPt.current
+        if (!hp || gesture.current) return
+        const top = pickNowRef.current(hp).ordered[0] ?? null
+        const key = top
+          ? top.kind === 'ghost'
+            ? `ghost:${top.segId}:${top.entityId}`
+            : top.kind === 'segment'
+              ? `segment:${top.segId}`
+              : `${top.kind}:${top.id}`
+          : null
+        setHoverKey((prev) => (prev === key ? prev : key))
+      })
+    }
+  })
+
   return (
     <svg
       ref={svgRef}
@@ -946,6 +1065,7 @@ export function SimplePitch() {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={() => endGestureRef.current(false)}
+      onPointerLeave={() => setHoverKey(null)}
       onContextMenu={(e) => e.preventDefault()}
     >
       <PitchMarkings pitch={doc.pitch} />
@@ -970,6 +1090,7 @@ export function SimplePitch() {
           dimOthers={false}
           pathPhase={viewingFrame ? pathPhase : undefined}
           stepMuted={stepMuted}
+          hoverSegmentId={hoverKey?.startsWith('segment:') ? hoverKey.slice(8) : null}
         />
       </g>
       {/* step badges - kept mounted, faded out while viewing a frame (D-02) */}
@@ -1015,7 +1136,7 @@ export function SimplePitch() {
             number={p.number}
             label={p.label && p.role ? `${p.label}(${p.role})` : (p.label ?? p.role)}
             selected={selection.includes(p.id)}
-            hovered={false}
+            hovered={hoverKey === `player:${p.id}`}
             dragging={drag?.id === p.id}
             pressed={pressedId === p.id && drag?.id !== p.id}
             heading={rp?.heading}
@@ -1044,7 +1165,7 @@ export function SimplePitch() {
           return hid ? teamColorOf(doc, hid) : undefined
         })()}
         selected={selection.includes(doc.ball.id)}
-        hovered={false}
+        hovered={hoverKey === `ball:${doc.ball.id}`}
         dragging={drag?.id === doc.ball.id}
         pressed={pressedId === doc.ball.id && drag?.id !== doc.ball.id}
         dropFrom={ballDrop?.from ?? null}
@@ -1072,7 +1193,12 @@ export function SimplePitch() {
             key={g.id}
             className={styles.ghostToken}
             transform={`translate(${g.pos.x}, ${g.pos.y})`}
-            style={{ opacity: drawKeyHeld ? Math.min(0.85, g.opacity + 0.25) : g.opacity }}
+            style={{
+              opacity:
+                drawKeyHeld || hoverKey === `ghost:${g.segId}:${g.entityId}`
+                  ? Math.min(0.9, g.opacity + 0.3)
+                  : g.opacity,
+            }}
             data-ghost={g.entityId}
             data-move-seg={g.segId}
             data-gx={g.pos.x}

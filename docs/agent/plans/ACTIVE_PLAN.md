@@ -1,7 +1,7 @@
 # Active ExecPlan
 
 Plan ID: PLAN-20260820-007
-Status: In Progress (사용자 승인 2026-08-20 — Codex 수정안 전면 수용. A-01 6px/1.2s+즉시 리셋, A-02 하이라이트만(라벨은 체감 후 dwell 재논의), A-03 같은 종류 내 후순위, A-04 수정자 호환 계층)
+Status: Completed (2026-08-20 — M0~M4 AGENT-VERIFIED: 골든 G1~G7 보존, 호버/순환 동작·성능 확인. 브라우저 체감은 사용자 몫)
 Task Risk: L2
 Created: 2026-08-20
 Updated: 2026-08-20

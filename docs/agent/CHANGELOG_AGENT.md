@@ -799,3 +799,14 @@ Change:
 - SimplePitch pointerdown: DOM closest 3종 → pickTargets 어댑터(배지/피커 DOM 우선 유지, gestureIntent 불변). 고스트에 원본 step 부여, 경로는 full path 0.6m 샘플(세그먼트 identity 캐시).
 Validation: typecheck/lint/test 142(+6)/build/harness/format PASS; M0 골든 G1~G7 재실행 전부 동일; 개선 데모 — 고스트가 라이브 토큰을 덮은 지점에서 중심 클릭=#8 선수·1.5m 링 클릭=움직임 선택(페인트 순서 무관), 콘솔 클린.
 
+### CHG-20260820-076 — FEAT — PLAN-007 M2·M3·M4: 호버 예고·재클릭 순환·마감
+
+Problem: 겹친 지점에서 무엇이 잡힐지 누르기 전엔 모르고, 잘못 잡히면 대안이 없음.
+Change:
+- **호버 예고(M2, A-02 하이라이트만)**: 마우스 이동 시 rAF 병합으로 pickTargets 최상위 후보를 계산, 키가 바뀔 때만 상태 갱신 — 잡힐 선수(호버 링)/공/경로(글로우)/고스트(선명)를 누르기 전에 표시. 마우스 전용, 재생/프레임 조회 중·프레스 중 꺼짐(CR-07).
+- **재클릭 순환(M3, CR-06/A-01)**: 드래그 없는 pointerup에서만, 같은 지점(6px)·1.2s·같은 후보 지문·같은 문서 리비전·**직전 결과가 아직 선택돼 있을 때만** 다음 겹침 후보 선택(선수→고스트→경로…). 드래그·수정자·문서 변경 시 즉시 무효. 가드 덕에 골든 G1(소유 판별)과 충돌하지 않음(회귀 잡고 수정).
+- fingerprint를 정렬 무관 정규형으로(선택 sticky 재정렬이 순환을 깨지 않게).
+- 조작법에 "겹친 곳 다시 클릭 = 다음 대상" 추가. lint TDZ 이슈로 pick/hover 클로저를 선언 이후 단일 effect에서 ref 배선.
+- M4: 골든 G1~G7 재실행 전부 일치, 22명+5경로 호버 스윕 2초+ long task(>50ms) 0건, 콘솔 클린.
+Validation: typecheck/lint/test 142/build/harness/format PASS; Playwright: 호버 링 표시, 겹침 스택 클릭1=선수8→클릭2=움직임 순환, Escape 후 재클릭은 순환 안 함(새 의도 존중).
+

@@ -33,6 +33,7 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: '빈 잔디 드래그', hint: '박스로 여러 명 선택' },
   { label: 'Shift+잔디 드래그', hint: '기존 선택에 박스 추가' },
   { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)' },
+  { label: '겹친 곳 다시 클릭', hint: '겹쳐 있는 다음 대상 선택 (선수→고스트→경로 순환)' },
   { label: '공 → 선수 드롭', hint: '그 선수가 공 보유' },
   { label: '선수 클릭', hint: '등번호·이름·포지션 편집' },
 ]
