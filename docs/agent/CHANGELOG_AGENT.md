@@ -415,3 +415,15 @@ Problem: 사용자 제안 — 끝점에 고스트·화살촉·배지가 몰려 �
 Change: 배지 위치 = 경로 호 길이 중간(pointAtDistance), 위로 1.9m 띄움; 기본 opacity 0.35(호버 1). 끝점은 고스트만.
 Validation: test 86/build/harness/format PASS; Playwright 회귀(지그재그·미세조정·이동) PASS, 스크린샷 확인.
 
+### CHG-20260820-036 — FEAT — 단계 미리보기·구간 재생·결과 유지 (PLAN-005 M1)
+
+Problem: 수정 확인마다 전체 재생을 처음부터 기다려야 했고, 종료/일시정지가 즉시 t=0으로 튀어 결과를 볼 수 없었다 (A-01, A-02, FRAG-01).
+Change:
+- `stepWindow(doc, step)` (stepCommands): 단계의 compiled 시작~가장 느린 멤버 종료 창. stepStart는 이를 재사용.
+- uiStore: `playScope('all'|'step'|'from-step')`, `rangeStart/rangeEnd`, `completion('idle'|'held-result')`, `startRange/holdResult/returnToAuthoringStart`. `setPlaying(false)`=frame 유지(암묵 t=0 제거), `playFrom/setPlayheadAuto` 삭제(구간 재생이 대체).
+- usePlayback: 순수 `advanceClock` + 공용 action(`playAll/playWindow/pausePlayback/togglePlayback/returnToStart`) — footer 버튼·Space·Home이 같은 함수 사용(RULE-03). 자연 종료 = 구간 끝 frame 유지(held-result), loop는 rangeStart로 복귀.
+- StepBar: chip = 단계 선택 + 사용 단계면 시작 장면 preview(문서 불변, A-01/A-03 chip 부분). 사용 단계에 `▶ 이 단계만`/`▶ 여기부터` 문맥 버튼.
+- AppShell: held-result 시 footer에 "결과 화면 — ↺(Home)으로 원위치" status.
+- SimplePitch: 문서를 바꾸는 제스처 시작(토큰 이동/그리기/벤딩/고스트 조정/선수 추가) = `returnToAuthoringStart()`. 고스트/배지는 t>0(재생·정지 frame·preview)일 때 숨김.
+Validation: typecheck/lint/test 97/build/harness/format PASS; Playwright(m1.cjs): chip2 preview 180px 지점·고스트 0, 이 단계만 재생 중 타 단계 드리프트 0, 종료 후 배너+frame 유지, Home 원위치 0px, held 중 편집 시 자동 복귀+배너 소거, 콘솔 클린.
+

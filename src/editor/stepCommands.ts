@@ -272,19 +272,30 @@ export function removeStepSegment(core: EditorCore, segmentId: Id): void {
   })
 }
 
-/** Start time of a step (for setting the playhead when authoring). */
-export function stepStart(doc: TacticDocument, step: number): number {
+/**
+ * Compiled time window of a step: shared start (all members start together) to the end of its
+ * slowest member. Read-only — used by the UI for step preview and scoped replay (PLAN-005 M1).
+ * Returns null when the step has no authored movement.
+ */
+export function stepWindow(
+  doc: TacticDocument,
+  step: number,
+): { start: number; end: number } | null {
   const compiled = compile(doc)
-  let start = 0
-  let best = Infinity
+  let start = Infinity
+  let end = 0
   for (const track of sceneOf(doc).timeline.tracks)
     for (const s of track.segments) {
       if (!('path' in s) || s.id.startsWith(GEN_PREFIX) || stepOf(s) !== step) continue
       const tm = compiled.segmentTimes[s.id]
-      if (tm && tm.start < best) {
-        best = tm.start
-        start = tm.start
-      }
+      if (!tm) continue
+      start = Math.min(start, tm.start)
+      end = Math.max(end, tm.end)
     }
-  return Number.isFinite(best) ? start : 0
+  return Number.isFinite(start) ? { start, end } : null
+}
+
+/** Start time of a step (for setting the playhead when authoring). */
+export function stepStart(doc: TacticDocument, step: number): number {
+  return stepWindow(doc, step)?.start ?? 0
 }

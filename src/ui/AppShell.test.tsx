@@ -101,6 +101,39 @@ describe('AppShell (simple mode, ADR-0009)', () => {
     expect(seg.step).toBe(2)
   })
 
+  it('step chip preview moves UI time only - no document revision (PLAN-005 M1)', async () => {
+    const { core } = setup()
+    await act(async () => {
+      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
+    })
+    const d = core.getDocument()
+    const [a, b] = d.players
+    await act(async () => {
+      addStepRun(core, a!.id, makePath([a!.home, { x: a!.home.x + 10, y: a!.home.y }]).waypoints, 1)
+      addStepRun(core, b!.id, makePath([b!.home, { x: b!.home.x + 6, y: b!.home.y }]).waypoints, 2)
+    })
+    const rev = core.getRevision()
+    const chip2 = screen.getByTitle(/^2단계/)
+    await act(async () => {
+      chip2.click()
+    })
+    const ui = useUiStore.getState()
+    expect(ui.currentStep).toBe(2)
+    expect(ui.playback.t).toBeGreaterThan(0) // preview seeks to the step-2 start
+    expect(ui.playback.playing).toBe(false)
+    expect(core.getRevision()).toBe(rev) // chip never mutates the document
+    // scoped replay actions appear for a used step
+    const stepOnly = screen.getByRole('button', { name: /이 단계만/ })
+    await act(async () => {
+      stepOnly.click()
+    })
+    const st = useUiStore.getState()
+    expect(st.playback.playing).toBe(true)
+    expect(st.playScope).toBe('step')
+    expect(st.rangeEnd).not.toBeNull()
+    expect(core.getRevision()).toBe(rev)
+  })
+
   it('a pass in step 2 starts after the step-1 run ends (steps drive the timing)', async () => {
     const { core } = setup()
     await act(async () => {

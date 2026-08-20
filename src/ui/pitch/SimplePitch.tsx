@@ -210,6 +210,7 @@ export function SimplePitch() {
       if (!commit) return
       const team = doc.teams[g.team === 'home' ? 0 : 1]
       if (!team) return
+      st.returnToAuthoringStart()
       const id = addPlayer(core, team.id, g.at)
       st.select([id])
       return
@@ -335,7 +336,7 @@ export function SimplePitch() {
 
   const startDraw = (entityId: Id, pointerId: number, startPos: Vec2) => {
     const st = useUiStore.getState()
-    st.setPlaying(false)
+    st.returnToAuthoringStart()
     st.select([entityId])
     gesture.current = { type: 'draw', entityId, pointerId, points: [startPos] }
     st.setPathDraft({ entityId, points: [startPos] })
@@ -351,7 +352,7 @@ export function SimplePitch() {
     const st = useUiStore.getState()
 
     const pressToken = (entityId: Id) => {
-      st.setPlaying(false)
+      st.returnToAuthoringStart()
       // Shift+drag on the token = draw a movement from its ORIGINAL spot.
       if (e.shiftKey) {
         const startPos =
@@ -413,7 +414,7 @@ export function SimplePitch() {
         const f = segId ? findSegment(core.getDocument(), segId) : null
         if (f && 'path' in f.segment) {
           const wps = f.segment.path.waypoints
-          st.setPlaying(false)
+          st.returnToAuthoringStart()
           st.selectSegment(segId)
           gesture.current = {
             type: 'bend',
@@ -452,7 +453,7 @@ export function SimplePitch() {
             id === doc.ball.id ? doc.ball.home : doc.players.find((pl) => pl.id === id)?.home
           if (h) group.set(id, h)
         }
-        st.setPlaying(false)
+        st.returnToAuthoringStart()
         gesture.current = {
           type: 'token',
           id: ownerId,
@@ -533,6 +534,7 @@ export function SimplePitch() {
         const moved = Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y)
         if (moved < DRAG_THRESHOLD_PX) return
         g.started = true
+        st.returnToAuthoringStart()
         core.begin('Bend path')
         core.update((d) => {
           g.wpId = bendGrabWaypointInDraft(
@@ -630,6 +632,8 @@ export function SimplePitch() {
   const drag = ui.drag
   const selection = ui.selection
   const isPlaying = ui.playback.playing
+  /** Frame is away from the authoring start: playing, paused mid-play, held result, or step preview. */
+  const viewingFrame = isPlaying || ui.playback.t > 0
   const draftColor = ui.pathDraft
     ? ui.pathDraft.entityId === doc.ball.id
       ? 'var(--st-ball-path, #f5f5f7)'
@@ -746,7 +750,7 @@ export function SimplePitch() {
         dimOthers={isPlaying}
       />
       {/* step badges */}
-      {!isPlaying &&
+      {!viewingFrame &&
         badges.map((b) => (
           <g
             key={b.id}
@@ -818,7 +822,7 @@ export function SimplePitch() {
         />
       )}
       {/* ghosts: future positions (Shift+drag to continue from there) */}
-      {!isPlaying &&
+      {!viewingFrame &&
         ghosts.map((g) => (
           <g
             key={g.id}

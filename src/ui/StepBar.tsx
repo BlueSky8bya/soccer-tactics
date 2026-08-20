@@ -1,45 +1,79 @@
-import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
-import { MAX_STEP, setSegmentStep, stepCounts } from '@/editor/stepCommands'
+import { useEditorSnapshot } from '@/editor/EditorContext'
+import { MAX_STEP, stepCounts, stepWindow } from '@/editor/stepCommands'
+import { playWindow } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
 import styles from './shell.module.css'
 
 /**
- * Step chips ①-⑩ (ADR-0009). The selected chip is the step new movements get.
- * With a movement selected, clicking a chip moves THAT movement to the step.
+ * Step chips ①-⑨ (ADR-0009, PLAN-005 M1). A chip NEVER changes the document: it picks the step new
+ * movements get and — when the step is already used — previews its starting frame. Scoped replay
+ * ("이 단계만" / "여기부터") lives next to the chips as context actions.
  */
 export function StepBar() {
-  const core = useEditor()
   const { doc } = useEditorSnapshot()
   const currentStep = useUiStore((s) => s.currentStep)
   const setCurrentStep = useUiStore((s) => s.setCurrentStep)
-  const selectedSegmentId = useUiStore((s) => s.selectedSegmentId)
+  const setPlayhead = useUiStore((s) => s.setPlayhead)
+  const setPlaying = useUiStore((s) => s.setPlaying)
   const counts = stepCounts(doc)
-  const visible = MAX_STEP // 1~9 always visible (user 2026-08-20)
+  const currentUsed = counts[currentStep - 1]! > 0
+
+  const preview = (n: number) => {
+    setCurrentStep(n)
+    if ((counts[n - 1] ?? 0) === 0) return
+    const w = stepWindow(doc, n)
+    if (!w) return
+    // Show the step's starting frame — pure UI time, no document change (A-01).
+    setPlaying(false)
+    setPlayhead(w.start)
+  }
+
+  const replayStep = () => {
+    const w = stepWindow(doc, currentStep)
+    if (w) playWindow('step', w.start, w.end)
+  }
+  const replayFrom = () => {
+    const w = stepWindow(doc, currentStep)
+    if (w) playWindow('from-step', w.start, null)
+  }
 
   return (
     <div className={styles.stepBar} role="group" aria-label={t('simple.steps')}>
       <span className={styles.stepLabel}>{t('simple.steps')}</span>
-      {Array.from({ length: visible }, (_, i) => i + 1).map((n) => (
+      {Array.from({ length: MAX_STEP }, (_, i) => i + 1).map((n) => (
         <button
           key={n}
           type="button"
           className={`${styles.stepChip} ${currentStep === n ? styles.stepChipActive : ''} ${counts[n - 1]! > 0 ? styles.stepChipUsed : ''}`}
-          onClick={() => {
-            setCurrentStep(n)
-            if (selectedSegmentId) setSegmentStep(core, selectedSegmentId, n)
-          }}
-          title={
-            selectedSegmentId
-              ? t('simple.stepAssign', { n })
-              : t('simple.stepPick', { n, c: counts[n - 1]! })
-          }
+          onClick={() => preview(n)}
+          title={t('simple.stepPick', { n, c: counts[n - 1]! })}
           aria-pressed={currentStep === n}
         >
           {n}
           {counts[n - 1]! > 0 && <span className={styles.stepCount}>{counts[n - 1]}</span>}
         </button>
       ))}
+      {currentUsed && (
+        <span className={styles.stepActions}>
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={replayStep}
+            title={t('simple.playStepHint', { n: currentStep })}
+          >
+            {t('simple.playStep')}
+          </button>
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={replayFrom}
+            title={t('simple.playFromHint', { n: currentStep })}
+          >
+            {t('simple.playFrom')}
+          </button>
+        </span>
+      )}
     </div>
   )
 }

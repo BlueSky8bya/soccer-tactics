@@ -1,10 +1,62 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useUiStore } from './uiStore'
+import type { PlaybackScope } from './uiStore'
 
 /**
  * Playback controller — the UI clock (ADR-0003/0006 "two clocks").
  * Advances uiStore.playback.t with rAF while playing. Tactical time is linear: t += dt * speed.
+ * PLAN-005 M1: the clock is bounded by [rangeStart, rangeEnd ?? duration]; a natural finish HOLDS
+ * the final frame ('held-result', A-02) instead of snapping to 0. Buttons and keyboard share the
+ * exported actions below (RULE-03) so their semantics can never diverge.
  */
+
+/** One clock advance, pure (tested in usePlayback.test.ts). */
+export function advanceClock(
+  t: number,
+  dt: number,
+  speed: number,
+  loop: boolean,
+  rangeStart: number,
+  rangeEnd: number,
+): { t: number; done: boolean } {
+  let next = t + dt * speed
+  if (next >= rangeEnd) {
+    if (loop) return { t: rangeStart, done: false }
+    return { t: rangeEnd, done: true }
+  }
+  if (next < rangeStart) next = rangeStart
+  return { t: next, done: false }
+}
+
+/** Footer Play / Space: the whole play. Resumes a paused frame; restarts after a finish. */
+export function playAll(duration: number): void {
+  const st = useUiStore.getState()
+  const atEnd = st.completion === 'held-result' || st.playback.t >= duration - 1e-6
+  st.startRange('all', atEnd ? 0 : st.playback.t, null)
+}
+
+/** Scoped replay (StepBar context actions): one step, or from a step to the end. */
+export function playWindow(scope: PlaybackScope, start: number, end: number | null): void {
+  useUiStore.getState().startRange(scope, start, end)
+}
+
+/** Pause: hold the current frame (A-02). */
+export function pausePlayback(): void {
+  useUiStore.getState().setPlaying(false)
+}
+
+/** Space semantics: pause when playing, otherwise play the whole thing. */
+export function togglePlayback(duration: number): void {
+  const st = useUiStore.getState()
+  if (st.playback.playing) pausePlayback()
+  else playAll(duration)
+}
+
+/** Home: explicit return to the authoring start (t=0, scope reset). */
+export function returnToStart(): void {
+  useUiStore.getState().returnToAuthoringStart()
+}
+
 export function usePlaybackController(duration: number) {
   const raf = useRef<number | null>(null)
   const last = useRef(0)
@@ -22,18 +74,23 @@ export function usePlaybackController(duration: number) {
       }
       const dt = Math.min(0.1, (now - last.current) / 1000)
       last.current = now
-      let t = st.playback.t + dt * st.playback.speed
-      if (t >= durRef.current) {
-        if (st.playback.loop) t = 0
-        else {
-          // Playback finished → snap back to the start, so the vivid tokens sit at their original
-          // spots and only the faint ghosts mark the path ends (authoring view stays readable).
-          useUiStore.setState({ playback: { ...st.playback, t: 0, playing: false } })
-          raf.current = null
-          return
-        }
+      const end = Math.min(st.rangeEnd ?? durRef.current, durRef.current)
+      const res = advanceClock(
+        st.playback.t,
+        dt,
+        st.playback.speed,
+        st.playback.loop,
+        st.rangeStart,
+        end,
+      )
+      if (res.done) {
+        // Natural finish → hold the result frame; the user studies the outcome and returns
+        // via Home or by starting an edit (A-02).
+        st.holdResult(res.t)
+        raf.current = null
+        return
       }
-      useUiStore.setState({ playback: { ...st.playback, t } })
+      useUiStore.setState({ playback: { ...st.playback, t: res.t } })
       raf.current = requestAnimationFrame(tick)
     }
     const unsub = useUiStore.subscribe((s, prev) => {
@@ -48,26 +105,12 @@ export function usePlaybackController(duration: number) {
     }
   }, [])
 
-  const play = useCallback(() => {
-    const st = useUiStore.getState()
-    // After drawing a pass/fling the playhead sits at the arrival; play from where that action started.
-    if (st.playFrom !== null) st.setPlayhead(st.playFrom)
-    else if (st.playback.t >= durRef.current - 1e-6) st.setPlayhead(0)
-    st.setPlaying(true)
-  }, [])
-  const pause = useCallback(() => useUiStore.getState().setPlaying(false), [])
-  const toggle = useCallback(() => {
-    const st = useUiStore.getState()
-    if (st.playback.playing) pause()
-    else play()
-  }, [play, pause])
-  const restart = useCallback(() => {
-    const st = useUiStore.getState()
-    st.setPlayhead(0)
-  }, [])
+  const play = useCallback(() => playAll(durRef.current), [])
+  const pause = useCallback(() => pausePlayback(), [])
+  const toggle = useCallback(() => togglePlayback(durRef.current), [])
+  const restart = useCallback(() => returnToStart(), [])
   const seek = useCallback((t: number) => {
-    const st = useUiStore.getState()
-    st.setPlayhead(Math.max(0, Math.min(durRef.current, t)))
+    useUiStore.getState().setPlayhead(Math.max(0, Math.min(durRef.current, t)))
   }, [])
 
   return { play, pause, toggle, restart, seek }

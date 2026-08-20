@@ -152,6 +152,11 @@ export function AppShell() {
             ⟳
           </button>
           <StepBar />
+          {ui.completion === 'held-result' && (
+            <span className={styles.heldResult} role="status">
+              {t('simple.heldResult')}
+            </span>
+          )}
         </div>
       </footer>
 

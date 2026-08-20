@@ -15,6 +15,9 @@ export interface PlaybackState {
   loop: boolean
 }
 
+/** What the clock is currently bounded to (PLAN-005 M1): full play, one step, or from a step on. */
+export type PlaybackScope = 'all' | 'step' | 'from-step'
+
 export interface PathDraft {
   /** Entity the path belongs to (player move, or ball travel). */
   entityId: Id
@@ -54,12 +57,23 @@ export interface UiState {
   playback: PlaybackState
   /** True once playback was started at least once this session (getting-started checklist). */
   hasPlayed: boolean
+  /** Scope of the running/last playback (PLAN-005 M1). Footer Play/Space always use 'all'. */
+  playScope: PlaybackScope
+  /** Where the current scope starts (seconds). Loop returns here. */
+  rangeStart: number
+  /** Where the current scope ends; null = full duration. */
+  rangeEnd: number | null
   /**
-   * When a command auto-advanced the playhead (e.g. to a pass arrival), the time the authored action
-   * started. The next Play starts from here so the user sees what they just drew. Cleared by manual seeks.
+   * 'held-result' after a natural finish: the frame stays so the user can study the outcome
+   * (A-02). Home or any document-changing edit returns to the authoring start.
    */
-  playFrom: number | null
-  setPlayheadAuto: (t: number, from: number) => void
+  completion: 'idle' | 'held-result'
+  /** Start playing `scope` from `start`; `end` bounds the clock (null = document duration). */
+  startRange: (scope: PlaybackScope, start: number, end: number | null) => void
+  /** Natural finish: freeze the frame at `t` and flag the held-result state (A-02). */
+  holdResult: (t: number) => void
+  /** Explicit return to the authoring view: t=0, stopped, scope reset (Home / first edit). */
+  returnToAuthoringStart: () => void
   /** Animation mode (ADR-0009 v2): double-click drawing + the animation bar only when on. */
   animMode: boolean
   setAnimMode: (on: boolean) => void
@@ -127,8 +141,11 @@ export const useUiStore = create<UiState>((set) => ({
   reducedMotion: false,
   playback: { t: 0, playing: false, speed: 1, loop: false },
   hasPlayed: false,
+  playScope: 'all',
+  rangeStart: 0,
+  rangeEnd: null,
+  completion: 'idle',
   tour: { active: false, step: 0 },
-  playFrom: null,
   toast: null,
   currentStep: 1,
   animMode: false,
@@ -162,11 +179,28 @@ export const useUiStore = create<UiState>((set) => ({
   setTimelineExpanded: (timelineExpanded) => set({ timelineExpanded }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setPlayhead: (t) =>
-    set((s) => ({ playback: { ...s.playback, t: Math.max(0, t) }, playFrom: null })),
-  setPlayheadAuto: (t, from) =>
+    set((s) => ({ playback: { ...s.playback, t: Math.max(0, t) }, completion: 'idle' })),
+  startRange: (scope, start, end) =>
     set((s) => ({
-      playback: { ...s.playback, t: Math.max(0, t) },
-      playFrom: Math.max(0, Math.min(from, t)),
+      playScope: scope,
+      rangeStart: Math.max(0, start),
+      rangeEnd: end,
+      completion: 'idle',
+      playback: { ...s.playback, t: Math.max(0, start), playing: true },
+      hasPlayed: true,
+    })),
+  holdResult: (t) =>
+    set((s) => ({
+      playback: { ...s.playback, t: Math.max(0, t), playing: false },
+      completion: 'held-result',
+    })),
+  returnToAuthoringStart: () =>
+    set((s) => ({
+      playback: { ...s.playback, t: 0, playing: false },
+      playScope: 'all',
+      rangeStart: 0,
+      rangeEnd: null,
+      completion: 'idle',
     })),
   setAnimMode: (animMode) => set({ animMode }),
   setCurrentStep: (currentStep) => set({ currentStep: Math.max(1, Math.min(10, currentStep)) }),
@@ -179,9 +213,10 @@ export const useUiStore = create<UiState>((set) => ({
   endTour: () => set({ tour: { active: false, step: 0 } }),
   setPlaying: (playing) =>
     set((s) => ({
-      // Stopping (pause, click, end) always returns to the start: the vivid tokens belong at their
-      // original spots while authoring; the play is only ever watched from the beginning.
-      playback: { ...s.playback, playing, ...(playing ? {} : { t: 0 }) },
+      // Pause HOLDS the frame (A-02); returning to the authoring start is explicit
+      // (returnToAuthoringStart via Home or the first document-changing edit).
+      playback: { ...s.playback, playing },
+      completion: playing ? 'idle' : s.completion,
       hasPlayed: s.hasPlayed || playing,
     })),
   setSpeed: (speed) => set((s) => ({ playback: { ...s.playback, speed } })),

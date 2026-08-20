@@ -3,6 +3,7 @@ import { useEditor } from '@/editor/EditorContext'
 import { removeEntities } from '@/editor/commands'
 import { removeStepSegment, setSegmentStep } from '@/editor/stepCommands'
 import { useUiStore } from '@/editor/uiStore'
+import { returnToStart, togglePlayback } from '@/editor/usePlayback'
 import { compile } from '@/engine/compile'
 
 function isTypingTarget(el: EventTarget | null): boolean {
@@ -76,17 +77,13 @@ export function useEditorKeyboard(): void {
             ;(e.target as HTMLElement).blur()
           }
           e.preventDefault()
-          if (ui.playback.playing) ui.setPlaying(false)
-          else {
-            if (ui.playFrom !== null) ui.setPlayhead(ui.playFrom)
-            else if (ui.playback.t >= duration() - 1e-6) ui.setPlayhead(0)
-            ui.setPlaying(true)
-          }
+          // Same actions as the footer buttons (RULE-03): pause holds, Home returns to start.
+          togglePlayback(duration())
           return
         }
         case 'Home':
           e.preventDefault()
-          ui.setPlayhead(0)
+          returnToStart()
           return
         case 'g':
           ui.setLoop(!ui.playback.loop)

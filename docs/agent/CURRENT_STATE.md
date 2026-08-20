@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-08-20 (세션 11, PLAN-004 R15 완료 — 선수 카드·포메이션 선택·조작법 개선, 사용자 리뷰·커밋 대기)
+Last Updated: 2026-08-20 (세션 12, PLAN-005 M1 완료 — 단계 미리보기·구간 재생·결과 유지. 커밋됨, 사용자 브라우저 확인 대기)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 

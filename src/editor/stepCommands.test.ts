@@ -11,6 +11,7 @@ import {
   setSegmentStep,
   stepCounts,
   stepStart,
+  stepWindow,
 } from './stepCommands'
 
 function filled() {
@@ -137,5 +138,53 @@ describe('step model (ADR-0009)', () => {
       .filter((s) => s.id.startsWith('gen-'))
     expect(genAfter.map((s) => s.trigger)).toEqual(gen.map((s) => s.trigger))
     expect(compile(core.getDocument()).issues.filter((i) => i.level === 'error')).toHaveLength(0)
+  })
+})
+
+describe('stepWindow (PLAN-005 M1)', () => {
+  it('parallel segments share the start; the window ends with the slowest member', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const [a, b, c] = d.players
+    addStepRun(core, a!.id, makePath([a!.home, { x: a!.home.x + 5, y: a!.home.y }]).waypoints, 1)
+    addStepRun(core, b!.id, makePath([b!.home, { x: b!.home.x + 20, y: b!.home.y }]).waypoints, 1)
+    const r3 = addStepRun(
+      core,
+      c!.id,
+      makePath([c!.home, { x: c!.home.x + 5, y: c!.home.y }]).waypoints,
+      2,
+    )
+    const doc = core.getDocument()
+    const w1 = stepWindow(doc, 1)!
+    expect(w1.start).toBe(0)
+    const cm = compile(doc)
+    // step 1 ends with its slowest (= step 2's start), same-end rule included
+    expect(w1.end).toBeCloseTo(cm.segmentTimes[r3]!.start, 5)
+    const w2 = stepWindow(doc, 2)!
+    expect(w2.start).toBeCloseTo(w1.end, 5)
+    expect(w2.end).toBeGreaterThan(w2.start)
+    expect(stepStart(doc, 2)).toBeCloseTo(w2.start, 5)
+  })
+
+  it('an unused step has no window; relayout keeps windows contiguous', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const [a, b] = d.players
+    expect(stepWindow(core.getDocument(), 3)).toBeNull()
+    const r1 = addStepRun(
+      core,
+      a!.id,
+      makePath([a!.home, { x: a!.home.x + 8, y: a!.home.y }]).waypoints,
+      1,
+    )
+    addStepRun(core, b!.id, makePath([b!.home, { x: b!.home.x + 8, y: b!.home.y }]).waypoints, 2)
+    // renumber step 1 -> 4: windows re-derive, still contiguous from 0
+    setSegmentStep(core, r1, 4)
+    const doc = core.getDocument()
+    const w2 = stepWindow(doc, 2)!
+    const w4 = stepWindow(doc, 4)!
+    expect(w2.start).toBe(0)
+    expect(w4.start).toBeCloseTo(w2.end, 5)
+    expect(stepWindow(doc, 1)).toBeNull()
   })
 })

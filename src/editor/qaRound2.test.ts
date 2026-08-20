@@ -86,13 +86,23 @@ describe('QA round 1 fixes', () => {
     expect(track.segments[i + 1]?.kind).not.toBe('possessed')
   })
 
-  it('setPlayheadAuto remembers where the action started; a manual seek forgets it', () => {
+  it('pause holds the frame; returnToAuthoringStart resets time and scope (PLAN-005 M1)', () => {
     const ui = useUiStore.getState()
-    ui.setPlayheadAuto(2.2, 0.8)
+    ui.startRange('step', 1.5, 3)
+    expect(useUiStore.getState().playback.playing).toBe(true)
+    expect(useUiStore.getState().playback.t).toBe(1.5)
+    useUiStore.setState((s) => ({ playback: { ...s.playback, t: 2.2 } }))
+    ui.setPlaying(false) // pause = hold, no implicit reset
     expect(useUiStore.getState().playback.t).toBe(2.2)
-    expect(useUiStore.getState().playFrom).toBe(0.8)
-    ui.setPlayhead(1)
-    expect(useUiStore.getState().playFrom).toBeNull()
+    ui.holdResult(3)
+    expect(useUiStore.getState().completion).toBe('held-result')
+    expect(useUiStore.getState().playback.t).toBe(3)
+    ui.returnToAuthoringStart()
+    const st = useUiStore.getState()
+    expect(st.playback.t).toBe(0)
+    expect(st.playScope).toBe('all')
+    expect(st.rangeEnd).toBeNull()
+    expect(st.completion).toBe('idle')
   })
 
   it('QA r3 P0: a second pass after quick start (initial holder set) compiles without a trigger cycle', () => {

@@ -1,7 +1,7 @@
 # Active ExecPlan
 
 Plan ID: PLAN-20260821-005  
-Status: Approved (2026-08-20, 사용자 구두 승인 — "A-04 보류, 나머지는 계획대로")  
+Status: In Progress (승인 2026-08-20, 사용자 구두 승인 — "A-04 보류, 나머지는 계획대로")  
 Task Risk: L2  
 Created: 2026-08-21  
 Updated: 2026-08-20  
