@@ -35,7 +35,7 @@ import { MIN_POINT_DIST_PX, mapPenPressure, mouseSpeedPressure, smoothPressure }
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
 import { useUiStore } from '@/editor/uiStore'
 import { useCompiled, useResolvedState } from '@/editor/useCompiled'
-import { carryOffset } from '@/engine/compile'
+import { ATTACH_RADIUS_M, carryOffset } from '@/engine/compile'
 import { beautifyStroke, buildPathLUT, pointAtDistance } from '@/engine/path'
 import { stateAt } from '@/engine/stateAt'
 import { DrawingLayer, PenStroke } from '@/renderer/DrawingLayer'
@@ -561,7 +561,7 @@ export function SimplePitch() {
       // Released ON a player (the drop-target highlight is showing) = GIVE, never a throw —
       // the promise the highlight makes wins over release velocity (user 2026-08-21).
       const releasedOnPlayer = d.players.some(
-        (p) => Math.hypot(p.home.x - at.x, p.home.y - at.y) <= 2.7,
+        (p) => Math.hypot(p.home.x - at.x, p.home.y - at.y) <= ATTACH_RADIUS_M,
       )
       let fling: ReturnType<typeof simulateFling> | null = null
       if (!releasedOnPlayer && vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
@@ -575,7 +575,7 @@ export function SimplePitch() {
       }
       const near = d.players
         .map((p) => ({ p, dist: Math.hypot(p.home.x - at.x, p.home.y - at.y) }))
-        .filter((x) => x.dist <= 2.7) // ring max is exactly 2.6 — leave float headroom
+        .filter((x) => x.dist <= ATTACH_RADIUS_M) // one semantic constant (ADR-0010 D5)
         .sort((a, b) => a.dist - b.dist)[0]
       core.update((dd) => moveBallStartInDraft(dd as TacticDocument, at, near?.p.id ?? null))
       core.commit()
@@ -1210,7 +1210,7 @@ export function SimplePitch() {
     // who would RECEIVE the ball if dropped here (attach range) — light them up
     const over = doc.players
       .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - raw.x, pl.home.y - raw.y) }))
-      .filter((x) => x.dist <= 2.7)
+      .filter((x) => x.dist <= ATTACH_RADIUS_M)
       .sort((a, b) => a.dist - b.dist)[0]
     setDropTargetId((prev) => (prev === (over?.id ?? null) ? prev : (over?.id ?? null)))
     core.update((d) => {

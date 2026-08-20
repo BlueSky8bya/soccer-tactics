@@ -1,7 +1,7 @@
 # Active ExecPlan
 
 Plan ID: PLAN-20260821-009
-Status: In Progress
+Status: Completed (2026-08-21 — M1~M5 전부 게이트 PASS(167 tests) + s1_orbit Playwright probe ALL PASS. 커밋 ae84469/2300005/b10680f/956dae2/+M5. 브라우저 체감은 사용자 몫)
 Task Risk: L3 (엔진·에디터 구조 변경)
 Created: 2026-08-21
 Updated: 2026-08-21

@@ -1,10 +1,22 @@
 # Current State
 
-Last Updated: 2026-08-21 (세션 13, PLAN-008 완료 — 자유 그리기 펜/지우개. 게이트 146 tests PASS) (직전: 2026-08-20 세션 12, PLAN-005 M1~M7 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제·intent resolver·active 강조·세션 A/B·미니 투어·dead state 정리. 게이트 116 tests PASS, 사용자 브라우저 체감 확인 대기)
+Last Updated: 2026-08-21 (세션 14, PLAN-009 완료 — 공 정션 구조 봉합(감사 1안 M1~M5). 게이트 167 tests PASS) (직전: 2026-08-20 세션 12, PLAN-005 M1~M7 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제·intent resolver·active 강조·세션 A/B·미니 투어·dead state 정리. 게이트 116 tests PASS, 사용자 브라우저 체감 확인 대기)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 
 ## Current Objective
+
+**PLAN-009(공 정션 구조 봉합, 2026-08-21) 완료** — Codex 구조 감사(handoffs/REVIEW-ball-carry-structural.md)
+채택(ADR-0010). M1 공용 carry resolver(`src/engine/carry.ts`, compile release=stateAt, 경계 연속·핀 통과),
+M2 도착 고스트 전용 command(`moveTravelEndInDraft`+`orbit-receive`, 곡률·hold·receiver 불변),
+M3 bend 국소화(±1 창만 재스무딩), M4 relayout 단일 파이프라인(구조→timing→anchor(정확 t)→제약, byte 멱등,
+재진입 제거), M5 validator 보강(carryEnd/offset/offsetLocked/pressures/hold/receiver 참조)+
+attach 상수 단일화(`CARRY_RING_MIN/MAX_M`, `ATTACH_RADIUS_M`). 감사 확정 결함 S1/S3/S5·R1/R2/R9/R12-A/B/C 전부 해소.
+**2안(BallJunction 스키마)은 조건부 보류** — 동종 결함 재발 시 이행(ADR-0010 D1). 감사 '위험' 항목
+R5(pick dispatch)/R7(blur·lostpointercapture cancel)/R12-D(letterbox 7px)/R12-E(tie-break)는 후속 후보.
+**EXTERNAL-VERIFICATION-PENDING(사용자)**: 도착 고스트 회전 체감(곡률 불변), 방향 전환 드리블 경계, 패스 원점 화면=재생 일치.
+
+### 이전 목표(완료): PLAN-008
 
 **PLAN-008(자유 그리기, 2026-08-21) 완료** — 펜(freehand)+획 단위 지우개, 하단 바 전환(D/Esc),
 색 4·굵기 3, GIF 포함. 사용자 결정 D-01~D-04는 ACTIVE_PLAN에 기록. QA 후속(2026-08-20):

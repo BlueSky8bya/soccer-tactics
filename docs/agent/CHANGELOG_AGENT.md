@@ -1107,3 +1107,9 @@ Validation: typecheck/lint/test 163/build/harness/format PASS. 신규 테스트:
 Problem: relayout 순서가 timing→원점→재timing→스루볼→self-heal→possession pull로 구조 정규화가 뒤에 있고, `resolvePassReceiverInDraft`가 내부에서 relayout을 재호출해 command당 2~3중 실행(재진입). 원점 스냅은 `t-0.001` 샘플 트릭(R4). dead `durs` map.
 Change: 파이프라인 재배열 — ① self-heal(구조) ② step timing ③ 원점=stateAt(정확한 launch t; M1로 compile release=resolver라 ε 불필요) ④ 원점 이동 시 timing 재산출 1회 ⑤ through-ball 제약 ⑥ possession trigger 정규화. `resolvePassReceiverInDraft` 내부 relayout 제거(caller가 마지막에 1회 — addStepPass/addStepRun/bend commit 조정). `durs` 삭제.
 Validation: typecheck/lint/test 165/build/harness/format PASS. 신규: relayout byte 멱등성(2회 실행 === 1회, 복합 문서), self-heal 선행(무소유 travel이 한 번의 relayout로 possession+원점 동시 복구). s1_orbit probe 재실행 ALL PASS.
+
+### CHG-20260821-115 — EDITOR/ENGINE — validator 보강 + attach 상수 단일화 (감사 1안 M5, R8·R10)
+
+Problem: validator가 optional 필드(carryEnd/offset/offsetLocked/pressures/waypoint handle·hold)와 holderId/receiverId 참조를 검사하지 않아 NaN/문자열 오염이 parse를 통과(R8). attach/carry 반경이 2.6(clamp)·2.7(drop)·리터럴 산재로 경계 약속 분산(R10).
+Change: validateDocument — waypoint handleIn/Out·hold(≥0), move.carryEnd, possessed.offset(Vec)/offsetLocked(boolean)/holderId 참조, travel.receiverId 참조, freehand pressures(숫자·points와 동일 길이) 검사. compile.ts에 `CARRY_RING_MIN_M`/`CARRY_RING_MAX_M`/`ATTACH_RADIUS_M`(=max+0.1 headroom) 단일 정의 — carryOffset clamp와 SimplePitch drop/attach/highlight 판정 전부 이 상수 파생(2.7 리터럴 3곳 제거).
+Validation: typecheck/lint/test 167/build/harness/format PASS. 신규: malformed 거부 표(7종 path별) + valid optional 필드 클린 통과, ring 경계 r−ε/r/r+5 clamp 표 + ATTACH>RING 불변식.

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyDocument } from '@/domain'
 import type { Path, Segment, TacticDocument, Track } from '@/domain/types'
-import { compile } from './compile'
+import {
+  ATTACH_RADIUS_M,
+  CARRY_RING_MAX_M,
+  CARRY_RING_MIN_M,
+  carryOffset,
+  compile,
+} from './compile'
 import { buildPathLUT, pointAtDistance, simplifyPolyline, smoothWaypoints } from './path'
 import { stateAt } from './stateAt'
 
@@ -25,6 +31,21 @@ function baseDoc(): TacticDocument {
 function track(entityId: string, entityKind: 'player' | 'ball', segments: Segment[]): Track {
   return { id: `t-${entityId}`, entityId, entityKind, segments }
 }
+
+describe('carry ring / attach contract (ADR-0010 D5)', () => {
+  it('one semantic constant: attach always covers the ring, clamp is exact at the boundary', () => {
+    // the CHG-105 bug class: a ball ON the ring must ALWAYS be attachable
+    expect(ATTACH_RADIUS_M).toBeGreaterThan(CARRY_RING_MAX_M)
+    const eps = 1e-9
+    const at = (r: number) => carryOffset({ x: 0, y: r })
+    expect(at(CARRY_RING_MAX_M - eps).y).toBeCloseTo(CARRY_RING_MAX_M - eps, 6)
+    expect(at(CARRY_RING_MAX_M).y).toBe(CARRY_RING_MAX_M)
+    expect(at(CARRY_RING_MAX_M + 5).y).toBe(CARRY_RING_MAX_M) // clamped
+    expect(at(CARRY_RING_MIN_M - 1).y).toBe(CARRY_RING_MIN_M) // clamped up
+    // every clamped rest position stays attachable
+    expect(CARRY_RING_MAX_M).toBeLessThanOrEqual(ATTACH_RADIUS_M)
+  })
+})
 
 describe('path', () => {
   it('polyline LUT length and sampling are exact', () => {

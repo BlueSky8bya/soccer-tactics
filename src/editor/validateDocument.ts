@@ -76,6 +76,14 @@ export function validateDocument(input: unknown): string[] {
         case 'line':
         case 'freehand':
           if (!Array.isArray(dr.points) || !dr.points.every(isVec)) bad(`drawings[${i}]`, 'points')
+          else if (
+            dr.kind === 'freehand' &&
+            dr.pressures !== undefined &&
+            (!Array.isArray(dr.pressures) ||
+              !dr.pressures.every(isNum) ||
+              dr.pressures.length !== dr.points.length)
+          )
+            bad(`drawings[${i}].pressures`, 'must be numbers, one per point')
           break
         case 'zone': {
           const sh = dr.shape
@@ -144,16 +152,39 @@ export function validateDocument(input: unknown): string[] {
           const kind = sg.kind
           if (kind === 'move' || kind === 'travel') {
             const path = sg.path
+            const wpOk = (w: unknown): boolean =>
+              isObj(w) &&
+              isStr(w.id) &&
+              isVec(w.p) &&
+              (w.handleIn === undefined || isVec(w.handleIn)) &&
+              (w.handleOut === undefined || isVec(w.handleOut)) &&
+              (w.hold === undefined || (isNum(w.hold) && w.hold >= 0))
             if (
               !isObj(path) ||
               !Array.isArray(path.waypoints) ||
               path.waypoints.length < 1 ||
-              !path.waypoints.every((w) => isObj(w) && isStr(w.id) && isVec(w.p))
+              !path.waypoints.every(wpOk)
             )
-              bad(`${SP}.path`, 'waypoints invalid')
+              bad(`${SP}.path`, 'waypoints invalid (p/handles/hold)')
           }
-          if (kind === 'possessed' && !isStr(sg.holderId)) bad(`${SP}.holderId`, 'missing')
-          if (kind === 'travel' && !isStr(sg.travelKind)) bad(`${SP}.travelKind`, 'missing')
+          if (kind === 'move' && sg.carryEnd !== undefined && !isVec(sg.carryEnd))
+            bad(`${SP}.carryEnd`, 'must be a vector')
+          if (kind === 'possessed') {
+            if (!isStr(sg.holderId)) bad(`${SP}.holderId`, 'missing')
+            else if (!playerIds.has(sg.holderId)) bad(`${SP}.holderId`, 'unknown player')
+            if (sg.offset !== undefined && !isVec(sg.offset))
+              bad(`${SP}.offset`, 'must be a vector')
+            if (sg.offsetLocked !== undefined && typeof sg.offsetLocked !== 'boolean')
+              bad(`${SP}.offsetLocked`, 'must be boolean')
+          }
+          if (kind === 'travel') {
+            if (!isStr(sg.travelKind)) bad(`${SP}.travelKind`, 'missing')
+            if (
+              sg.receiverId !== undefined &&
+              !(isStr(sg.receiverId) && playerIds.has(sg.receiverId))
+            )
+              bad(`${SP}.receiverId`, 'unknown player')
+          }
           if (!['move', 'hold', 'possessed', 'travel', 'loose'].includes(kind))
             bad(`${SP}.kind`, `unknown ${kind}`)
         })

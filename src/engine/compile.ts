@@ -20,6 +20,13 @@ export const DEFAULT_SPEED = 4.5 // m/s (jog/run) when a move has speed timing b
 export const MIN_SCENE_DURATION = 5 // seconds shown when the timeline is empty
 export const BALL_OFFSET: Vec2 = { x: 1.75, y: 1.15 } // possessed ball just clear of the holder (m)
 
+/** Carry ring — where a held ball may rest around its holder (ADR-0010 D5, one source). */
+export const CARRY_RING_MIN_M = 2.0
+export const CARRY_RING_MAX_M = 2.6
+/** Drop-commit / attach radius: ring max + float headroom, so a ball released exactly ON the
+ *  ring ALWAYS attaches (the 2.6-vs-2.6 float equality bug of CHG-105 can never return). */
+export const ATTACH_RADIUS_M = CARRY_RING_MAX_M + 0.1
+
 /**
  * Carry direction: clamp a holder→ball vector to a natural dribbling radius. The holder can carry
  * the ball at ANY angle (user 2026-08-20) — direction is preserved, distance stays in [0.8, 1.6] m.
@@ -30,7 +37,7 @@ export function carryOffset(v: Vec2): Vec2 {
   if (len < 0.05) return BALL_OFFSET
   // Foot distance: far enough that the ball never sits ON the player disc (r 1.7 + ball 0.75),
   // close enough to read as "held" (user 2026-08-20: 공이 선수를 가리면 클릭을 뺏는다).
-  const r = Math.max(2.0, Math.min(2.6, len))
+  const r = Math.max(CARRY_RING_MIN_M, Math.min(CARRY_RING_MAX_M, len))
   return { x: (v.x / len) * r, y: (v.y / len) * r }
 }
 
