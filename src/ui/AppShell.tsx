@@ -5,6 +5,7 @@ import { useCompiled } from '@/editor/useCompiled'
 import { usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
+import { SelectionActionBar } from './SelectionActionBar'
 import { ActionsPanel, GuidePanel } from './SidePanels'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { StepBar } from './StepBar'
@@ -111,7 +112,7 @@ export function AppShell() {
         <div className={styles.pitchFrame}>
           <SimplePitch />
         </div>
-        <PlayerCard />
+        {ui.selectedSegmentId ? <SelectionActionBar /> : <PlayerCard />}
         {errors.length > 0 && (
           <div className={styles.emptyHint} role="alert">
             ⚠ {t('tl.issue.cycle')}

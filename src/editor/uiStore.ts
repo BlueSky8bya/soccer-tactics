@@ -4,6 +4,7 @@
  */
 import { create } from 'zustand'
 import type { Id, Vec2 } from '@/domain/types'
+import { MAX_STEP } from './stepCommands'
 
 export type Tool = 'select' | 'add-player' | 'add-ball' | 'path' | 'zone' | 'text' | 'arrow'
 
@@ -203,7 +204,8 @@ export const useUiStore = create<UiState>((set) => ({
       completion: 'idle',
     })),
   setAnimMode: (animMode) => set({ animMode }),
-  setCurrentStep: (currentStep) => set({ currentStep: Math.max(1, Math.min(10, currentStep)) }),
+  setCurrentStep: (currentStep) =>
+    set({ currentStep: Math.max(1, Math.min(MAX_STEP, currentStep)) }),
   flashToast: (msg, ms = 1800) => {
     set({ toast: msg })
     setTimeout(() => set((s) => (s.toast === msg ? { toast: null } : {})), ms)

@@ -1,6 +1,7 @@
 import { createEmptyDocument } from '@/domain'
 import { applyFormations, placeBallCenter, seedDefaultTeams } from '@/editor/commands'
 import { replaceDocument } from '@/editor/moreCommands'
+import { clearAllMovements } from '@/editor/stepCommands'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { FORMATIONS } from '@/presets/formations'
 import { useState } from 'react'
@@ -64,6 +65,17 @@ export function ActionsPanel() {
         data-tour="ball-btn"
       >
         ● {t('panel.ball')}
+      </button>
+      <button
+        type="button"
+        className={`${styles.btn} ${styles.panelBtn}`}
+        onClick={() => {
+          const n = clearAllMovements(core)
+          flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
+        }}
+        title={t('panel.clearAll')}
+      >
+        ⌫ {t('panel.clearAll')}
       </button>
       <button
         type="button"

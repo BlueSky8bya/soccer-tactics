@@ -1220,6 +1220,12 @@
   font-size: 12.5px;
 }
 
+.sabKind {
+  font-weight: 700;
+  color: var(--st-text-1);
+  white-space: nowrap;
+}
+
 .playerCard label {
   display: flex;
   align-items: center;

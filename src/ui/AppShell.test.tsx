@@ -82,7 +82,7 @@ describe('AppShell (simple mode, ADR-0009)', () => {
     expect(container.querySelectorAll('[data-kind="player"]').length).toBe(0)
   })
 
-  it('a drawn run renders a path with a step badge; the badge advances the step', async () => {
+  it('badge click only SELECTS; the action bar picker sets the exact step (PLAN-005 M2)', async () => {
     const { core, container } = setup()
     await act(async () => {
       screen.getByRole('button', { name: /양 팀 채우기/ }).click()
@@ -92,13 +92,60 @@ describe('AppShell (simple mode, ADR-0009)', () => {
       addStepRun(core, p.id, makePath([p.home, { x: p.home.x + 10, y: p.home.y }]).waypoints, 1)
     })
     expect(container.querySelectorAll('[data-segment]').length).toBeGreaterThan(0)
+    const rev = core.getRevision()
     const badge = screen.getByRole('button', { name: /단계 1/ })
     await act(async () => {
       badge.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
     })
+    // no document change; the movement is selected and the action bar appears
+    expect(core.getRevision()).toBe(rev)
+    const seg = core
+      .getDocument()
+      .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+      .find((s) => 'path' in s)!
+    expect(useUiStore.getState().selectedSegmentId).toBe(seg.id)
+    expect(seg.step ?? 1).toBe(1)
+    // picker: exact assignment 1 -> 5 in one change
+    const picker = screen.getByRole('combobox', { name: /이 움직임의 단계/ })
+    await act(async () => {
+      const { fireEvent } = await import('@testing-library/react')
+      fireEvent.change(picker, { target: { value: '5' } })
+    })
+    const seg2 = core
+      .getDocument()
+      .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+      .find((s) => 'path' in s)!
+    expect(seg2.step).toBe(5)
+  })
+
+  it('움직임 전체 지우기 removes all authored movements in one undo entry', async () => {
+    const { core } = setup()
+    await act(async () => {
+      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
+    })
     const d = core.getDocument()
-    const seg = d.scenes[0]!.timeline.tracks.flatMap((t) => t.segments).find((s) => 'path' in s)!
-    expect(seg.step).toBe(2)
+    const [a, b] = d.players
+    await act(async () => {
+      addStepRun(core, a!.id, makePath([a!.home, { x: a!.home.x + 8, y: a!.home.y }]).waypoints, 1)
+      addStepRun(core, b!.id, makePath([b!.home, { x: b!.home.x + 8, y: b!.home.y }]).waypoints, 2)
+    })
+    await act(async () => {
+      screen.getByRole('button', { name: /움직임 전체 지우기/ }).click()
+    })
+    const segs = core
+      .getDocument()
+      .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+      .filter((s) => 'path' in s)
+    expect(segs).toHaveLength(0)
+    expect(core.getDocument().players.length).toBeGreaterThan(0)
+    await act(async () => {
+      core.undo()
+    })
+    const restored = core
+      .getDocument()
+      .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+      .filter((s) => 'path' in s)
+    expect(restored).toHaveLength(2)
   })
 
   it('step chip preview moves UI time only - no document revision (PLAN-005 M1)', async () => {

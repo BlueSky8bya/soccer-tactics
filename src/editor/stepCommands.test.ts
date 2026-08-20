@@ -7,6 +7,9 @@ import { findTrack, makePath } from './segmentCommands'
 import {
   addStepPass,
   addStepRun,
+  clearAllMovements,
+  clearEntityMovements,
+  clearStep,
   removeStepSegment,
   setSegmentStep,
   stepCounts,
@@ -186,5 +189,71 @@ describe('stepWindow (PLAN-005 M1)', () => {
     expect(w2.start).toBe(0)
     expect(w4.start).toBeCloseTo(w2.end, 5)
     expect(stepWindow(doc, 1)).toBeNull()
+  })
+})
+
+describe('partial clears (PLAN-005 M2, A-06)', () => {
+  it('clearStep removes one step in ONE undo entry and relayouts the rest', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const [a, b, c] = d.players
+    addStepRun(core, a!.id, makePath([a!.home, { x: a!.home.x + 8, y: a!.home.y }]).waypoints, 1)
+    addStepRun(core, b!.id, makePath([b!.home, { x: b!.home.x + 8, y: b!.home.y }]).waypoints, 1)
+    const r3 = addStepRun(
+      core,
+      c!.id,
+      makePath([c!.home, { x: c!.home.x + 8, y: c!.home.y }]).waypoints,
+      2,
+    )
+    const before = core.getDocument()
+    const n = clearStep(core, 1)
+    expect(n).toBe(2)
+    const after = core.getDocument()
+    expect(stepCounts(after)[0]).toBe(0)
+    // remaining step-2 run relayouts to start at 0
+    const cm = compile(after)
+    expect(cm.segmentTimes[r3]!.start).toBe(0)
+    core.undo() // ONE undo restores both removed movements
+    expect(core.getDocument().scenes[0]!.timeline.tracks).toEqual(before.scenes[0]!.timeline.tracks)
+    expect(stepCounts(core.getDocument())[0]).toBe(2)
+  })
+
+  it('clearEntityMovements removes only that entity; clearStep(3) on empty step is a no-op', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const [a, b] = d.players
+    addStepRun(core, a!.id, makePath([a!.home, { x: a!.home.x + 8, y: a!.home.y }]).waypoints, 1)
+    addStepRun(core, b!.id, makePath([b!.home, { x: b!.home.x + 8, y: b!.home.y }]).waypoints, 1)
+    const rev = core.getRevision()
+    expect(clearStep(core, 3)).toBe(0)
+    expect(core.getRevision()).toBe(rev) // no empty undo entry
+    expect(clearEntityMovements(core, a!.id)).toBe(1)
+    expect(stepCounts(core.getDocument())[0]).toBe(1) // b's run survives
+  })
+
+  it('clearAllMovements keeps formation and ball but drops passes + follower possession', () => {
+    const core = filled()
+    const d0 = core.getDocument()
+    const holder = d0.players.find((p) => p.id === d0.ball.initialHolderId)!
+    const mate = d0.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    addStepRun(
+      core,
+      mate.id,
+      makePath([mate.home, { x: mate.home.x + 10, y: mate.home.y }]).waypoints,
+      1,
+    )
+    addStepPass(core, makePath([d0.ball.home, mate.home]).waypoints, 2, holder.id)
+    const players = core.getDocument().players.length
+    const n = clearAllMovements(core)
+    expect(n).toBeGreaterThanOrEqual(2)
+    const after = core.getDocument()
+    expect(after.players.length).toBe(players) // formation untouched
+    const ballTrack = findTrack(after, after.ball.id)
+    // no dangling travel/possession pair left behind
+    expect(ballTrack?.segments.filter((s) => 'path' in s) ?? []).toHaveLength(0)
+    const cm = compile(after)
+    expect(cm.issues.filter((i) => i.level === 'error')).toHaveLength(0)
+    core.undo()
+    expect(stepCounts(core.getDocument()).reduce((x, y) => x + y, 0)).toBe(2)
   })
 })

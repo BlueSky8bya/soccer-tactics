@@ -427,3 +427,13 @@ Change:
 - SimplePitch: 문서를 바꾸는 제스처 시작(토큰 이동/그리기/벤딩/고스트 조정/선수 추가) = `returnToAuthoringStart()`. 고스트/배지는 t>0(재생·정지 frame·preview)일 때 숨김.
 Validation: typecheck/lint/test 97/build/harness/format PASS; Playwright(m1.cjs): chip2 preview 180px 지점·고스트 0, 이 단계만 재생 중 타 단계 드리프트 0, 종료 후 배너+frame 유지, Home 원위치 0px, held 중 편집 시 자동 복귀+배너 소거, 콘솔 클린.
 
+### CHG-20260820-037 — FEAT — 명시적 단계 편집·부분 삭제·선택 액션 바 (PLAN-005 M2)
+
+Problem: 배지 오클릭이 즉시 단계 +1(역방향 수정 번거로움, C-02), chip이 선택된 경로를 암묵 재배정(A-03), 삭제 단위가 경로 하나/전체 판뿐(A-06), 단계 상한이 uiStore에서 10으로 남음(DOC-04).
+Change:
+- 배지 클릭 = 선택만. 단계 지정은 SelectionActionBar(신규)의 1~9 picker 또는 숫자키.
+- SelectionActionBar: 선택한 움직임의 소유자·종류(이동/패스)·단계 picker·`▶ 이 단계만`·삭제·선택 해제 — native 컨트롤(C-06). PlayerCard와 같은 anchor, 동시에 하나만 렌더.
+- `clearStep`/`clearEntityMovements`/`clearAllMovements` (stepCommands): 각각 1 transaction·1 undo, gen- 보존, relayout 포함. 좌측 패널에 `움직임 전체 지우기`(새로 시작과 분리, undo 안내 toast, A-06(a) 확인창 없음).
+- uiStore `setCurrentStep` clamp를 MAX_STEP(9)로 통일(DOC-04).
+Validation: typecheck/lint/test 101/build/harness/format PASS; Playwright(m2.cjs): 배지→액션바, picker 1→5(chip5 used), 바에서 단계 재생, 삭제→segments 0, 전체 지우기→segments 0·선수 22 유지, Ctrl+Z 한 번에 2개 복원, 콘솔 클린.
+

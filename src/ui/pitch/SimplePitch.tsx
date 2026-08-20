@@ -19,7 +19,6 @@ import {
   bendMoveWaypointInDraft,
   relayoutStepsInDraft,
   resolvePassReceiverInDraft,
-  setSegmentStep,
   stepOf,
 } from '@/editor/stepCommands'
 
@@ -757,9 +756,8 @@ export function SimplePitch() {
             className={styles.stepBadge}
             transform={`translate(${b.end.x}, ${b.end.y - 1.9})`}
             onPointerDown={(e) => {
+              // Select only (C-02): the exact step is set in the selection action bar or with 1-9.
               e.stopPropagation()
-              const next = (b.step % 9) + 1
-              setSegmentStep(core, b.id, next)
               useUiStore.getState().selectSegment(b.id)
             }}
             role="button"

@@ -263,6 +263,58 @@ export function setSegmentStep(core: EditorCore, segmentId: Id, step: number): v
   })
 }
 
+/** Authored (non-generated) path segment ids matching `pred` — the partial-clear unit (M2). */
+function authoredIds(
+  doc: TacticDocument,
+  pred: (seg: { id: Id; step?: number }, entityId: Id) => boolean,
+): Id[] {
+  const ids: Id[] = []
+  for (const track of sceneOf(doc).timeline.tracks)
+    for (const s of track.segments) {
+      if (!('path' in s) || s.id.startsWith(GEN_PREFIX)) continue
+      if (pred(s, track.entityId)) ids.push(s.id)
+    }
+  return ids
+}
+
+/** Shared partial clear: remove the given authored movements in ONE transaction (A-06). */
+function clearMovements(core: EditorCore, label: string, ids: Id[]): number {
+  if (ids.length === 0) return 0
+  core.transaction(label, (d) => {
+    const doc = d as TacticDocument
+    for (const id of ids) removeSegmentInDraft(doc, id)
+    relayoutStepsInDraft(doc)
+  })
+  return ids.length
+}
+
+/** Delete every movement of one step — one undo entry. Generated (gen-) segments survive. */
+export function clearStep(core: EditorCore, step: number): number {
+  return clearMovements(
+    core,
+    'Clear step',
+    authoredIds(core.getDocument(), (s) => stepOf(s) === step),
+  )
+}
+
+/** Delete every authored movement of one entity (player runs, or all ball passes). */
+export function clearEntityMovements(core: EditorCore, entityId: Id): number {
+  return clearMovements(
+    core,
+    'Clear entity movements',
+    authoredIds(core.getDocument(), (_s, eid) => eid === entityId),
+  )
+}
+
+/** Delete every authored movement on the board; formation/meta/drawings stay. */
+export function clearAllMovements(core: EditorCore): number {
+  return clearMovements(
+    core,
+    'Clear all movements',
+    authoredIds(core.getDocument(), () => true),
+  )
+}
+
 /** Delete a movement and re-derive the remaining steps — one undo step. */
 export function removeStepSegment(core: EditorCore, segmentId: Id): void {
   core.transaction('Delete', (d) => {
