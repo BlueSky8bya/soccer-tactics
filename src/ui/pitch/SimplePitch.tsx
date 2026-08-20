@@ -25,6 +25,8 @@ import {
   stepOf,
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
+import { ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
+import type { PickGhost, PickSegment } from './pickTarget'
 
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
 import { useUiStore } from '@/editor/uiStore'
@@ -46,6 +48,19 @@ import {
   ghostOpacityForStep,
   placeStepBadges,
 } from './pathPresentation'
+
+/** Sampled polyline (~0.6m) of a segment's FULL authored path — geometric hit input (M1). */
+const pathPtsCache = new WeakMap<object, Vec2[]>()
+function samplePathPts(seg: { path: Path }): Vec2[] {
+  const hit = pathPtsCache.get(seg)
+  if (hit) return hit
+  const lut = buildPathLUT(seg.path)
+  const n = Math.max(2, Math.ceil(lut.length / 0.6) + 1)
+  const pts: Vec2[] = []
+  for (let i = 0; i < n; i++) pts.push(pointAtDistance(lut, (lut.length * i) / (n - 1)))
+  pathPtsCache.set(seg, pts)
+  return pts
+}
 
 const DRAG_THRESHOLD_PX = 4
 
@@ -103,6 +118,13 @@ export function SimplePitch() {
   const ui = useUiStore()
   const svgRef = useRef<SVGSVGElement>(null)
   const gesture = useRef<Gesture | null>(null)
+  /** Last pointerdown pick (PLAN-007): cycling input + adapter data for the intent switch. */
+  const lastPickRef = useRef<{
+    pick: ReturnType<typeof pickTargets>
+    pt: Vec2
+    clientX: number
+    clientY: number
+  } | null>(null)
   const [marquee, setMarquee] = useState<{ a: Vec2; b: Vec2 } | null>(null)
   const [drawKeyHeld, setDrawKeyHeld] = useState(false)
   /** While drawing: the target (player now / any future ghost) the stroke end is snapped to. */
@@ -463,44 +485,59 @@ export function SimplePitch() {
       svg.setPointerCapture(e.pointerId)
     }
 
-    // Reduce the press to flags, let the pure resolver pick ONE intent (PLAN-005 M3, FRAG-02).
-    const ghostEl = targetEl.closest('[data-ghost]') as SVGElement | null
-    const segEl = targetEl.closest('[data-segment]') as SVGElement | null
-    const tokenEl = targetEl.closest('[data-entity]') as SVGGElement | null
-    // The ball paints ABOVE its holder, so it wins every overlapping press. Disambiguate by
-    // visual-radius-normalized distance: pressing the player's body grabs the PLAYER (run/move),
-    // pressing the little ball itself still grabs the BALL (pass) — user 2026-08-20.
-    // At t=0 a step-1 pass makes the resolved status 'travel', so fall back to the INITIAL holder
-    // (otherwise the press leaks to the ball and dragging the player rips the possession apart).
+    // Geometric candidates replace DOM paint-order routing (PLAN-007 M1). Interactive DOM
+    // controls (badge, picker) were already handled above; everything else is picked from
+    // positions, so overlapping siblings all compete on distance — not on z-order.
+    const livePlayers = doc.players.map((pl) => ({
+      id: pl.id,
+      pos: resolved.players[pl.id]?.pos ?? pl.home,
+    }))
+    const liveBall = { id: doc.ball.id, pos: resolved.ball.pos }
+    const pickGhosts: PickGhost[] = ghosts.map((g) => ({
+      entityId: g.entityId,
+      segId: g.segId,
+      kind: g.kind === 'ball' ? 'ball' : 'player',
+      pos: g.pos,
+      step: g.step,
+    }))
+    const svgRect = svg.getBoundingClientRect()
+    const pick = pickTargets({
+      players: livePlayers,
+      ball: liveBall,
+      ghosts: viewingFrame ? [] : pickGhosts, // decorations are hidden while viewing a frame
+      segments: pickSegments,
+      pt,
+      metresPerPixel: (doc.pitch.length + 4) / Math.max(1, svgRect.width),
+      currentStep: ui.currentStep,
+      selection: st.selection,
+      selectedSegmentId: st.selectedSegmentId,
+    })
+    const ov = pick.overlaps
+    const ghostTop = ov.ghosts[0] ?? null
+    const segTop = ov.segments[0] ?? null
+    // Possession pair (golden G1): the historical .9/1.8 comparator, with the t=0 initial-holder
+    // fallback (a step-1 pass makes the resolved status 'travel' at rest).
     const pressHolderId =
       resolved.ball.holderId ?? (ui.playback.t === 0 ? doc.ball.initialHolderId : undefined)
-    let tokenEntityId = tokenEl?.getAttribute('data-entity') ?? null
-    if (tokenEntityId === doc.ball.id && pressHolderId) {
-      const hp = resolved.players[pressHolderId]?.pos
-      if (hp) {
-        const dBall = Math.hypot(resolved.ball.pos.x - pt.x, resolved.ball.pos.y - pt.y)
-        const dHolder = Math.hypot(hp.x - pt.x, hp.y - pt.y)
-        if (dBall / 0.9 > dHolder / 1.8) tokenEntityId = pressHolderId
-      }
+    let tokenEntityId: Id | null = null
+    if (ov.ball && pressHolderId && resolved.players[pressHolderId]) {
+      const hp = resolved.players[pressHolderId]!.pos
+      tokenEntityId =
+        resolvePossessionPair(pt, resolved.ball.pos, hp) === 'holder' ? pressHolderId : doc.ball.id
+    } else {
+      tokenEntityId = ov.players[0]?.id ?? ov.ball?.id ?? null
     }
-    const nearPlayer = ghostEl
-      ? doc.players.find((pl) => {
-          const pos = resolved.players[pl.id]?.pos ?? pl.home
-          return Math.hypot(pos.x - pt.x, pos.y - pt.y) < 1.2
-        })
-      : undefined
-    const nearBall = ghostEl
-      ? Math.hypot(resolved.ball.pos.x - pt.x, resolved.ball.pos.y - pt.y) < 0.9
-      : false
+    const yieldId = ghostTop ? ghostYieldTarget(pt, livePlayers, liveBall) : null
+    lastPickRef.current = { pick, pt, clientX: e.clientX, clientY: e.clientY }
     const intent = resolvePointerIntent(
       {
-        ghost: !!ghostEl,
-        segment: !!segEl,
-        token: !!tokenEl,
+        ghost: !!ghostTop,
+        segment: !!segTop,
+        token: !!tokenEntityId,
         insidePitch: pt.x >= 0 && pt.x <= L && pt.y >= 0 && pt.y <= W,
       },
       { button: e.button, draw: e.altKey, ctrl: e.ctrlKey || e.metaKey },
-      { liveTokenNearGhost: !!nearPlayer || nearBall, chainActive: !!chain.current },
+      { liveTokenNearGhost: !!yieldId, chainActive: !!chain.current },
     )
 
     switch (intent) {
@@ -508,25 +545,22 @@ export function SimplePitch() {
         // Next movement starts at that future spot — and must PLAY after it too, or the compiled
         // start attaches to the holder's PAST position (user bug 2026-08-20). Force step >=
         // (source movement's step + 1); the chip only raises it further.
-        const entityId = ghostEl!.getAttribute('data-ghost')!
-        const gx = Number(ghostEl!.getAttribute('data-gx'))
-        const gy = Number(ghostEl!.getAttribute('data-gy'))
-        const srcSegId = ghostEl!.getAttribute('data-move-seg')
-        const src = srcSegId ? findSegment(core.getDocument(), srcSegId) : null
-        const minStep =
-          src && 'path' in src.segment
-            ? Math.min(MAX_STEP, stepOf(src.segment as { step?: number }) + 1)
-            : undefined
-        startDraw(entityId, e.pointerId, { x: gx, y: gy }, minStep)
+        const minStep = Math.min(MAX_STEP, ghostTop!.step + 1)
+        startDraw(
+          ghostTop!.entityId,
+          e.pointerId,
+          { x: ghostTop!.pos.x, y: ghostTop!.pos.y },
+          minStep,
+        )
         return
       }
       case 'press-live-token':
         // A live token sits right under the ghost press - the token wins.
-        pressToken(nearBall ? doc.ball.id : nearPlayer!.id)
+        pressToken(yieldId!)
         return
       case 'adjust-ghost-end': {
         // Plain drag on a ghost = fine-tune that movement's end.
-        const segId = ghostEl!.getAttribute('data-move-seg')
+        const segId = ghostTop!.segId
         const f = segId ? findSegment(core.getDocument(), segId) : null
         if (!f || !('path' in f.segment)) return
         const wps = f.segment.path.waypoints
@@ -567,12 +601,12 @@ export function SimplePitch() {
         return
       case 'bend-path': {
         // Path drag is ALWAYS bend (C-01) - group moves use live token drags only.
-        const segmentId = segEl!.getAttribute('data-segment')!
+        const segmentId = segTop!.segId
         st.selectSegment(segmentId)
         gesture.current = {
           type: 'bend',
           segmentId,
-          entityId: segEl!.getAttribute('data-entity-of') ?? '',
+          entityId: segTop!.entityId,
           pointerId: e.pointerId,
           startClient: { x: e.clientX, y: e.clientY },
           started: false,
@@ -734,6 +768,20 @@ export function SimplePitch() {
     ;(window as unknown as Record<string, unknown>).__stCompiled = compiled
   }, [doc, compiled])
 
+  // Geometric pick inputs (PLAN-007 M1): sampled FULL paths, cached by segment identity.
+  const pickSegments: PickSegment[] = doc.scenes[0]
+    ? sceneTracks(doc).flatMap((tr) =>
+        tr.segments
+          .filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
+          .map((sg) => ({
+            segId: sg.id,
+            entityId: tr.entityId,
+            step: stepOf(sg as { step?: number }),
+            pts: samplePathPts(sg as { path: Path }),
+          })),
+      )
+    : []
+
   // ---------- render ----------
   const drag = ui.drag
   const selection = ui.selection
@@ -794,7 +842,8 @@ export function SimplePitch() {
           return segs.flatMap((sg) => {
             const path = (sg as { path: { waypoints: { p: Vec2 }[] } }).path
             const end = path.waypoints[path.waypoints.length - 1]!.p
-            const rank = usedSteps.indexOf(stepOf(sg as { step?: number }))
+            const srcStep = stepOf(sg as { step?: number })
+            const rank = usedSteps.indexOf(srcStep)
             const opacity = ghostOpacityForStep(
               rank < 0 ? 0 : rank,
               selection.includes(tr.entityId),
@@ -819,6 +868,7 @@ export function SimplePitch() {
                 segId: (sg as { id: Id }).id,
                 entityId: tr.entityId,
                 kind: tr.entityKind,
+                step: srcStep,
                 pos,
                 opacity,
                 number:
@@ -840,6 +890,7 @@ export function SimplePitch() {
                     segId: (sg as { id: Id }).id,
                     entityId: doc.ball.id,
                     kind: 'ball' as const,
+                    step: srcStep,
                     pos: rs.ball.pos,
                     opacity,
                     number: undefined,

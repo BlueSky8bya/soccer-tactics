@@ -791,3 +791,11 @@ Validation: typecheck/lint/test 136/build/harness/format PASS; 실제 GIF 추출
 Change: tactic-날짜.gif → 활성 전술안 접두(예: B안_260820_1714.gif) — 어떤 안의 장면인지 파일명만으로 식별.
 Validation: typecheck/lint/test 136/build/harness/format PASS; Playwright: B안 활성 상태에서 내보내기 → 'B안_260820_1714.gif' 확인.
 
+### CHG-20260820-075 — REFACTOR — PLAN-007 M1: 기하 후보 히트(하이브리드 라우팅)
+
+Problem: 히트가 DOM 페인트 순서에 종속 — 겹침에서 위에 그려진 요소가 무조건 승, 예외 패치 누적(PLAN-007 문제 정의).
+Change:
+- 신규 pickTarget.ts(순수): 겹치는 모든 후보(선수/공/고스트/경로)를 거리와 함께 수집, (sticky 선택 > 같은 종류 내 현재 단계 > 정규화 거리 > stableKey) 순위 튜플 정렬 + fingerprint. 역사적 수치 계약 보존: 소유 비교 .9/1.8, 고스트 양보 1.2/0.9m, 토큰 반경 2.2/1.76m, 경로는 화면 7px 허용(CR-02/04).
+- SimplePitch pointerdown: DOM closest 3종 → pickTargets 어댑터(배지/피커 DOM 우선 유지, gestureIntent 불변). 고스트에 원본 step 부여, 경로는 full path 0.6m 샘플(세그먼트 identity 캐시).
+Validation: typecheck/lint/test 142(+6)/build/harness/format PASS; M0 골든 G1~G7 재실행 전부 동일; 개선 데모 — 고스트가 라이브 토큰을 덮은 지점에서 중심 클릭=#8 선수·1.5m 링 클릭=움직임 선택(페인트 순서 무관), 콘솔 클린.
+
