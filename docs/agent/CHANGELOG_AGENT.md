@@ -531,3 +531,10 @@ Change:
 - ADR-0009 **Amendment v4**: PLAN-005 승인 계약(칩=preview, 구간 재생, 결과 유지, 경로 드래그=휘기, 배지=선택, 체인 상한, 세션 A/B, A-04 보류) 기록.
 - CURRENT_STATE 머리말·상태 갱신(DOC-01), PROJECT_MAP에 신규 파일 반영.
   Validation: `rg "animMode|timelineExpanded|autoReactOpen|scrubGhost|animToggle" src` → 0건(역사적 ADR 언급만 잔존); typecheck/lint/test 116/build/harness/format PASS.
+
+### CHG-20260820-043 — UX — 재생 중 경로/화살표 숨김 (사용자 지시)
+
+Problem: 사용자 — "애니메이션 진행할 때는 이거 화살표 안 보이게 해줘" (재생 중 경로 화살표가 움직임을 방해).
+Change: PathLayer 전체를 재생 중(`playing`) `.decorHidden`으로 페이드 아웃(160ms, reduced-motion 즉시) — M4의 "재생 중 active 경로 강조"를 사용자 결정으로 대체(ADR-0009 v4 해당 항목 수정). 일시정지·결과 화면·단계 미리보기 frame에서는 phase 감쇠로 다시 표시. dimOthers 재생 분기 제거.
+Validation: typecheck/test 116/build/harness/format PASS; Playwright(m8.cjs): authoring path 1.0 → playing path 0·badge 0 → held-result path 0.22(past) → Home 1.0, 콘솔 클린.
+

@@ -13,7 +13,7 @@ PLAN-20260821-005 (Codex 계획·Claude 구현, 승인 2026-08-20 "A-04 보류, 
 - M1: 단계 칩=시작 장면 preview(문서 불변) · `▶ 이 단계만`/`▶ 여기부터` · 일시정지/종료=frame 유지("결과 화면"), Home/편집 시작 시 복귀 · Space/버튼 공용 action.
 - M2: 배지 클릭=선택만 · SelectionActionBar(단계 picker·재생·삭제) · `움직임 전체 지우기`(1 undo) · clearStep/clearEntity/clearAll · 단계 상한 9 통일.
 - M3: `gestureIntent.ts` 순수 intent 판정 · **경로 드래그=항상 휘기**(그룹 이동은 토큰 드래그) · 체인 9단계 초과 차단+토스트 · toast 렌더러 추가.
-- M4: 재생 중 active 경로 강조(casing)·past/future 후퇴 · 고스트 전역 단계 감쇠 · 배지 충돌 회피 · chip aria-current.
+- M4: 재생 중 active 경로 강조(casing)·past/future 후퇴 · 고스트 전역 단계 감쇠 · 배지 충돌 회피 · chip aria-current. **후속(CHG-043): 재생 중에는 경로/화살표 전부 숨김(사용자 지시)** — 강조는 일시정지/미리보기 frame에서만.
 - M5: 세션 A/B 변형(독립 EditorCore/undo, 메모리 한정, 새로고침 소멸).
 - M6: 짧은 드래그 이유 토스트 · 옵트인 미니 투어(굽히기→단계 재생→undo) · 고스트/배지 160ms 페이드(reduced-motion 즉시) · 공 드롭 스프링 배선.
 - M7: dead state(animMode·timelineExpanded·autoReactOpen·theme)·dead CSS·dead i18n 제거, ADR-0009 Amendment v4, 문서 정합화.

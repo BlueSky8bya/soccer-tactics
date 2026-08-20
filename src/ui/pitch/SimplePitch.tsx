@@ -755,24 +755,27 @@ export function SimplePitch() {
     >
       <PitchMarkings pitch={doc.pitch} />
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />
-      <PathLayer
-        doc={doc}
-        teamColorOf={(pid) => teamColorOf(doc, pid)}
-        selectedEntityIds={selection}
-        selectedSegmentId={ui.selectedSegmentId}
-        attachedStart={attachedStart}
-        draft={
-          ui.pathDraft
-            ? {
-                points: ui.pathDraft.points,
-                color: draftColor,
-                dashed: ui.pathDraft.entityId === doc.ball.id,
-              }
-            : null
-        }
-        dimOthers={isPlaying}
-        pathPhase={viewingFrame ? pathPhase : undefined}
-      />
+      {/* Routes hidden while the animation runs (user 2026-08-20): the moving tokens ARE the play. */}
+      <g className={isPlaying ? styles.decorHidden : styles.decorShown}>
+        <PathLayer
+          doc={doc}
+          teamColorOf={(pid) => teamColorOf(doc, pid)}
+          selectedEntityIds={selection}
+          selectedSegmentId={ui.selectedSegmentId}
+          attachedStart={attachedStart}
+          draft={
+            ui.pathDraft
+              ? {
+                  points: ui.pathDraft.points,
+                  color: draftColor,
+                  dashed: ui.pathDraft.entityId === doc.ball.id,
+                }
+              : null
+          }
+          dimOthers={false}
+          pathPhase={viewingFrame ? pathPhase : undefined}
+        />
+      </g>
       {/* step badges - kept mounted, faded out while viewing a frame (D-02) */}
       <g className={viewingFrame ? styles.decorHidden : styles.decorShown}>
         {badges.map((b) => (
