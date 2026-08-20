@@ -32,6 +32,8 @@ function isActivatableControl(el: EventTarget | null): boolean {
 export function useEditorKeyboard(): void {
   const core = useEditor()
   const inputModality = useRef<'pointer' | 'keyboard'>('pointer')
+  /** Space HOLD = temporary fast-forward (×3); tap keeps its play/pause meaning. */
+  const spaceHold = useRef<{ wasPlaying: boolean; boosted: boolean; timer: number } | null>(null)
   useEffect(() => {
     const onPointer = () => {
       inputModality.current = 'pointer'
@@ -99,8 +101,20 @@ export function useEditorKeyboard(): void {
             ;(e.target as HTMLElement).blur()
           }
           e.preventDefault()
-          // Same actions as the footer buttons (RULE-03): pause holds, Home returns to start.
-          togglePlayback(duration())
+          if (e.repeat) return
+          // TAP = play/pause (footer parity, RULE-03). HOLD ≥260ms = fast-forward ×3 while held
+          // (user 2026-08-21); the pause of a tap-while-playing moves to keyup so a hold never
+          // pauses first.
+          const playing = ui.playback.playing
+          if (!playing) togglePlayback(duration())
+          const timer = window.setTimeout(() => {
+            const u = useUiStore.getState()
+            if (u.playback.playing) {
+              u.setSpeed(3)
+              if (spaceHold.current) spaceHold.current.boosted = true
+            }
+          }, 260)
+          spaceHold.current = { wasPlaying: playing, boosted: false, timer }
           return
         }
         case 'Home':
@@ -164,7 +178,33 @@ export function useEditorKeyboard(): void {
         }
       }
     }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== ' ') return
+      const h = spaceHold.current
+      if (!h) return
+      spaceHold.current = null
+      window.clearTimeout(h.timer)
+      const u = useUiStore.getState()
+      if (h.boosted) {
+        u.setSpeed(1) // hold ends: back to normal pace, keep playing
+        return
+      }
+      if (h.wasPlaying) togglePlayback(playableEnd(compile(core.getDocument()))) // tap = pause
+    }
+    const onBlur = () => {
+      const h = spaceHold.current
+      if (!h) return
+      spaceHold.current = null
+      window.clearTimeout(h.timer)
+      if (h.boosted) useUiStore.getState().setSpeed(1)
+    }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onBlur)
+    }
   }, [core])
 }

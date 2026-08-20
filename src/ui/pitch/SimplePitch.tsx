@@ -1122,7 +1122,9 @@ export function SimplePitch() {
         t: tm.end,
         pos: end,
         angleDeg: (Math.atan2(normal.y, normal.x) * 180) / Math.PI,
-        strength: Math.max(0.55, Math.min(1.35, speed / 18)),
+        // authored shots can only be drawn up to the net, so path speed under-reports the
+        // shot's power — playback goals always ripple at full punch (user 2026-08-21)
+        strength: Math.max(1.05, Math.min(1.35, speed / 14)),
       })
     }
     return out

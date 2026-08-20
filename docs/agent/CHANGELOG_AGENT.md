@@ -1003,3 +1003,11 @@ Validation: typecheck/lint/test 158/build/harness/format PASS. Playwright: 지�
 Problem: 선수 바로 위에서 놓아도 릴리즈 속도(≥10m/s)가 쉽게 넘어 굴러감 판정 — 드롭 타깃 하이라이트가 약속한 것과 다름(사용자).
 Change: 릴리즈 지점이 선수 부착 범위(2.6m) 안이면 플링을 아예 건너뜀 — 하이라이트된 선수에게 부여. 빈 잔디 릴리즈만 던지기.
 Validation: typecheck/lint/test 158/build/harness/format PASS. Playwright: 빠른 드래그로 선수 위 릴리즈 → #7 보유·공 2.0m 부착, 빈 잔디 플링 회귀 ALL PASS, 콘솔 클린.
+
+### CHG-20260821-101 — FEAT — 스페이스 홀드 = 3배속 + 재생 골 FX 강도 상향
+
+Problem: (1) 저작 슛은 경로를 그물까지만 그릴 수 있어 경로 속도가 실제 슛 파워를 과소평가 — 재생 골 FX가 약함(사용자). (2) 배속 시청 수단 없음.
+Change:
+- 재생 골 FX 강도 하한 1.05 (기존 0.55~) — 골인은 항상 찰지게.
+- Space 홀드(≥260ms) = 재생 3배속, 떼면 1배속 복귀·재생 유지. 탭 의미는 유지(재생 시작/일시정지 — 일시정지는 keyup으로 이동해 홀드가 먼저 멈추는 일 없음). e.repeat 무시, blur 시 부스트 해제. keymap 힌트 갱신.
+Validation: typecheck/lint/test 158/build/harness/format PASS. Playwright: 홀드 중 이동 속도비 3.12×, 릴리즈 후 재생 유지·1×, 탭=일시정지 — ALL PASS, 콘솔 클린.

@@ -10,7 +10,7 @@ export interface Binding {
 
 export const KEYMAP = {
   playback: {
-    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지' },
+    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지 · 꾹 누르면 3배속' },
     restart: { key: 'Home', label: 'Home', hint: '처음으로' },
     loop: { key: 'g', label: 'G', hint: '반복' },
   },
