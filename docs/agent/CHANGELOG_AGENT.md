@@ -1131,3 +1131,9 @@ Validation: typecheck/lint/test 169/build/harness/format PASS. 신규 ballStepOr
 Problem: 복잡한 장면에서 특정 선수 수정 시 모든 경로·고스트·배지가 동일 강도로 보여 구분 불가(사용자: "해당 선수의 타임라인들만 하이라이팅되면 좋겠어. 공도 포함").
 Change: focusIds = 선택 토큰 ∪ 선택 세그먼트의 엔티티, 비어있지 않으면 공 자동 포함. PathLayer dimOthers 활성(비포커스 경로 opacity 0.35), 고스트·단계 배지 0.25 감쇠. 공 토큰 단독 선택은 포커스 미발동(공은 모든 플레이 공용).
 Validation: Playwright focus probe — 무선택 시 dim 없음, 선수 선택 시 자기 경로+공 경로 선명·타 선수 dim, 콘솔 클린 — ALL PASS. 스크린샷 검수.
+
+### CHG-20260821-119 — UX — 포커스 모드 완성: 클릭=격리 편집, 잔디 클릭=해제 (사용자 확정 스펙)
+
+Problem: CHG-118의 포커스는 시각 감쇠만 — 겹친 다른 엔티티의 경로/고스트가 여전히 press를 가로챘고(오클릭), 잔디 클릭은 편집 중에도 선수를 추가했으며, 공 단독 클릭은 포커스 미발동.
+Change: ① press 파이프라인에서 포커스 중 비포커스 엔티티의 ghost/segment 후보 제거(라이브 토큰은 유지 — 포커스 전환 수단) ② 포커스 중 빈 잔디 클릭 = 선택 해제(선수 추가 안 함; 비포커스 상태의 잔디 클릭은 기존대로 추가) ③ 공 클릭도 공 타임라인 포커스(선수 포커스는 공 동반, 공 포커스는 공만).
+Validation: typecheck/lint/test 169/build/harness/format PASS. Playwright focus probe 5 시나리오: 잔디 해제+무추가, 선수 포커스 감쇠, 겹친 타 경로 그랩 차단, 비포커스 정상 픽, 공 단독 포커스 — ALL PASS.

@@ -872,8 +872,14 @@ export function SimplePitch() {
     const liveBall = { id: doc.ball.id, pos: resolved.ball.pos }
     const pick = pickNowRef.current(pt)
     const ov = pick.overlaps
-    const ghostTop = ov.ghosts[0] ?? null
-    const segTop = ov.segments[0] ?? null
+    // FOCUS isolation (user 2026-08-21): while an entity is focused, only ITS ghosts and paths
+    // are grabbable — an overlapping stroke of another entity can never steal the press. Live
+    // tokens stay clickable (that is how focus switches).
+    const inFocus = focusIds.size > 0
+    const ghostTop =
+      (inFocus ? ov.ghosts.filter((g) => focusIds.has(g.entityId)) : ov.ghosts)[0] ?? null
+    const segTop =
+      (inFocus ? ov.segments.filter((c) => focusIds.has(c.entityId)) : ov.segments)[0] ?? null
     // Possession pair (golden G1): the historical .9/1.8 comparator, with the t=0 initial-holder
     // fallback (a step-1 pass makes the resolved status 'travel' at rest).
     const pressHolderId =
@@ -1028,6 +1034,13 @@ export function SimplePitch() {
       }
       case 'add-home-player':
       case 'add-away-player':
+        // Focused board: the first empty-grass click ENDS the edit (user 2026-08-21: 한 번
+        // 클릭해서 편집 끝) — it never drops a new player mid-edit.
+        if (focusIds.size > 0) {
+          st.clearSelection()
+          st.selectSegment(null)
+          return
+        }
         st.clearSelection()
         gesture.current = {
           type: 'add',
@@ -1537,10 +1550,9 @@ export function SimplePitch() {
       const f = findSegment(doc, ui.selectedSegmentId)
       if (f) set.add(f.track.entityId)
     }
-    // the ball TOKEN alone is not an editing focus — it belongs to every play; only a player
-    // selection or a selected segment narrows the board
-    if (set.size === 1 && set.has(doc.ball.id) && !ui.selectedSegmentId) return new Set<Id>()
-    if (set.size > 0) set.add(doc.ball.id)
+    // a focused PLAYER always brings the ball along (the play travels with it); a focused
+    // ball narrows to the ball's own timeline (user 2026-08-21: 선수든 공이든)
+    if ([...set].some((id) => id !== doc.ball.id)) set.add(doc.ball.id)
     return set
   })()
 
