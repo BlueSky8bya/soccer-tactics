@@ -365,25 +365,35 @@ export function AppShell() {
                   <UiIcon name="play" size={18} filled />
                 )}
               </button>
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={pb.restart}
-                title={`${t('tl.restart')} (Home)`}
-                aria-label={t('tl.restart')}
-              >
-                <UiIcon name="home" />
-              </button>
-              <button
-                type="button"
-                className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
-                onClick={() => ui.setLoop(!ui.playback.loop)}
-                title={`${t('tl.loop')} (G)`}
-                aria-label={t('tl.loop')}
-                aria-pressed={ui.playback.loop}
-              >
-                <UiIcon name="loop" size={15} />
-              </button>
+              <span className={styles.toolCol}>
+                <span className={styles.toolKey} aria-hidden="true">
+                  Home
+                </span>
+                <button
+                  type="button"
+                  className={styles.btn}
+                  onClick={pb.restart}
+                  title={`${t('tl.restart')} (Home)`}
+                  aria-label={t('tl.restart')}
+                >
+                  <UiIcon name="home" />
+                </button>
+              </span>
+              <span className={styles.toolCol}>
+                <span className={styles.toolKey} aria-hidden="true">
+                  G
+                </span>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${ui.playback.loop ? styles.btnActive : ''}`}
+                  onClick={() => ui.setLoop(!ui.playback.loop)}
+                  title={`${t('tl.loop')} (G)`}
+                  aria-label={t('tl.loop')}
+                  aria-pressed={ui.playback.loop}
+                >
+                  <UiIcon name="loop" size={15} />
+                </button>
+              </span>
               <button
                 type="button"
                 className={styles.btn}
@@ -397,11 +407,6 @@ export function AppShell() {
             </span>
             <span className={styles.barDivider} aria-hidden="true" />
             <StepBar />
-            {ui.completion === 'held-result' && (
-              <span className={styles.heldResult} role="status">
-                {t('simple.heldResult')}
-              </span>
-            )}
           </div>
         )}
       </footer>

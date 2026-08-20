@@ -948,3 +948,8 @@ Change:
 - 던지기: 상한 26→30 m/s, 감쇠 k 1.9→2.4, 정지 속도 0.6→1.5 m/s — 굼뜬 저속 꼬리 제거, 스냅한 정지감.
 - 속도 결합 테스트(28/7 하드코드)를 DEFAULT_PLAYER_SPEED 참조로 교정.
 Validation: typecheck/lint/test 156/build/harness/format PASS.
+
+### CHG-20260821-094 — UX — 결과 화면 설명 필 제거 + Home/G 키 라벨을 아이콘 위로
+
+Change: 하단 바의 "결과 화면 — ↺(Home)으로 원위치…" 설명 필 삭제(i18n·CSS 정리). 처음으로(Home)·반복(G) 버튼에 그리기 도구(V/P/E)와 동일한 아이콘 위 흐릿한 키 라벨.
+Validation: typecheck/lint/test 156/build/harness/format PASS. Playwright: toolKey Home·G 표시, 자연 종료 후 설명 필 부재, 스크린샷 검수.

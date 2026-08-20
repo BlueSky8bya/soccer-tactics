@@ -1451,16 +1451,6 @@
   border-left: 1px solid var(--st-border);
 }
 
-.heldResult {
-  margin-left: 10px;
-  font-size: 12px;
-  color: var(--st-text-3);
-  background: var(--st-accent-soft);
-  border-radius: 6px;
-  padding: 3px 8px;
-  white-space: nowrap;
-}
-
 .stepChipUsed {
   border-color: var(--st-accent);
   color: var(--st-accent);

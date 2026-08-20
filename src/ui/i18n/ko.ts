@@ -247,7 +247,6 @@ export const ko = {
   'simple.playStepHint': '{n}단계만 재생',
   'simple.playFrom': '▶ 여기부터',
   'simple.playFromHint': '{n}단계부터 끝까지 재생',
-  'simple.heldResult': '결과 화면 — ↺(Home)으로 원위치, 편집하면 자동 복귀',
   'simple.stepLimit':
     '9단계가 마지막이에요 — 이 동작은 추가되지 않았어요. 단계를 정리하거나 기존 단계(1~9)에 그리세요.',
   'variant.label': '전술안',
