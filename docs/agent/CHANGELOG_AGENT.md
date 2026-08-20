@@ -932,3 +932,11 @@ Change:
 - 헤더: 브랜드 17→20px. A/B/C를 하단 모드 배지와 같은 세그먼트 컨트롤로(반복·정렬·비례) — 빈 안은 0.38 투명, 호버 시 +가 나타남(상시 + 제거).
 - 토큰 축소: 선수 r 1.5→1.2m, 공 0.62m(고스트·GIF·폰트·어웨이 키라인 동반 조정). 히트 반경(2.2/1.76)·소유 비교·캐리 계약은 불변 — 골든 유지.
 Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright round3: 토큰 r 1.2, 칩 렌더, 피커 열림·사각형→휴 드래그로 #24b3b3 반영, 스크린샷 3종 검수, 콘솔 클린.
+
+### CHG-20260821-092 — FEAT — 공 던지기 물리 (관성 굴림·벽 튕김)
+
+Problem: 공을 휙 던지는 물리 감각 요청(사용자: "공을 잡고 휙 던지면 날라가듯이").
+Change:
+- 신규 src/ui/pitch/ballFling.ts(순수·결정론): 릴리즈 속도 추정(최근 110ms 창, 릴리즈 전 120ms 정지 시 배치로 간주), 지수 감쇠 굴림(k=1.9), 경기장 경계 반발 0.55 바운스, 속도 상한 26m/s, 120Hz 고정 적분. 최종 정지점만 문서 커밋(moveBallStartInDraft 재사용 — 선수 2.6m 내 정지 시 보유 스냅). 엔진/도메인 불변(ADR-0006 D1: 인터페이스 모션은 UI).
+- SimplePitch: 공 단독 드래그에 속도 샘플(최근 10), 릴리즈 ≥10m/s면 시뮬 궤적을 rAF로 재생(굴린 거리→스핀), 도착 시 안착 스프링·보유 연출·토스트. reduced-motion은 즉시 점프.
+Validation: typecheck/lint/test 156(+4 골든: 속도 추정·정지 배치 구분·감속 정지·경계 바운스·상한·결정론)/build/harness/format PASS. Playwright: 플릭 23.9m 굴러감(중간 프레임 검증), 250ms 멈춘 뒤 놓기=제자리 배치, 부착 일관성(2.6m ⟺ holder) — ALL PASS, 콘솔 클린.

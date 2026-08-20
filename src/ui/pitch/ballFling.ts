@@ -1,0 +1,109 @@
+/**
+ * Ball fling physics (user 2026-08-21: "공을 잡고 휙 던지면 날라가듯이").
+ * Pure + deterministic: the UI samples the drag, this module integrates a rolling ball with
+ * exponential drag and wall bounces, and ONLY the final resting spot is committed to the
+ * document (engine/domain untouched — the roll itself is interface motion, ADR-0006 D1).
+ */
+import type { Vec2 } from '@/domain/types'
+
+/** Release speed (m/s) below which a drop is just a drop. */
+export const FLING_MIN_SPEED = 10
+/** If the pointer rested longer than this before release, it is a PLACE, not a throw. */
+export const FLING_STALE_MS = 120
+/** Speed cap — a wild swipe still lands on the pitch, not in the car park. */
+export const FLING_MAX_SPEED = 26
+/** Exponential drag coefficient k: v(t) = v0·e^(−kt) — grass rolling feel. */
+export const FLING_DRAG_K = 1.9
+/** Rolling stops below this speed. */
+export const FLING_STOP_SPEED = 0.6
+/** Wall bounce energy retention (pitch boundary). */
+export const FLING_RESTITUTION = 0.55
+const DT = 1 / 120
+const MAX_T = 4
+
+export interface FlingSample {
+  t: number
+  x: number
+  y: number
+}
+
+/**
+ * Release velocity from the drag's recent samples (~last 110ms) — px-noise robust.
+ * Returns null when the data cannot support an estimate.
+ */
+export function flingVelocity(samples: readonly FlingSample[], releaseT: number): Vec2 | null {
+  if (samples.length < 2) return null
+  const last = samples[samples.length - 1]!
+  // held still before letting go → deliberate placement, never a throw
+  if (releaseT - last.t > FLING_STALE_MS) return null
+  let first = samples[0]!
+  for (const s of samples) {
+    if (last.t - s.t <= 110) {
+      first = s
+      break
+    }
+  }
+  const dt = (last.t - first.t) / 1000
+  if (dt <= 0.005) return null
+  return { x: (last.x - first.x) / dt, y: (last.y - first.y) / dt }
+}
+
+export interface FlingPoint {
+  x: number
+  y: number
+  /** Seconds since release. */
+  t: number
+  /** Cumulative rolled distance (metres) — drives ball spin. */
+  d: number
+}
+
+export interface FlingResult {
+  points: FlingPoint[]
+  final: Vec2
+  duration: number
+}
+
+/** Integrate the roll: exponential drag, boundary bounces, fixed 120Hz steps (deterministic). */
+export function simulateFling(
+  p0: Vec2,
+  v0: Vec2,
+  pitch: { length: number; width: number },
+): FlingResult {
+  const L = pitch.length
+  const W = pitch.width
+  const speed0 = Math.hypot(v0.x, v0.y)
+  const s = speed0 > FLING_MAX_SPEED ? FLING_MAX_SPEED / speed0 : 1
+  const p = { x: p0.x, y: p0.y }
+  const v = { x: v0.x * s, y: v0.y * s }
+  const decay = Math.exp(-FLING_DRAG_K * DT)
+  const points: FlingPoint[] = [{ x: p.x, y: p.y, t: 0, d: 0 }]
+  let t = 0
+  let d = 0
+  while (Math.hypot(v.x, v.y) > FLING_STOP_SPEED && t < MAX_T) {
+    t += DT
+    const px = p.x
+    const py = p.y
+    p.x += v.x * DT
+    p.y += v.y * DT
+    // pitch boundary bounce (goal line / touch line)
+    if (p.x < 0) {
+      p.x = -p.x
+      v.x = -v.x * FLING_RESTITUTION
+    } else if (p.x > L) {
+      p.x = 2 * L - p.x
+      v.x = -v.x * FLING_RESTITUTION
+    }
+    if (p.y < 0) {
+      p.y = -p.y
+      v.y = -v.y * FLING_RESTITUTION
+    } else if (p.y > W) {
+      p.y = 2 * W - p.y
+      v.y = -v.y * FLING_RESTITUTION
+    }
+    v.x *= decay
+    v.y *= decay
+    d += Math.hypot(p.x - px, p.y - py)
+    points.push({ x: p.x, y: p.y, t, d })
+  }
+  return { points, final: { x: p.x, y: p.y }, duration: t }
+}

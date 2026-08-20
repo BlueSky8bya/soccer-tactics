@@ -26,6 +26,8 @@ import {
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
+import { FLING_MIN_SPEED, flingVelocity, simulateFling } from './ballFling'
+import type { FlingPoint } from './ballFling'
 import type { PickSegment } from './pickTarget'
 import { addFreehand } from '@/editor/moreCommands'
 import { MIN_POINT_DIST_PX, mapPenPressure, mouseSpeedPressure, smoothPressure } from './inking'
@@ -94,6 +96,8 @@ type Gesture =
       /** Set when the dragged group holds the ball's INITIAL HOLDER (ball itself not in the group):
        *  the resting ball keeps its chosen side and travels with the player. */
       ballOrigin?: Vec2
+      /** Recent drag samples (ball only) — release velocity for the fling (PLAN 2026-08-21). */
+      samples?: { t: number; x: number; y: number }[]
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2; additive: boolean }
   | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[]; minStep?: number }
@@ -163,6 +167,11 @@ export function SimplePitch() {
   const [snapPos, setSnapPos] = useState<Vec2 | null>(null)
   /** Ball drop feedback (D-03): UI-only offset spring from the release point to the settled home. */
   const [ballDrop, setBallDrop] = useState<{ from: Vec2; key: number } | null>(null)
+  /** Fling roll animation (UI-only): trajectory from the pure sim; doc already holds the END. */
+  const [flingAnim, setFlingAnim] = useState<{ points: FlingPoint[]; key: number } | null>(null)
+  const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
+  const flingDoneRef = useRef<(() => void) | null>(null)
+  const flingKeyRef = useRef(0)
   /** In-place 1-9 picker opened by clicking a step badge (faster than the action bar). */
   const [stepPicker, setStepPicker] = useState<{ segId: Id; at: Vec2 } | null>(null)
   /** One-shot expanding ring when the ball ATTACHES to a player (immersion feedback). */
@@ -432,7 +441,16 @@ export function SimplePitch() {
       // Move the ball's starting spot: on a player → that player holds it; grass → loose there.
       // Works with authored passes too (their origin follows).
       const d = core.getDocument()
-      const at = drag?.raw ?? d.ball.home
+      let at = drag?.raw ?? d.ball.home
+      // FLING (user 2026-08-21): a fast release throws the ball — it rolls out with drag and
+      // wall bounces (pure sim), and only the RESTING spot becomes the document position.
+      const vel = commit && g.samples ? flingVelocity(g.samples, performance.now()) : null
+      const speed = vel ? Math.hypot(vel.x, vel.y) : 0
+      let fling: ReturnType<typeof simulateFling> | null = null
+      if (vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
+        fling = simulateFling(at, vel, doc.pitch)
+        at = fling.final
+      }
       const near = d.players
         .map((p) => ({ p, dist: Math.hypot(p.home.x - at.x, p.home.y - at.y) }))
         .filter((x) => x.dist <= 2.6)
@@ -443,19 +461,28 @@ export function SimplePitch() {
       const settled = core.getDocument().ball.home
       const dx = at.x - settled.x
       const dy = at.y - settled.y
-      if (Math.hypot(dx, dy) > 0.05)
-        setBallDrop((prev) => ({ from: { x: dx, y: dy }, key: (prev?.key ?? 0) + 1 }))
-      // Unmistakable ATTACH feedback (user 2026-08-20): pop both tokens, flash an expanding
-      // ring at the player, and say who holds it — the little "탁!" moment matters.
-      if (near) {
-        pulseKey.current++
-        setPulses((prev) => ({
-          ...prev,
-          [near.p.id]: pulseKey.current,
-          [doc.ball.id]: pulseKey.current,
-        }))
-        setAttachFx({ id: near.p.id, key: pulseKey.current })
-        ui.flashToast(t('ball.attached', { n: near.p.number }))
+      const settleAndAttach = () => {
+        if (Math.hypot(dx, dy) > 0.05)
+          setBallDrop((prev) => ({ from: { x: dx, y: dy }, key: (prev?.key ?? 0) + 1 }))
+        // Unmistakable ATTACH feedback (user 2026-08-20): pop both tokens, flash an expanding
+        // ring at the player, and say who holds it — the little "탁!" moment matters.
+        if (near) {
+          pulseKey.current++
+          setPulses((prev) => ({
+            ...prev,
+            [near.p.id]: pulseKey.current,
+            [doc.ball.id]: pulseKey.current,
+          }))
+          setAttachFx({ id: near.p.id, key: pulseKey.current })
+          ui.flashToast(t('ball.attached', { n: near.p.number }))
+        }
+      }
+      if (fling && fling.duration > 0.05) {
+        // roll the visual along the simulated path; settle/attach feedback fires on arrival
+        flingDoneRef.current = settleAndAttach
+        setFlingAnim({ points: fling.points, key: (flingKeyRef.current += 1) })
+      } else {
+        settleAndAttach()
       }
     } else {
       core.commit()
@@ -466,6 +493,38 @@ export function SimplePitch() {
   useEffect(() => {
     endGestureRef.current = endGestureImpl
   })
+
+  // Fling roll driver: replay the simulated trajectory in real time, spin from rolled distance.
+  useEffect(() => {
+    if (!flingAnim) return
+    const pts = flingAnim.points
+    const total = pts[pts.length - 1]!.t
+    const t0 = performance.now()
+    let raf = 0
+    let idx = 0
+    const tick = () => {
+      const el = (performance.now() - t0) / 1000
+      if (el >= total) {
+        setFlingPos(null)
+        setFlingAnim(null)
+        const done = flingDoneRef.current
+        flingDoneRef.current = null
+        done?.()
+        return
+      }
+      while (idx < pts.length - 2 && pts[idx + 1]!.t <= el) idx++
+      const a = pts[idx]!
+      const b = pts[Math.min(idx + 1, pts.length - 1)]!
+      const f = b.t > a.t ? (el - a.t) / (b.t - a.t) : 0
+      setFlingPos({
+        pos: { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f },
+        spin: (a.d + (b.d - a.d) * f) / 0.62,
+      })
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [flingAnim])
 
   // Shift shows/arms the ghosts (they sit ON TOP of tokens, but only catch clicks while Shift is down,
   // so the ball ghost under a receiver is still reachable — QA: 공이 클릭이 안 돼).
@@ -926,6 +985,10 @@ export function SimplePitch() {
     // Ball alone: absolute move; the drop decides holder/loose in endGesture.
     const origin = g.group.get(g.id) ?? g.home
     const delta = { x: raw.x - origin.x, y: raw.y - origin.y }
+    // velocity window for the fling (keep the last ~10 samples)
+    g.samples = g.samples ?? []
+    g.samples.push({ t: e.timeStamp, x: raw.x, y: raw.y })
+    if (g.samples.length > 10) g.samples.shift()
     core.update((d) => {
       setEntityHome(d as TacticDocument, g.id, { x: origin.x + delta.x, y: origin.y + delta.y })
       const tr = findTrack(d as TacticDocument, d.ball.id)
@@ -1293,9 +1356,9 @@ export function SimplePitch() {
       <AnimatedToken
         id={doc.ball.id}
         kind="ball"
-        pos={resolved.ball.pos}
+        pos={flingPos?.pos ?? resolved.ball.pos}
         height={resolved.ball.height}
-        spin={resolved.ball.spin}
+        spin={flingPos ? flingPos.spin : resolved.ball.spin}
         ballStatus={
           resolved.ball.status === 'travel' && ui.playback.t === 0 && !isPlaying
             ? 'possessed'
