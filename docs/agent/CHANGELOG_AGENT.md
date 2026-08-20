@@ -700,3 +700,8 @@ Problem: 단계/전술안 칩·버전 배지가 .btn 포커스 링 밖, 고대�
 Change: stepChip/variantChip/versionBadge focus-visible 아웃라인, forced-colors에서 컨트롤 보더(ButtonText)·포커스(Highlight) 보장. 토스트(status)·컴파일 오류(alert)·GIF 진행(status)의 역할 구분은 기존 유지 확인.
 Validation: typecheck/lint/test 134/build/harness/format PASS.
 
+### CHG-20260820-063 — DOCS — PLAN-006 M7: 사후 증거·성능·감사 마감
+
+Change: M7-01~08 재캡처(BASE 1:1, 콘솔 클린), 재생 중 long task(>50ms) 0건 관측, 감사(순수성/레거시/의존성/bezier) 전부 클린, manifest에 차이 요약. 계획 Status Completed — 브라우저 수용 체크리스트는 사용자 몫(EXTERNAL-VERIFICATION-PENDING).
+Validation: typecheck/lint/test 134/build/harness/format PASS (최종 게이트 아래 커밋에서 재실행).
+

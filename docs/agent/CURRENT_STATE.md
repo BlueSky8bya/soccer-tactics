@@ -6,7 +6,7 @@ Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness
 
 ## Current Objective
 
-PLAN-20260821-006 (대대적 리디자인, 승인 2026-08-20) 진행 중 — **M0·M1·M2 완료**(기준 증거 → 토큰·재질 → 셸 계층·아이콘), 다음 M3(22명 판독성: 토큰/공/경로/고스트/배지). PLAN-005는 완료·배포됨(Vercel 자동 배포, GitHub push 상시 위임).
+PLAN-20260821-006 (대대적 리디자인, 승인 2026-08-20) 진행 중 — **M0~M7 전부 완료·AGENT-VERIFIED** (토큰·재질 → 셸 계층 → 22명 판독성 → 마이크로 인터랙션 → 재생 무대 → a11y → 사후 증거/성능/감사). 다음: 사용자 Browser Acceptance Checklist(계획서 참조) → 피드백 라운드. PLAN-005는 완료·배포됨(Vercel 자동 배포, GitHub push 상시 위임).
 
 ### PLAN-005 요약 (2026-08-20, 커밋 d246f43…)
 

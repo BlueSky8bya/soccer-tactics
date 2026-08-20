@@ -1,7 +1,7 @@
 # Active ExecPlan
 
 Plan ID: PLAN-20260821-006
-Status: In Progress (사용자 승인 2026-08-20)
+Status: Completed (2026-08-20 — M0~M7 AGENT-VERIFIED, Browser Acceptance Checklist는 EXTERNAL-VERIFICATION-PENDING)
 Task Risk: L2
 Created: 2026-08-20
 Updated: 2026-08-20
