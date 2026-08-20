@@ -1089,3 +1089,9 @@ Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright: [pass
 Problem: 공 정션 위치 해석기가 넷(offset/offsetLocked·travel 끝점·carryEnd·stateAt 전방 캐리)이고 compile의 travel release는 possession offset만 사용 — 화면·재생 원점 불일치(감사 S3/R2), chainIn ramp=1 강제로 방향 전환/핀 정션에서 한 프레임 2.7~3.2m 순간이동(S5/R12-A), lastEnded possession의 offsetLocked 소실(R12-C).
 Change: src/engine/carry.ts 신설 — carryAheadFor(단일 캐리 해석: 활성 run 전방+carryEnd blend, standing 영구 front-rest, 경계에서 이전 run end-carry를 '정확히 통과' 후 0.35s 보간)와 heldBallPos(offsetLocked>carry>offset 우선순위). stateAt·compile 둘 다 이 resolver 호출(travel release가 stateAt과 동일 계산). chainIn edge=Infinity 폐기. lastEnded possessed에 offsetLocked 전달.
 Validation: typecheck/lint/test 161/build/harness/format PASS. 신규 테스트 3: 90° 전환 체인 경계 무점프(0.025s 스텝 <0.9m), carryEnd 핀 정확 통과+세척, release anchor=stateAt(launch−ε) 3케이스(전방/핀/락). 구 골든 'release=possession offset'(engine.test) ADR-0010 D6로 교체.
+
+### CHG-20260821-112 — EDITOR/UX — 도착 고스트 전용 receive-junction command (감사 1안 M2, S1·R9)
+
+Problem: 받은 패스의 도착 고스트를 회전하면 일반 bend(`bendMoveWaypointInDraft`)를 거쳐 전체 waypoint가 `smoothWaypoints`로 재생성 — 이전 패스 곡률·hold 파괴(S1), commit 시 receiver 재선택으로 더 가까운 선수에게 수신자 탈취(R9).
+Change: `moveTravelEndInDraft` 신설(segmentCommands) — 끝 waypoint+그 handle만 평행이동, resmooth 없음, receiver 불변, follow possession offset을 ring clamp+`offsetLocked`로 고정, 옛 끝점에서 이어진 체인 원점(≤0.75m)만 동행. SimplePitch에 `orbit-receive` 제스처 신설(도착 고스트 press 라우팅, drag threshold, ring 제약, commit 시 relayout 1회·receiver resolve 없음). bend commit의 receiver resolve는 '끝 waypoint를 잡았을 때'로 조건화 — 내부 곡률 bend는 수신자 재해석 금지.
+Validation: typecheck/lint/test 162/build/harness/format PASS. 유닛: 국소성 계약(비인접 waypoint·hold byte 불변, thief 0.4m 근접에도 receiver 고정, offsetLocked, 체인 동행). Playwright s1_orbit probe: 곡선 패스 도착 고스트 90° 회전 → 링 안착(2.53m), interior waypoint/d-prefix byte 불변, 콘솔 클린 — ALL PASS.

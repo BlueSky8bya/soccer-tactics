@@ -300,6 +300,62 @@ export function moveWaypointInDraft(
   if (wp.handleOut) wp.handleOut = { x: wp.handleOut.x + dx, y: wp.handleOut.y + dy }
 }
 
+/**
+ * Receive-junction orbit (ADR-0010 D3, audit S1): move a travel's END without re-smoothing
+ * the path, without re-selecting the receiver and without touching any other waypoint.
+ * Translates the end waypoint + its own handles only, pins the follow possession to the
+ * chosen side (offsetLocked), and drags a chained next ball-path origin authored from the
+ * old end along (≤0.75m) so the chain never tears. Receiver identity NEVER changes here —
+ * reattaching is a separate, explicit operation.
+ */
+export function moveTravelEndInDraft(
+  draft: TacticDocument,
+  segmentId: Id,
+  to: Vec2,
+  receiverPos?: Vec2,
+): void {
+  const f = findSegment(draft, segmentId)
+  if (!f || f.segment.kind !== 'travel') return
+  const seg = f.segment
+  const endWp = seg.path.waypoints[seg.path.waypoints.length - 1]
+  if (!endWp) return
+  const oldEnd = { x: endWp.p.x, y: endWp.p.y }
+  const inc = { x: to.x - oldEnd.x, y: to.y - oldEnd.y }
+  if (Math.hypot(inc.x, inc.y) < 1e-9) return
+  endWp.p = { x: to.x, y: to.y }
+  if (endWp.handleIn) endWp.handleIn = { x: endWp.handleIn.x + inc.x, y: endWp.handleIn.y + inc.y }
+  if (endWp.handleOut)
+    endWp.handleOut = { x: endWp.handleOut.x + inc.x, y: endWp.handleOut.y + inc.y }
+  // follow possession keeps the user's chosen side — locked, so the dribble front-rest yields
+  if (receiverPos) {
+    const rel = { x: to.x - receiverPos.x, y: to.y - receiverPos.y }
+    const nx = f.track.segments[f.index + 1]
+    if (
+      nx &&
+      nx.kind === 'possessed' &&
+      nx.trigger.type === 'afterSegment' &&
+      nx.trigger.segmentId === segmentId &&
+      Math.hypot(rel.x, rel.y) >= 0.3
+    ) {
+      nx.offset = carryOffset(rel)
+      nx.offsetLocked = true
+    }
+  }
+  // chained next ball path drawn from the old ghost spot follows the junction
+  for (let j = f.index + 1; j < f.track.segments.length; j++) {
+    const later = f.track.segments[j]!
+    if (!('path' in later) || later.id.startsWith('gen-')) continue
+    const first = later.path.waypoints[0]
+    if (first && Math.hypot(first.p.x - oldEnd.x, first.p.y - oldEnd.y) <= 0.75) {
+      first.p = { x: first.p.x + inc.x, y: first.p.y + inc.y }
+      if (first.handleIn)
+        first.handleIn = { x: first.handleIn.x + inc.x, y: first.handleIn.y + inc.y }
+      if (first.handleOut)
+        first.handleOut = { x: first.handleOut.x + inc.x, y: first.handleOut.y + inc.y }
+    }
+  }
+}
+
 /** Radius (m) within which a player at the pass end point counts as the receiver. */
 export const RECEIVE_RADIUS_M = 3.5
 

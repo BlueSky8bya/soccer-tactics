@@ -11,6 +11,7 @@ import {
   shiftEntityPathsInDraft,
   newIdFor,
   sceneOf,
+  moveTravelEndInDraft,
 } from '@/editor/segmentCommands'
 import {
   MAX_STEP,
@@ -109,9 +110,6 @@ type Gesture =
       startClient: { x: number; y: number }
       started: boolean
       wpId: Id | null
-      /** Ball-ghost orbit (2026-08-21): drag the carried ball AROUND its holder — the end is
-       *  constrained to the carry ring and the chosen side survives receiver re-sync. */
-      orbitCenter?: Vec2
     }
   | {
       type: 'add'
@@ -140,6 +138,16 @@ type Gesture =
       center: Vec2
       /** The RUN whose end junction this carry belongs to — junction-local pin. */
       runSegId: Id
+      began: boolean
+    }
+  /** Arrival-ghost orbit (ADR-0010 D3): slide a RECEIVED pass's end around its receiver —
+   *  a dedicated junction command; curvature and receiver identity never change. */
+  | {
+      type: 'orbit-receive'
+      pointerId: number
+      center: Vec2
+      travelSegId: Id
+      startClient: { x: number; y: number }
       began: boolean
     }
 
@@ -419,6 +427,17 @@ export function SimplePitch() {
       return
     }
 
+    if (g.type === 'orbit-receive') {
+      setOrbitGrabSeg(null)
+      if (g.began) {
+        if (commit) {
+          core.update((d) => relayoutStepsInDraft(d as TacticDocument))
+          core.commit()
+        } else core.cancel()
+      }
+      return
+    }
+
     if (g.type === 'marquee') {
       setMarquee(null)
       if (!commit) return
@@ -496,15 +515,16 @@ export function SimplePitch() {
         core.cancel()
         return
       }
-      // Length changed → steps re-stretch; a moved pass end → receiver re-resolve.
+      // Length changed → steps re-stretch. Receiver re-resolve ONLY when the END moved —
+      // an interior curvature bend never reinterprets who receives (ADR-0010 D3 / audit R9).
       core.update((d) => {
         const doc2 = d as TacticDocument
         relayoutStepsInDraft(doc2)
         const f = findSegment(doc2, g.segmentId)
-        if (f && f.segment.kind === 'travel')
-          resolvePassReceiverInDraft(doc2, g.segmentId, {
-            preserveEndDirection: !!g.orbitCenter,
-          })
+        if (f && f.segment.kind === 'travel') {
+          const wps2 = f.segment.path.waypoints
+          if (g.wpId === wps2[wps2.length - 1]?.id) resolvePassReceiverInDraft(doc2, g.segmentId)
+        }
       })
       core.commit()
       return
@@ -911,16 +931,31 @@ export function SimplePitch() {
           svg.setPointerCapture(e.pointerId)
           return
         }
-        let orbitCenter: Vec2 | undefined
         if (
           ghostTop!.entityId === doc.ball.id &&
           f.segment.kind === 'travel' &&
           f.segment.receiverId
         ) {
+          // RECEIVED pass arrival ghost: orbit around the receiver via the dedicated
+          // junction command — the pass curvature and receiver identity stay untouched
+          // (ADR-0010 D3; audit S1).
           const tmEnd = compiled.segmentTimes[segId]?.end
-          if (tmEnd !== undefined) {
-            const rs = stateAt(compiled, doc, tmEnd + 0.05)
-            orbitCenter = rs.players[f.segment.receiverId]?.pos
+          const rs = tmEnd !== undefined ? stateAt(compiled, doc, tmEnd + 0.05) : undefined
+          const center = rs?.players[f.segment.receiverId]?.pos
+          if (center) {
+            st.returnToAuthoringStart()
+            st.selectSegment(segId)
+            gesture.current = {
+              type: 'orbit-receive',
+              pointerId: e.pointerId,
+              center,
+              travelSegId: segId!,
+              startClient: { x: e.clientX, y: e.clientY },
+              began: false,
+            }
+            setOrbitGrabSeg(segId!)
+            svg.setPointerCapture(e.pointerId)
+            return
           }
         }
         st.returnToAuthoringStart()
@@ -933,7 +968,6 @@ export function SimplePitch() {
           startClient: { x: e.clientX, y: e.clientY },
           started: false,
           wpId: wps[wps.length - 1]!.id,
-          ...(orbitCenter ? { orbitCenter } : {}),
         }
         svg.setPointerCapture(e.pointerId)
         return
@@ -1050,6 +1084,19 @@ export function SimplePitch() {
       return
     }
 
+    if (g.type === 'orbit-receive') {
+      if (!g.began) {
+        const moved = Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y)
+        if (moved < DRAG_THRESHOLD_PX) return
+        g.began = true
+        core.begin('Set receive side')
+      }
+      const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
+      const target = { x: g.center.x + off.x, y: g.center.y + off.y }
+      core.update((d) => moveTravelEndInDraft(d as TacticDocument, g.travelSegId, target, g.center))
+      return
+    }
+
     if (g.type === 'marquee') {
       g.b = pt
       setMarquee({ a: g.a, b: g.b })
@@ -1072,11 +1119,7 @@ export function SimplePitch() {
         })
       }
       if (g.wpId) {
-        let target = clampToPitch(pt, doc.pitch)
-        if (g.orbitCenter) {
-          const off = carryOffset({ x: pt.x - g.orbitCenter.x, y: pt.y - g.orbitCenter.y })
-          target = { x: g.orbitCenter.x + off.x, y: g.orbitCenter.y + off.y }
-        }
+        const target = clampToPitch(pt, doc.pitch)
         core.update((d) =>
           bendMoveWaypointInDraft(d as TacticDocument, g.segmentId, g.wpId!, target),
         )

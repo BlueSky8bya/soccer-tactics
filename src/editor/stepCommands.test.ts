@@ -4,7 +4,7 @@ import type { TacticDocument } from '@/domain/types'
 import { carryOffset, compile } from '@/engine/compile'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
-import { DEFAULT_PLAYER_SPEED, findTrack, makePath } from './segmentCommands'
+import { DEFAULT_PLAYER_SPEED, findTrack, makePath, moveTravelEndInDraft } from './segmentCommands'
 import {
   addStepPass,
   addStepRun,
@@ -501,5 +501,95 @@ describe('through ball sync (user 2026-08-20: 미래 지점 패스)', () => {
     const dist = Math.hypot(end.x - relay.home.x, end.y - relay.home.y)
     expect(dist).toBeGreaterThanOrEqual(1.9)
     expect(dist).toBeLessThanOrEqual(2.7)
+  })
+})
+
+describe('receive-junction orbit (ADR-0010 D3 — audit S1/R9)', () => {
+  it('moveTravelEndInDraft changes the endpoint only — curvature, holds and receiver stay', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    const receiver = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    const thief = d.players.find(
+      (p) => p.teamId === holder.teamId && p.id !== holder.id && p.id !== receiver.id,
+    )!
+    const passId = addStepPass(core, makePath([d.ball.home, receiver.home]).waypoints, 1, holder.id)
+
+    const seg = (id: string) =>
+      core
+        .getDocument()
+        .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+        .find((x) => x.id === id)!
+    const wps = (id: string) => {
+      const x = seg(id)
+      if (!('path' in x)) throw new Error('no path')
+      return x.path.waypoints
+    }
+
+    // authored curvature + a HOLD on an interior waypoint — both must survive the orbit
+    core.transaction('curve', (dd) => {
+      const x = (dd as TacticDocument).scenes[0]!.timeline.tracks.flatMap((t) => t.segments).find(
+        (y) => y.id === passId,
+      )!
+      if ('path' in x) {
+        const a = x.path.waypoints[0]!
+        const b = x.path.waypoints[x.path.waypoints.length - 1]!
+        const mid = { x: (a.p.x + b.p.x) / 2, y: (a.p.y + b.p.y) / 2 + 4 }
+        x.path.waypoints.splice(1, 0, {
+          id: 'mid-w',
+          p: mid,
+          handleIn: { x: mid.x - 2, y: mid.y },
+          handleOut: { x: mid.x + 2, y: mid.y },
+          hold: 0.4,
+        })
+      }
+    })
+
+    const endBefore = { ...wps(passId)[wps(passId).length - 1]!.p }
+    // chained next pass drawn FROM the arrival ghost
+    const pass2Id = addStepPass(
+      core,
+      makePath([endBefore, { x: endBefore.x + 15, y: endBefore.y }]).waypoints,
+      2,
+      receiver.id,
+    )
+    const pass2StartBefore = { ...wps(pass2Id)[0]!.p }
+
+    // user orbits the arrival to BELOW the receiver; a thief stands even closer to that spot
+    const to = { x: receiver.home.x, y: receiver.home.y + 2.6 }
+    core.transaction('thief', (dd) => {
+      const t = (dd as TacticDocument).players.find((pl) => pl.id === thief.id)!
+      t.home = { x: to.x + 0.4, y: to.y }
+    })
+
+    const interiorBefore = JSON.stringify(wps(passId).slice(0, -1))
+    core.transaction('orbit', (dd) =>
+      moveTravelEndInDraft(dd as TacticDocument, passId, to, receiver.home),
+    )
+
+    const after = wps(passId)
+    const inc = { x: to.x - endBefore.x, y: to.y - endBefore.y }
+    // endpoint moved to the chosen ring spot…
+    expect(after[after.length - 1]!.p.x).toBeCloseTo(to.x, 6)
+    expect(after[after.length - 1]!.p.y).toBeCloseTo(to.y, 6)
+    // …and EVERYTHING else is byte-identical: no re-smooth, hold intact (audit S1/R12-B)
+    expect(JSON.stringify(after.slice(0, -1))).toBe(interiorBefore)
+    // receiver identity NEVER reinterpreted — even with a closer thief (audit R9)
+    const p1 = seg(passId)
+    expect(p1.kind === 'travel' && p1.receiverId).toBe(receiver.id)
+    // follow possession pinned to the chosen side, locked
+    const track = findTrack(core.getDocument(), core.getDocument().ball.id)!
+    const idx = track.segments.findIndex((x) => x.id === passId)
+    const follow = track.segments[idx + 1]!
+    expect(follow.kind).toBe('possessed')
+    if (follow.kind === 'possessed') {
+      expect(follow.holderId).toBe(receiver.id)
+      expect(follow.offset!.x).toBeCloseTo(0, 5)
+      expect(follow.offset!.y).toBeCloseTo(2.6, 5)
+      expect(follow.offsetLocked).toBe(true)
+    }
+    // the chained pass origin follows the junction — the chain never tears
+    expect(wps(pass2Id)[0]!.p.x).toBeCloseTo(pass2StartBefore.x + inc.x, 5)
+    expect(wps(pass2Id)[0]!.p.y).toBeCloseTo(pass2StartBefore.y + inc.y, 5)
   })
 })
