@@ -489,9 +489,12 @@ export function SimplePitch() {
         // roll the visual along the simulated path; settle/attach feedback fires on arrival
         netFxAtRef.current = fling.goal
           ? {
-              t: fling.goal.t,
-              pos: fling.goal.pos,
-              angleDeg: (Math.atan2(fling.goal.v.y, fling.goal.v.x) * 180) / Math.PI,
+              t: (fling.goal.impact ?? fling.goal).t,
+              pos: (fling.goal.impact ?? fling.goal).pos,
+              angleDeg: (() => {
+                const iv = fling.goal.impact?.v ?? fling.goal.v
+                return (Math.atan2(iv.y, iv.x) * 180) / Math.PI
+              })(),
             }
           : null
         flingDoneRef.current = settleAndAttach
@@ -520,6 +523,19 @@ export function SimplePitch() {
     const tick = () => {
       const el = (performance.now() - t0) / 1000
       if (el >= total) {
+        // the mesh contact can land on the very last step — flush its FX before finishing
+        const pending = netFxAtRef.current
+        if (pending) {
+          netFxAtRef.current = null
+          setNetFx({
+            pos: pending.pos,
+            angleDeg: pending.angleDeg,
+            key: (flingKeyRef.current += 1),
+          })
+          pulseKey.current++
+          setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
+          window.setTimeout(() => setNetFx(null), 800)
+        }
         setFlingPos(null)
         setFlingAnim(null)
         const done = flingDoneRef.current
@@ -532,7 +548,10 @@ export function SimplePitch() {
       if (nf && el >= nf.t) {
         netFxAtRef.current = null
         setNetFx({ pos: nf.pos, angleDeg: nf.angleDeg, key: (flingKeyRef.current += 1) })
-        window.setTimeout(() => setNetFx(null), 520)
+        // the ball itself pops as the mesh takes it — part of the 촤르륵
+        pulseKey.current++
+        setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
+        window.setTimeout(() => setNetFx(null), 800)
       }
       const a = pts[idx]!
       const b = pts[Math.min(idx + 1, pts.length - 1)]!
@@ -545,6 +564,7 @@ export function SimplePitch() {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flingAnim])
 
   // Shift shows/arms the ghosts (they sit ON TOP of tokens, but only catch clicks while Shift is down,
@@ -1292,8 +1312,28 @@ export function SimplePitch() {
           className={styles.netFx}
           transform={`translate(${netFx.pos.x} ${netFx.pos.y}) rotate(${netFx.angleDeg})`}
         >
-          <path d="M 0 -2.2 Q 2.6 0 0 2.2" className={styles.netFxArcOuter} />
-          <path d="M 0 -1.5 Q 1.7 0 0 1.5" className={styles.netFxArcInner} />
+          {/* pocket: the mesh wraps the ball, stretches past, snaps back (elastic) */}
+          <path d="M 0 -1.1 Q 1.9 0 0 1.1 Q 0.5 0 0 -1.1 Z" className={styles.netFxPocket} />
+          <path
+            d="M 0 -0.9 Q 1.3 0 0 0.9"
+            className={styles.netFxArc}
+            style={{ animationDelay: '0s' }}
+          />
+          <path
+            d="M 0 -1.4 Q 1.9 0 0 1.4"
+            className={styles.netFxArc}
+            style={{ animationDelay: '0.05s' }}
+          />
+          <path
+            d="M 0 -1.9 Q 2.4 0 0 1.9"
+            className={styles.netFxArc}
+            style={{ animationDelay: '0.1s' }}
+          />
+          <path
+            d="M 0 -2.4 Q 2.9 0 0 2.4"
+            className={styles.netFxArc}
+            style={{ animationDelay: '0.16s' }}
+          />
         </g>
       )}
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />

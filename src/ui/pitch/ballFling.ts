@@ -67,7 +67,14 @@ export interface FlingResult {
   final: Vec2
   duration: number
   /** Set when the ball flew into a goal mouth — the net catch moment (FX hook). */
-  goal?: { t: number; pos: Vec2; v: Vec2; side: 'left' | 'right' }
+  goal?: {
+    t: number
+    pos: Vec2
+    v: Vec2
+    side: 'left' | 'right'
+    /** First contact with the actual NETTING (back/side mesh) — where the ripple belongs. */
+    impact?: { t: number; pos: Vec2; v: Vec2 }
+  }
 }
 
 export interface GoalGeom {
@@ -99,6 +106,7 @@ export function simulateFling(
   let t = 0
   let d = 0
   let goalHit: FlingResult['goal'] | undefined
+  let netImpact: { t: number; pos: Vec2; v: Vec2 } | undefined
   let inNet = false
   const NET_REST = 0.05
   while (Math.hypot(v.x, v.y) > FLING_STOP_SPEED && t < MAX_T) {
@@ -123,17 +131,24 @@ export function simulateFling(
       // net box walls: back stanchion + side netting, nearly dead on impact
       const backL = -goal.depth + 0.15
       const backR = L + goal.depth - 0.15
+      const hit = (cx: number, cy: number) => {
+        if (!netImpact) netImpact = { t, pos: { x: cx, y: cy }, v: { x: v.x, y: v.y } }
+      }
       if (p.x < backL) {
+        hit(backL, p.y)
         p.x = 2 * backL - p.x
         v.x = -v.x * NET_REST
       } else if (p.x > backR) {
+        hit(backR, p.y)
         p.x = 2 * backR - p.x
         v.x = -v.x * NET_REST
       }
       if (p.y < goal.top + 0.1) {
+        hit(p.x, goal.top + 0.1)
         p.y = 2 * (goal.top + 0.1) - p.y
         v.y = -v.y * NET_REST
       } else if (p.y > goal.bot - 0.1) {
+        hit(p.x, goal.bot - 0.1)
         p.y = 2 * (goal.bot - 0.1) - p.y
         v.y = -v.y * NET_REST
       }
@@ -161,6 +176,10 @@ export function simulateFling(
     v.y *= decay
     d += Math.hypot(p.x - px, p.y - py)
     points.push({ x: p.x, y: p.y, t, d })
+  }
+  if (goalHit) {
+    // soft shot that never reaches the mesh: the net still wraps it where it stops
+    goalHit.impact = netImpact ?? { t, pos: { x: p.x, y: p.y }, v: goalHit.v }
   }
   return { points, final: { x: p.x, y: p.y }, duration: t, ...(goalHit ? { goal: goalHit } : {}) }
 }

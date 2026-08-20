@@ -53,6 +53,10 @@ describe('ball fling physics (pure, deterministic)', () => {
     expect(r.goal).toBeDefined()
     expect(r.goal!.side).toBe('left')
     expect(r.goal!.v.x).toBeLessThan(0) // incoming velocity recorded for the FX angle
+    // the ripple anchors on the NETTING contact, behind the goal line — never on the line
+    expect(r.goal!.impact).toBeDefined()
+    expect(r.goal!.impact!.pos.x).toBeLessThan(-0.1)
+    expect(r.goal!.impact!.t).toBeGreaterThanOrEqual(r.goal!.t)
     // rests INSIDE the net box, never through the back
     expect(r.final.x).toBeLessThan(0.6)
     expect(r.final.x).toBeGreaterThanOrEqual(-2)
