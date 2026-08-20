@@ -750,3 +750,9 @@ Problem: 마퀴가 항상 선택을 교체 — 떨어져 있는 여러 무리를
 Change: Alt 전환으로 비게 된 Shift를 활용 — **Shift+빈 잔디 드래그 = 기존 선택에 박스 합집합**(교체 없음, 경로 교차 포함 규칙 동일). 일반 마퀴는 기존대로 교체. 조작법에 행 추가.
 Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 박스1=2명 → Shift+박스2=5(합집합) → 일반 박스=교체, 콘솔 클린.
 
+### CHG-20260820-068 — FIX — 단계 내 짧은 움직임 속도 밸런스 (stretch cap 2x, 사용자 지시)
+
+Problem: 같은 단계의 "같이 끝남" 규칙이 1m 움직임을 30m 스프린트와 같은 시간으로 늘여 기어가게 만듦.
+Change: relayout에서 멤버 duration = min(단계 길이, 자연 길이×2) — 같이 시작은 유지, 2배 이내 차이는 기존대로 같이 끝나고, 그 이상은 자연스러운 속도로 **먼저 도착**. 다음 단계 시작(가장 느린 멤버 끝)은 불변. ADR-0009 v3 규칙 보완 기록.
+Validation: typecheck/lint/test 135(+1)/build/harness/format PASS; Playwright: 2m+20m 동일 단계 → 창 [0,0.64] vs [0,3.25], 재생 중 짧은 쪽 조기 정지 확인, 콘솔 클린.
+

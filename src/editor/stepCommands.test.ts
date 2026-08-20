@@ -301,3 +301,58 @@ describe('360-degree carry direction (user 2026-08-20)', () => {
     expect(recv.offset!.x).toBeLessThan(0) // held on the arrival side
   })
 })
+
+describe('step stretch cap (user 2026-08-20: 짧은 움직임 밸런스)', () => {
+  it('a short member stretches to at most 2x natural and finishes early; the step still ends with the slowest', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const [a, b, c] = d.players
+    const short = addStepRun(
+      core,
+      a!.id,
+      makePath([a!.home, { x: a!.home.x + 2, y: a!.home.y }]).waypoints, // 2m
+      1,
+    )
+    const long = addStepRun(
+      core,
+      b!.id,
+      makePath([b!.home, { x: b!.home.x + 28, y: b!.home.y }]).waypoints, // 28m
+      1,
+    )
+    const next = addStepRun(
+      core,
+      c!.id,
+      makePath([c!.home, { x: c!.home.x + 5, y: c!.home.y }]).waypoints,
+      2,
+    )
+    const cm = compile(core.getDocument())
+    const tShort = cm.segmentTimes[short]!
+    const tLong = cm.segmentTimes[long]!
+    // same start
+    expect(tShort.start).toBe(0)
+    expect(tLong.start).toBe(0)
+    // short one: natural 2/7s, capped at 2x -> well before the long one's end
+    expect(tShort.end - tShort.start).toBeLessThanOrEqual((2 / 7) * 2 + 0.02)
+    expect(tShort.end).toBeLessThan(tLong.end)
+    // the NEXT step still waits for the slowest member
+    expect(cm.segmentTimes[next]!.start).toBeCloseTo(tLong.end, 1)
+    // comparable lengths (within 2x) still end together — the original rule survives
+    const core2 = filled()
+    const d2 = core2.getDocument()
+    const [p, q] = d2.players
+    const r1 = addStepRun(
+      core2,
+      p!.id,
+      makePath([p!.home, { x: p!.home.x + 10, y: p!.home.y }]).waypoints,
+      1,
+    )
+    const r2 = addStepRun(
+      core2,
+      q!.id,
+      makePath([q!.home, { x: q!.home.x + 16, y: q!.home.y }]).waypoints,
+      1,
+    )
+    const cm2 = compile(core2.getDocument())
+    expect(cm2.segmentTimes[r1]!.end).toBeCloseTo(cm2.segmentTimes[r2]!.end, 1)
+  })
+})
