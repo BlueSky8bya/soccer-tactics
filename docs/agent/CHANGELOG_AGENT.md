@@ -653,3 +653,14 @@ Change:
 - 신규 `designTokens.test.ts` 4건: 토큰 정의·reduced 커버리지·bezier 0·blur 상한(A-04a).
 Validation: typecheck/lint/test 126(+4)/build/harness/format PASS; 스크린샷 비교(BASE-01 대비 카드 solid·피치 단일 depth), 콘솔 클린.
 
+### CHG-20260820-057 — UX — PLAN-006 M2: 첫 3초 계층·로컬 SVG 아이콘·파괴 버튼 절제
+
+Problem: 셸 컨트롤이 텍스트 글리프(↶↷▶↺⟳?) 혼용, 정리(파괴) 버튼이 상시 빨강 강조, 구간 재생 버튼이 본 재생과 같은 무게(AUD 격차표 header/actions/footer 항목).
+Change:
+- 신규 `UiIcon.tsx`: 로컬 stroke SVG 7종(undo/redo/play/pause/home/loop/help, currentColor·24 viewBox) — 외부 의존성 0, 셸 한 목소리.
+- 정리 카드: `btnQuietDanger` — 평시 무채색, hover/focus-visible에서만 빨강(파괴는 의도 시점에만 강조).
+- 양 팀 채우기 `panelPrimary`(38px) — 빈번 행동 크게(Fitts).
+- StepBar 구간 재생 버튼을 pill 세컨더리(28px, hover 시 accent)로 — footer Play가 유일한 primary.
+- 테스트: 랜드마크·핵심 액션 존재 + 레거시 크롬(스크럽/모드 토글/range) 부재 단언 1건 추가.
+Validation: typecheck/lint/test 127(+1)/build/harness/format PASS; 스크린샷 육안(아이콘·계층), 콘솔 클린.
+

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { downloadBlob, exportGif } from './exportGif'
+import { UiIcon } from './UiIcon'
 import { usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
@@ -142,7 +143,7 @@ export function AppShell() {
             title={`${t('topbar.undo')} (Ctrl+Z)`}
             aria-label={t('topbar.undo')}
           >
-            ↶
+            <UiIcon name="undo" />
           </button>
           <button
             type="button"
@@ -152,7 +153,7 @@ export function AppShell() {
             title={`${t('topbar.redo')} (Ctrl+Shift+Z)`}
             aria-label={t('topbar.redo')}
           >
-            ↷
+            <UiIcon name="redo" />
           </button>
           <button
             type="button"
@@ -162,7 +163,7 @@ export function AppShell() {
             title={t('topbar.help')}
             aria-label={t('topbar.help')}
           >
-            ?
+            <UiIcon name="help" size={17} />
           </button>
         </span>
       </header>
@@ -192,7 +193,11 @@ export function AppShell() {
               title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
               aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
             >
-              {ui.playback.playing ? '❚❚' : '▶'}
+              {ui.playback.playing ? (
+                <UiIcon name="pause" size={18} />
+              ) : (
+                <UiIcon name="play" size={18} filled />
+              )}
             </button>
             <button
               type="button"
@@ -201,7 +206,7 @@ export function AppShell() {
               title={`${t('tl.restart')} (Home)`}
               aria-label={t('tl.restart')}
             >
-              ↺
+              <UiIcon name="home" />
             </button>
             <button
               type="button"
@@ -211,7 +216,7 @@ export function AppShell() {
               aria-label={t('tl.loop')}
               aria-pressed={ui.playback.loop}
             >
-              ⟳
+              <UiIcon name="loop" size={15} />
             </button>
             <button
               type="button"

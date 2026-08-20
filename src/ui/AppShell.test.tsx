@@ -250,3 +250,26 @@ describe('session A/B variants (PLAN-005 M5)', () => {
     expect(ui.selection).toEqual([])
   })
 })
+
+describe('shell hierarchy (PLAN-006 M2)', () => {
+  it('keeps the single simple-mode landmarks and all primary actions; no legacy chrome', async () => {
+    const { container } = setup()
+    // primary actions all reachable by name
+    for (const name of [
+      /양 팀 채우기/,
+      /공 투입/,
+      /움직임 전체 지우기/,
+      /새로 시작/,
+      /재생/,
+      /처음으로/,
+      /반복/,
+    ])
+      expect(screen.getByRole('button', { name })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /실행 취소/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /다시 실행/ })).toBeTruthy()
+    // no timeline / scrubber / mode toggle / doc menu resurrection
+    expect(container.querySelector('[class*="scrub"]')).toBeNull()
+    expect(document.body.textContent).not.toContain('애니메이션 모드')
+    expect(container.querySelector('input[type="range"]')).toBeNull()
+  })
+})

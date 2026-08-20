@@ -78,7 +78,7 @@ export function StepBar() {
         <span className={styles.stepActions}>
           <button
             type="button"
-            className={styles.btn}
+            className={`${styles.btn} ${styles.stepActionBtn}`}
             onClick={replayStep}
             title={t('simple.playStepHint', { n: currentStep })}
           >
@@ -86,7 +86,7 @@ export function StepBar() {
           </button>
           <button
             type="button"
-            className={styles.btn}
+            className={`${styles.btn} ${styles.stepActionBtn}`}
             onClick={replayFrom}
             title={t('simple.playFromHint', { n: currentStep })}
           >

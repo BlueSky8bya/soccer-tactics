@@ -1446,3 +1446,37 @@
   color: var(--st-text-3);
   white-space: nowrap;
 }
+
+/* M2: hierarchy — frequent action big and near (Fitts), destructive quiet until intent */
+.panelPrimary {
+  height: 38px;
+  font-size: 13px;
+}
+
+.btnQuietDanger {
+  background: transparent;
+  border-color: var(--st-border);
+  color: var(--st-text-2);
+}
+
+.btnQuietDanger:hover:not(:disabled),
+.btnQuietDanger:focus-visible {
+  background: rgba(255, 59, 48, 0.09);
+  border-color: rgba(255, 59, 48, 0.28);
+  color: #c62a22;
+}
+
+.stepActionBtn {
+  height: 28px;
+  font-size: 12px;
+  color: var(--st-text-2);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-pill);
+  padding: 0 10px;
+}
+
+.stepActionBtn:hover:not(:disabled) {
+  color: var(--st-accent);
+  border-color: var(--st-accent);
+  background: var(--st-accent-soft);
+}

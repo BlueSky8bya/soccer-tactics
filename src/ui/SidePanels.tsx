@@ -51,7 +51,7 @@ export function ActionsPanel() {
         {formationSelect(awayF, setAwayF, away?.name ?? 'Away', away?.color)}
         <button
           type="button"
-          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintBlue}`}
+          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintBlue} ${styles.panelPrimary}`}
           onClick={() => {
             const picks = [
               home ? { teamId: home.id, formationId: homeF } : null,
@@ -83,7 +83,7 @@ export function ActionsPanel() {
         <div className={styles.sectionLabel}>{t('panel.cleanup')}</div>
         <button
           type="button"
-          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintRed}`}
+          className={`${styles.btn} ${styles.panelBtn} ${styles.btnQuietDanger}`}
           onClick={() => {
             const n = clearAllMovements(core)
             flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
@@ -95,7 +95,7 @@ export function ActionsPanel() {
         </button>
         <button
           type="button"
-          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintRed}`}
+          className={`${styles.btn} ${styles.panelBtn} ${styles.btnQuietDanger}`}
           onClick={() => {
             replaceDocument(
               core,
