@@ -1143,3 +1143,9 @@ Validation: typecheck/lint/test 169/build/harness/format PASS. Playwright focus 
 Problem: 포커스가 경로·고스트·배지만 흐리게 하고 라이브 토큰은 원래 강도 유지 — "2번 선수의 0번 시점도 흐릿하게 보여야지"(사용자).
 Change: 선수 토큰을 focus wrapper `<g.tokenFocusDim>`(opacity 0.4, transition)로 감싸 비포커스 엔티티만 감쇠. 클릭 가능성은 유지(포커스 전환 수단). 공 토큰은 포커스 집합에 항상 포함되므로 불변.
 Validation: typecheck/lint/test 169/build/harness/format PASS. focus probe 시나리오 6 추가(포커스 A 선명·B 토큰 감쇠) — ALL PASS.
+
+### CHG-20260821-121 — FIX — 골 마우스를 넘는 공 경로는 골망 안에서 절단 (관통 방지)
+
+Problem: clampToPitch 2m 마진 탓에 슛 경로가 골을 '통과'해 바깥까지 그어짐 — 재생 시 공이 골을 관통하고, 끝점이 골망 판정 창(goalArrivals) 밖이라 캐치 FX 미발화(사용자 스크린샷).
+Change: `truncateBallPathAtGoal`(engine/geometry, pure) — 폴리라인이 골라인을 마우스 안(y ∈ 중앙±3.66)에서 넘는 첫 교차점에서 절단, 교차점(골라인 위) + 진입 방향 1.4m 침투점(골망 박스 내부·마우스 내부 clamp)으로 종료. finishDraw에서 공 경로에 적용, beautify 후 끝점 재고정. 마우스 밖(빗나간 슛)·필드 내 패스는 불변(null).
+Validation: typecheck/lint/test 172/build/harness/format PASS. geometry 유닛 3(우측 관통 절단·좌측 대칭·와이드/필드 무변경) + goalcut probe: 관통 드로우 → authored 끝 (106.35, 33.04) 골망 내부, 스크린샷 검수, 콘솔 클린 — ALL PASS.

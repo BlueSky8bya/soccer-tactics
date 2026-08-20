@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 
 import type { Id, Path, TacticDocument, Vec2 } from '@/domain/types'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
-import { clampToPitch } from '@/editor/geometry'
+import { clampToPitch, truncateBallPathAtGoal } from '@/editor/geometry'
 import {
   findSegment,
   lastKnownPosition,
@@ -305,7 +305,22 @@ export function SimplePitch() {
   const finishDraw = (entityId: Id, raw: Vec2[], minStep?: number) => {
     const st = useUiStore.getState()
     if (raw.length < 2) return
+    // A ball path INTO the goal mouth ends in the net — never through it (user 2026-08-21).
+    const goalCut = entityId === doc.ball.id ? truncateBallPathAtGoal(raw, doc.pitch) : null
+    if (goalCut) raw = goalCut
     const waypoints = beautifyStroke(raw, () => newIdFor('w'))
+    if (goalCut) {
+      // beautify may drift the tip — pin the end back inside the netting
+      const lastWp = waypoints[waypoints.length - 1]
+      const endPt = goalCut[goalCut.length - 1]!
+      if (lastWp) {
+        const dxe = endPt.x - lastWp.p.x
+        const dye = endPt.y - lastWp.p.y
+        lastWp.p = { x: endPt.x, y: endPt.y }
+        if (lastWp.handleIn)
+          lastWp.handleIn = { x: lastWp.handleIn.x + dxe, y: lastWp.handleIn.y + dye }
+      }
+    }
     const length = waypoints.reduce(
       (acc, w, i) =>
         i ? acc + Math.hypot(w.p.x - waypoints[i - 1]!.p.x, w.p.y - waypoints[i - 1]!.p.y) : 0,
