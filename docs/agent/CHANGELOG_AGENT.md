@@ -1053,3 +1053,12 @@ Change:
 - **구조적 불변식**: relayoutStepsInDraft가 모든 저작 패스의 원점을 "그 패스 발사 시각의 실제 공 위치"(compile+stateAt, 드리블 전방·잠금 오프셋 포함)로 스냅하고 타이밍을 1회 재유도 — 어디서 어떻게 그렸든, 단계를 바꾸든, 정적 화면과 재생이 절대 어긋날 수 없음. 기존 addStepPass 원점 스냅·exactOrigin 폐지(대체).
 - 캐리 공 고스트 드래그 = orbit-carry 제스처: 해당 정션 소유 세그먼트의 offset을 캐리 링으로 회전 저장(offsetLocked, 스키마 옵션 필드 추가·하위호환) — 런 경로는 절대 안 건드림. 잠금 오프셋은 정지 시 전방 유지(v3)보다 우선(엔진), 고스트 표시도 종료+0.05s 휴식 상태 기준.
 Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright structural.cjs: 원점=발사 위치 소수 일치, 궤도 후 런 웨이포인트 바이트 동일·offset (0,−2.6) 잠금 — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-107 — FIX — 캐리 궤도를 정션-로컬로 (중간 고스트만 이동) + 잡기 하이라이트
+
+Problem: 중간 정션의 공 고스트를 돌리면 체인 전체가 공유하는 소유 오프셋이 바뀌어 처음(t0 공)과 마지막 고스트가 움직이고 정작 중간은 그대로(사용자). 잡고 있다는 피드백도 없음.
+Change:
+- move 세그먼트에 carryEnd?: Vec2(옵션, 하위호환) — "이 런의 끝 정션에서 공이 앉는 방향"을 세그먼트 단위로 저장. 엔진: 런 종료 0.35s 전부터 전방 캐리→carryEnd 블렌드, 다음 런의 시작 블렌드·정지 휴식도 carryEnd 우선(endCarryVec). carryAhead를 벡터 기반으로 재구성.
+- orbit-carry가 소유 오프셋 대신 해당 런의 carryEnd만 기록 — t0 공·다른 정션 완전 불변(바이트 검증). 원점=발사 불변식이 carryEnd를 자동 반영.
+- 잡는 동안 해당 고스트 1.3× 리프트+선명+그림자(ghostGrabbed).
+Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright midorbit.cjs: 하이라이트 표시, run1 경로 동일, run1.carryEnd=(0, 2.5)만 기록, 초기 공 불변, run2 무영향 — ALL PASS, 콘솔 클린.

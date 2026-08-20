@@ -4,7 +4,6 @@ import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
 import { clampToPitch } from '@/editor/geometry'
 import {
-  ensureTrack,
   findSegment,
   lastKnownPosition,
   moveBallStartInDraft,
@@ -33,8 +32,6 @@ import { addFreehand } from '@/editor/moreCommands'
 import { MIN_POINT_DIST_PX, mapPenPressure, mouseSpeedPressure, smoothPressure } from './inking'
 
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
-const findTrackInDoc = (d: TacticDocument) =>
-  sceneOf(d).timeline.tracks.find((tr) => tr.entityId === d.ball.id)
 import { useUiStore } from '@/editor/uiStore'
 import { useCompiled, useResolvedState } from '@/editor/useCompiled'
 import { carryOffset } from '@/engine/compile'
@@ -141,8 +138,8 @@ type Gesture =
       type: 'orbit-carry'
       pointerId: number
       center: Vec2
-      holderId: Id
-      possessionId: Id | null
+      /** The RUN whose end junction this carry belongs to — junction-local pin. */
+      runSegId: Id
       began: boolean
     }
 
@@ -260,6 +257,8 @@ export function SimplePitch() {
   const [hoverKey, setHoverKey] = useState<string | null>(null)
   const hoverRaf = useRef<number | null>(null)
   const hoverPt = useRef<Vec2 | null>(null)
+  /** Carried-ball ghost being ORBITED — lifts + brightens so the grab is unmistakable. */
+  const [orbitGrabSeg, setOrbitGrabSeg] = useState<Id | null>(null)
   /** In-progress pen stroke (PLAN-008) — rendered live with the same pressure widths. */
   const [annotDraft, setAnnotDraft] = useState<{ points: Vec2[]; pressures: number[] } | null>(null)
   /** Unbroken Alt chain: next press continues from the entity's last position, step auto +1. */
@@ -412,6 +411,7 @@ export function SimplePitch() {
       return
     }
     if (g.type === 'orbit-carry') {
+      setOrbitGrabSeg(null)
       if (g.began) {
         if (commit) core.commit()
         else core.cancel()
@@ -896,30 +896,18 @@ export function SimplePitch() {
         if (!f || !('path' in f.segment)) return
         const wps = f.segment.path.waypoints
         if (ghostTop!.entityId === doc.ball.id && f.segment.kind === 'move') {
-          // carried ball beside a run's junction: orbit the possession side, leave the run alone
+          // carried ball beside a run's junction: pin THIS junction's carry side — the run path
+          // and every other junction stay untouched (user 2026-08-21: 중간만 움직여야지)
           const center = wps[wps.length - 1]!.p
-          const tmEnd = compiled.segmentTimes[segId]?.end
-          const bt = compiled.tracks[doc.ball.id]
-          let possessionId: Id | null = null
-          if (bt && tmEnd !== undefined) {
-            const ps = bt.segments.find(
-              (cs) =>
-                cs.kind === 'possessed' &&
-                cs.holderId === f.track.entityId &&
-                cs.start <= tmEnd + 0.06 &&
-                cs.end >= tmEnd - 0.06,
-            )
-            possessionId = ps?.id ?? null
-          }
           st.returnToAuthoringStart()
           gesture.current = {
             type: 'orbit-carry',
             pointerId: e.pointerId,
             center,
-            holderId: f.track.entityId,
-            possessionId,
+            runSegId: segId!,
             began: false,
           }
+          setOrbitGrabSeg(segId!)
           svg.setPointerCapture(e.pointerId)
           return
         }
@@ -1056,34 +1044,8 @@ export function SimplePitch() {
       const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
       core.update((d) => {
         const doc2 = d as TacticDocument
-        const bt2 = findTrackInDoc(doc2)
-        let seg = g.possessionId
-          ? (bt2?.segments.find((s2) => s2.id === g.possessionId) ?? undefined)
-          : undefined
-        if (!seg || seg.kind !== 'possessed') {
-          seg = bt2?.segments
-            .filter(
-              (s2): s2 is Extract<typeof s2, { kind: 'possessed' }> =>
-                s2.kind === 'possessed' && s2.holderId === g.holderId,
-            )
-            .pop()
-        }
-        if (!seg) {
-          const tr = ensureTrack(doc2, doc2.ball.id, 'ball')
-          const created = {
-            id: newIdFor('seg'),
-            kind: 'possessed' as const,
-            trigger: { type: 'at' as const, t: 0 },
-            timing: { duration: 0 },
-            holderId: g.holderId,
-          }
-          tr.segments.unshift(created)
-          seg = created
-        }
-        if (seg && seg.kind === 'possessed') {
-          seg.offset = off
-          seg.offsetLocked = true
-        }
+        const f2 = findSegment(doc2, g.runSegId)
+        if (f2 && f2.segment.kind === 'move') f2.segment.carryEnd = off
       })
       return
     }
@@ -1803,7 +1765,11 @@ export function SimplePitch() {
             data-gy={g.pos.y}
           >
             {g.kind === 'ball' ? (
-              <g className={styles.ghostBall}>
+              <g
+                className={`${styles.ghostBall} ${
+                  orbitGrabSeg === g.segId ? styles.ghostGrabbed : ''
+                }`}
+              >
                 {/* small invisible hit halo; visual matches the live ball size */}
                 <circle r={1.0} fill="transparent" stroke="none" />
                 <circle r={0.68} />

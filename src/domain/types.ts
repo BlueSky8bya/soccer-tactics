@@ -163,7 +163,13 @@ export interface SegmentBase {
 export type Segment = PlayerSegment | BallSegment
 
 export type PlayerSegment =
-  | (SegmentBase & { kind: 'move'; path: Path; facing?: 'path' | 'ball' | 'fixed' })
+  | (SegmentBase & {
+      kind: 'move'
+      path: Path
+      facing?: 'path' | 'ball' | 'fixed'
+      /** Carry side pinned at THIS run's end junction (ball-ghost orbit) — junction-local. */
+      carryEnd?: Vec2
+    })
   | (SegmentBase & { kind: 'hold' })
 
 export type BallTravelKind =

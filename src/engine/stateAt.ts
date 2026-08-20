@@ -19,9 +19,9 @@ export interface ResolvedPlayer {
   heading?: number
   moving: boolean
   segmentId?: Id
-  /** Dribble carry: the possessed ball rides ahead by ramp∈[0,1] along `heading`, blending
-   *  from `from` (previous carry vector; authored side offset when absent). */
-  carryAhead?: { heading: number; ramp: number; from?: Vec2 }
+  /** Dribble carry: target carry vector (front-of-feet, or a pinned junction side), blended in
+   *  by ramp∈[0,1] from `from` (previous carry vector; authored side offset when absent). */
+  carryAhead?: { vec: Vec2; ramp: number; from?: Vec2 }
 }
 
 /** Dribbling: the ball rides AHEAD of the run (a touch in front of the feet), not on the hip. */
@@ -113,18 +113,26 @@ function resolvePlayer(segs: CompiledSegment[], home: Vec2, t: number): Resolved
       const heading = headingAtDistance(seg.schedule.lut, s)
       // The ball NEVER swings back to the hip at a run's end (user 2026-08-21 사진1) — it stays
       // out front where the dribble left it. Only the ramp INTO the dribble blends, and it
-      // blends from wherever the ball was carried before (previous run's front, or the side).
+      // blends from wherever the ball was carried before (previous run's carry, or the side).
       const edge = chainIn ? Infinity : lt
-      const from = prevM
-        ? aheadVec(headingAtDistance(prevM.schedule.lut, prevM.schedule.lut.length))
-        : undefined
+      const from = prevM ? endCarryVec(prevM) : undefined
+      // junction-local pin: near THIS run's end, blend the front carry toward carryEnd
+      const dur = scheduleDuration(seg.schedule)
+      let vec = aheadVec(heading)
+      if (seg.carryEnd) {
+        const w = Math.max(0, Math.min(1, (DRIBBLE_RAMP_S - (dur - lt)) / DRIBBLE_RAMP_S))
+        vec = {
+          x: vec.x * (1 - w) + seg.carryEnd.x * w,
+          y: vec.y * (1 - w) + seg.carryEnd.y * w,
+        }
+      }
       return {
         pos,
         moving: true,
         heading,
         segmentId: seg.id,
         carryAhead: {
-          heading,
+          vec,
           ramp: Math.max(0, Math.min(1, edge / DRIBBLE_RAMP_S)),
           ...(from ? { from } : {}),
         },
@@ -143,19 +151,24 @@ function aheadVec(heading: number): Vec2 {
   return { x: Math.cos(heading) * DRIBBLE_AHEAD_M, y: Math.sin(heading) * DRIBBLE_AHEAD_M }
 }
 
-/** Standing AFTER any dribble: the ball rests out front where the last run pointed — for good
- *  (user 2026-08-21 사진1: 드리볼하던 그대로). It never swings back to the initial side. */
+/** Carry vector AT a move's end: the pinned junction side when set, else out front. */
+function endCarryVec(m: Extract<CompiledSegment, { kind: 'move' }>): Vec2 {
+  if (m.carryEnd) return m.carryEnd
+  return aheadVec(headingAtDistance(m.schedule.lut, m.schedule.lut.length))
+}
+
+/** Standing AFTER any dribble: the ball rests where the last run left it — the pinned junction
+ *  side if the user chose one, else out front (user 2026-08-21 사진1). */
 function standingCarry(
   moves: Extract<CompiledSegment, { kind: 'move' }>[],
   t: number,
-): { carryAhead?: { heading: number; ramp: number; from?: Vec2 } } {
+): { carryAhead?: { vec: Vec2; ramp: number; from?: Vec2 } } {
   let prevM: (typeof moves)[number] | undefined
   for (const m of moves) {
     if (m.end <= t + 1e-6) prevM = m
   }
   if (!prevM) return {}
-  const heading = headingAtDistance(prevM.schedule.lut, prevM.schedule.lut.length)
-  return { carryAhead: { heading, ramp: 1 } }
+  return { carryAhead: { vec: endCarryVec(prevM), ramp: 1 } }
 }
 
 function distanceAlong(
@@ -195,11 +208,9 @@ function resolveBall(
     if (p.carryAhead) {
       const r = p.carryAhead.ramp
       const base = p.carryAhead.from ?? offset
-      const ax = Math.cos(p.carryAhead.heading) * DRIBBLE_AHEAD_M
-      const ay = Math.sin(p.carryAhead.heading) * DRIBBLE_AHEAD_M
       return {
-        x: p.pos.x + base.x * (1 - r) + ax * r,
-        y: p.pos.y + base.y * (1 - r) + ay * r,
+        x: p.pos.x + base.x * (1 - r) + p.carryAhead.vec.x * r,
+        y: p.pos.y + base.y * (1 - r) + p.carryAhead.vec.y * r,
       }
     }
     return { x: p.pos.x + offset.x, y: p.pos.y + offset.y }

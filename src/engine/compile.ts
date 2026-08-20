@@ -47,7 +47,7 @@ export interface MoveSchedule {
 }
 
 export type CompiledSegment =
-  | { id: Id; kind: 'move'; start: number; end: number; schedule: MoveSchedule }
+  | { id: Id; kind: 'move'; start: number; end: number; schedule: MoveSchedule; carryEnd?: Vec2 }
   | { id: Id; kind: 'hold'; start: number; end: number }
   | {
       id: Id
@@ -405,7 +405,14 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
       let cs: CompiledSegment
       switch (seg.kind) {
         case 'move':
-          cs = { id: seg.id, kind: 'move', start, end, schedule: p.schedule! }
+          cs = {
+            id: seg.id,
+            kind: 'move',
+            start,
+            end,
+            schedule: p.schedule!,
+            ...(seg.carryEnd ? { carryEnd: seg.carryEnd } : {}),
+          }
           break
         case 'hold':
           cs = { id: seg.id, kind: 'hold', start, end }
