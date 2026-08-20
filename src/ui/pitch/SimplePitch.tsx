@@ -71,7 +71,7 @@ type Gesture =
       ballOrigin?: Vec2
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2; additive: boolean }
-  | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[] }
+  | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[]; minStep?: number }
   | {
       type: 'bend'
       segmentId: Id
@@ -146,7 +146,7 @@ export function SimplePitch() {
     }
   }, [ballStatus, ballHolder, doc.ball.id])
 
-  const finishDraw = (entityId: Id, raw: Vec2[]) => {
+  const finishDraw = (entityId: Id, raw: Vec2[], minStep?: number) => {
     const st = useUiStore.getState()
     if (raw.length < 2) return
     const waypoints = beautifyStroke(raw, () => newIdFor('w'))
@@ -160,8 +160,10 @@ export function SimplePitch() {
       ui.flashToast(t('simple.tooShort'))
       return
     }
-    const step =
-      chain.current && chain.current.entityId === entityId ? chain.current.step : st.currentStep
+    const step = Math.max(
+      chain.current && chain.current.entityId === entityId ? chain.current.step : st.currentStep,
+      minStep ?? 1,
+    )
     // Chain past the last step: block BEFORE creating anything and say why (A-05).
     if (step > MAX_STEP) {
       ui.flashToast(t('simple.stepLimit'))
@@ -253,7 +255,7 @@ export function SimplePitch() {
     if (g.type === 'draw') {
       st.setPathDraft(null)
       setSnapPos(null)
-      if (commit) finishDraw(g.entityId, g.points)
+      if (commit) finishDraw(g.entityId, g.points, g.minStep)
       return
     }
 
@@ -397,14 +399,14 @@ export function SimplePitch() {
     return best
   }
 
-  const startDraw = (entityId: Id, pointerId: number, startPos: Vec2) => {
+  const startDraw = (entityId: Id, pointerId: number, startPos: Vec2, minStep?: number) => {
     const st = useUiStore.getState()
     st.returnToAuthoringStart()
     st.select([entityId])
     // start acknowledgement: the subject pops once so the ink clearly belongs to it (M4)
     pulseKey.current++
     setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
-    gesture.current = { type: 'draw', entityId, pointerId, points: [startPos] }
+    gesture.current = { type: 'draw', entityId, pointerId, points: [startPos], minStep }
     st.setPathDraft({ entityId, points: [startPos] })
     svgRef.current?.setPointerCapture(pointerId)
   }
@@ -503,11 +505,19 @@ export function SimplePitch() {
 
     switch (intent) {
       case 'draw-from-ghost': {
-        // Next movement starts at that future spot.
+        // Next movement starts at that future spot — and must PLAY after it too, or the compiled
+        // start attaches to the holder's PAST position (user bug 2026-08-20). Force step >=
+        // (source movement's step + 1); the chip only raises it further.
         const entityId = ghostEl!.getAttribute('data-ghost')!
         const gx = Number(ghostEl!.getAttribute('data-gx'))
         const gy = Number(ghostEl!.getAttribute('data-gy'))
-        startDraw(entityId, e.pointerId, { x: gx, y: gy })
+        const srcSegId = ghostEl!.getAttribute('data-move-seg')
+        const src = srcSegId ? findSegment(core.getDocument(), srcSegId) : null
+        const minStep =
+          src && 'path' in src.segment
+            ? Math.min(MAX_STEP, stepOf(src.segment as { step?: number }) + 1)
+            : undefined
+        startDraw(entityId, e.pointerId, { x: gx, y: gy }, minStep)
         return
       }
       case 'press-live-token':

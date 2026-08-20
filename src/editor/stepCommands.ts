@@ -59,11 +59,9 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
   let t = 0
   for (const step of steps) {
     const members = authored.filter((s) => stepOf(s) === step)
-    // Same step = same START; the step lasts as long as its longest movement at natural speed.
-    // Balance guard (user 2026-08-20): a short movement stretches to AT MOST 3x its natural
-    // duration — beyond that it keeps a believable speed and simply finishes early instead of
-    // crawling (1m next to a 30m sprint must not take the same seconds).
-    const MAX_STRETCH = 3
+    // Same step = same START only (user 2026-08-20 final): every movement runs at its NATURAL
+    // speed and short ones simply finish early. The step window still lasts until its slowest
+    // member ends, so the next step's timing is unchanged.
     let stepDur = 0.1
     const durs = new Map<string, number>()
     for (const s of members) {
@@ -75,10 +73,9 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     }
     stepDur = Math.round(stepDur * 100) / 100
     for (const s of members) {
-      const natural = durs.get(s.id) ?? stepDur
-      const capped = Math.round(Math.min(stepDur, natural * MAX_STRETCH) * 100) / 100
+      const natural = Math.round((durs.get(s.id) ?? stepDur) * 100) / 100
       s.trigger = { type: 'at', t }
-      s.timing = { duration: capped }
+      s.timing = { duration: natural }
     }
     t = Math.round((t + stepDur) * 100) / 100
   }

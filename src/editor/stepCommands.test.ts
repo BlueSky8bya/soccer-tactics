@@ -302,8 +302,8 @@ describe('360-degree carry direction (user 2026-08-20)', () => {
   })
 })
 
-describe('step stretch cap (user 2026-08-20: 짧은 움직임 밸런스)', () => {
-  it('a short member stretches to at most 3x natural and finishes early; the step still ends with the slowest', () => {
+describe('natural speed within a step (user 2026-08-20 final)', () => {
+  it('every member runs at natural speed; short ones finish early; the step still ends with the slowest', () => {
     const core = filled()
     const d = core.getDocument()
     const [a, b, c] = d.players
@@ -331,28 +331,12 @@ describe('step stretch cap (user 2026-08-20: 짧은 움직임 밸런스)', () =>
     // same start
     expect(tShort.start).toBe(0)
     expect(tLong.start).toBe(0)
-    // short one: natural 2/7s, capped at 3x -> well before the long one's end
-    expect(tShort.end - tShort.start).toBeLessThanOrEqual((2 / 7) * 3 + 0.02)
+    // short one runs at NATURAL speed (2m / 7m/s)
+    expect(tShort.end - tShort.start).toBeCloseTo(2 / 7, 1)
     expect(tShort.end).toBeLessThan(tLong.end)
     // the NEXT step still waits for the slowest member
     expect(cm.segmentTimes[next]!.start).toBeCloseTo(tLong.end, 1)
-    // comparable lengths (within 3x) still end together — the original rule survives
-    const core2 = filled()
-    const d2 = core2.getDocument()
-    const [p, q] = d2.players
-    const r1 = addStepRun(
-      core2,
-      p!.id,
-      makePath([p!.home, { x: p!.home.x + 10, y: p!.home.y }]).waypoints,
-      1,
-    )
-    const r2 = addStepRun(
-      core2,
-      q!.id,
-      makePath([q!.home, { x: q!.home.x + 16, y: q!.home.y }]).waypoints,
-      1,
-    )
-    const cm2 = compile(core2.getDocument())
-    expect(cm2.segmentTimes[r1]!.end).toBeCloseTo(cm2.segmentTimes[r2]!.end, 1)
+    // and both members run at their own natural pace
+    expect(tLong.end - tLong.start).toBeCloseTo(28 / 7, 1)
   })
 })

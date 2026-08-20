@@ -761,3 +761,11 @@ Validation: typecheck/lint/test 135(+1)/build/harness/format PASS; Playwright: 2
 Change: MAX_STRETCH 2→3 — 같은 단계에서 3배 길이 차이까지는 같이 끝나고, 그 이상만 조기 도착. 테스트·ADR 갱신.
 Validation: typecheck/test 135 PASS.
 
+### CHG-20260820-070 — FIX — 단계 내 자연 속도(늘림 폐지)·고스트 이어 그리기 자동 단계+1 (사용자 지시)
+
+Problem: ① "같이 끝남" 규칙(cap 3배 포함)이 여전히 짧은 움직임을 늘임 — 사용자 최종 결정: 각자 평소 속도, 짧으면 먼저 끝 ② 고스트에서 이어 그려도 새 움직임이 현재 칩 단계(예: 1)로 들어가 두 경로가 같은 단계 — 컴파일이 이른 시각의 홀더(과거 위치)에 패스를 부착하는 버그 + 매번 칩 수동 변경 필요.
+Change:
+- relayout: 멤버 duration = **자연 길이 그대로**(늘림 없음). 같이 시작만 유지, 단계 경계=가장 느린 멤버 끝(불변).
+- 고스트(Alt+드래그) 이어 그리기: 새 움직임 step = **원본 움직임 step+1**(칩이 더 크면 칩 우선, MAX 9 클램프) — 사진의 연쇄 런/패스가 자동으로 1,2,… 순서. 과거 홀더 부착 버그 원인 제거.
+Validation: typecheck/lint/test 135/build/harness/format PASS; Playwright: 고스트 연쇄 → steps [1,2]·시작 0→1.95 순차, 같은 단계 20px+200px → 지속 0.32s/3.25s 자연 속도, 콘솔 클린.
+
