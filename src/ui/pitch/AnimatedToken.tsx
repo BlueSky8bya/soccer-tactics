@@ -5,6 +5,8 @@ import { SPRINGS } from '../motion/spring'
 import { useSpringAnimator } from '../motion/useSpring'
 
 export interface AnimatedTokenProps extends Omit<TokenProps, 'wrap'> {
+  /** Pointer is down on this token but not yet dragging — quick acknowledgement (M4). */
+  pressed?: boolean
   /** Offset (metres) from the release point to the settled position; animated to 0 on drop. */
   dropFrom: Vec2 | null
   dropKey: number
@@ -50,8 +52,9 @@ export const AnimatedToken = memo(function AnimatedToken(p: AnimatedTokenProps) 
   })
 
   useEffect(() => {
-    scale.to(p.dragging ? 1.08 : 1)
-  }, [p.dragging, scale])
+    // press = instant small lift acknowledgement; drag = full pickup (M4 contract)
+    scale.to(p.dragging ? 1.08 : p.pressed ? 1.035 : 1)
+  }, [p.dragging, p.pressed, scale])
 
   useEffect(() => {
     if (!p.dropFrom) return
@@ -70,6 +73,6 @@ export const AnimatedToken = memo(function AnimatedToken(p: AnimatedTokenProps) 
 
   const wrap = useCallback((body: ReactNode) => <g ref={inner}>{body}</g>, [])
 
-  const { dropFrom: _d, dropKey: _k, pulseKey: _p, pulseScale: _s, ...rest } = p
+  const { pressed: _pr, dropFrom: _d, dropKey: _k, pulseKey: _p, pulseScale: _s, ...rest } = p
   return <Token {...rest} wrap={wrap} />
 })

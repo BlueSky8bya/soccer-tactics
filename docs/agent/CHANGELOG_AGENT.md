@@ -679,3 +679,12 @@ Change:
 - **A-03 절충 구현**: run bob 진폭이 동시 이동 4명까지 0.22m, 그 이상 4/n 비례 감쇠(하한 0.08) — 결정적 f(t) 유지.
 Validation: typecheck/lint/test 129(+2)/build/harness/format PASS; Playwright: away 키라인 11개, 단계 전환 시 mute 플래그 [true,false]↔[false,true], 콘솔 클린.
 
+### CHG-20260820-060 — UX — PLAN-006 M4: 직접 조작 마이크로 인터랙션
+
+Problem: press/drag/drop 장식이 한 상태 모델 없이 흩어짐(AUD-04); 누르는 순간·잉크 시작·커밋 순간의 확인 피드백 부재.
+Change:
+- 신규 : 순수 phase 머신(idle→pressed→dragging→settling→idle, cancel 경로 포함, 비정상 이벤트 무시) — 장식의 단일 진실(+테스트 4).
+- **프레스 리프트**: 토큰 pointer down 즉시 scale 1.035(스프링, reduced=즉시), 드래그 시작하면 기존 1.08 픽업 — 입력 1프레임 내 반응.
+- **잉크 시작/커밋 확인**: Shift 드로우 시작 시 주체 토큰 1회 펄스, 경로 커밋 순간 다시 1회 펄스(화살표가 누구 것인지 즉시 인지).
+Validation: typecheck/lint/test 133(+4)/build/harness/format PASS; Playwright: 프레스 중 해당 토큰만 scale 1.035, 드로우 회귀 정상, 콘솔 클린.
+

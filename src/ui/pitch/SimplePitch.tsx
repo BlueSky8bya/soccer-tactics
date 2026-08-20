@@ -112,6 +112,8 @@ export function SimplePitch() {
   const [stepPicker, setStepPicker] = useState<{ segId: Id; at: Vec2 } | null>(null)
   /** One-shot expanding ring when the ball ATTACHES to a player (immersion feedback). */
   const [attachFx, setAttachFx] = useState<{ id: Id; key: number } | null>(null)
+  /** Token currently pressed (pointer down, drag not started) — quick lift ack (M4). */
+  const [pressedId, setPressedId] = useState<Id | null>(null)
   /** Unbroken Shift chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
@@ -167,6 +169,9 @@ export function SimplePitch() {
     if (entityId === doc.ball.id)
       addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId)
     else addStepRun(core, entityId, waypoints, step)
+    // commit confirmation: subject pops again as the arrow lands (M4)
+    pulseKey.current++
+    setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
     // Zigzag: while Shift stays down, the next press draws the next leg from where this ended.
     chain.current = { entityId, step: nextChainStep(step) ?? MAX_STEP + 1 }
     // Deliberately NOT selected: picking the next step chip must never retarget what was just drawn.
@@ -177,6 +182,7 @@ export function SimplePitch() {
   const endGestureImpl = (commit: boolean) => {
     const g = gesture.current
     gesture.current = null
+    setPressedId(null)
     const svg = svgRef.current
     if (!g) return
     if (svg && svg.hasPointerCapture(g.pointerId)) svg.releasePointerCapture(g.pointerId)
@@ -386,6 +392,9 @@ export function SimplePitch() {
     const st = useUiStore.getState()
     st.returnToAuthoringStart()
     st.select([entityId])
+    // start acknowledgement: the subject pops once so the ink clearly belongs to it (M4)
+    pulseKey.current++
+    setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
     gesture.current = { type: 'draw', entityId, pointerId, points: [startPos] }
     st.setPathDraft({ entityId, points: [startPos] })
     svgRef.current?.setPointerCapture(pointerId)
@@ -424,6 +433,7 @@ export function SimplePitch() {
       const cur =
         entityId === doc.ball.id ? resolved.ball.pos : (resolved.players[entityId]?.pos ?? home)
       const hid = doc.ball.initialHolderId
+      setPressedId(entityId)
       gesture.current = {
         type: 'token',
         id: entityId,
@@ -907,6 +917,7 @@ export function SimplePitch() {
             selected={selection.includes(p.id)}
             hovered={false}
             dragging={drag?.id === p.id}
+            pressed={pressedId === p.id && drag?.id !== p.id}
             heading={rp?.heading}
             moving={!!rp?.moving && isPlaying}
             dropFrom={null}
@@ -926,6 +937,7 @@ export function SimplePitch() {
         selected={selection.includes(doc.ball.id)}
         hovered={false}
         dragging={drag?.id === doc.ball.id}
+        pressed={pressedId === doc.ball.id && drag?.id !== doc.ball.id}
         dropFrom={ballDrop?.from ?? null}
         dropKey={ballDrop?.key ?? 0}
         pulseKey={pulses[doc.ball.id]}
