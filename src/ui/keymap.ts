@@ -20,6 +20,8 @@ export const KEYMAP = {
     del: { label: 'Delete', hint: '선택한 것 삭제' },
     esc: { label: 'Esc', hint: '취소 / 선택 해제' },
     step: { label: '1~9', hint: '단계 선택 (경로를 선택했으면 그 경로의 단계 변경)' },
+    clearAll: { label: 'Shift+Delete', hint: '움직임 전체 지우기' },
+    reset: { label: 'Shift+R', hint: '새로 시작 (전체 초기화)' },
   },
 } as const
 

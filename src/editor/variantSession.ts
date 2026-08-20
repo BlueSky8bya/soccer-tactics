@@ -1,5 +1,5 @@
 /**
- * Session-only A/B tactic variants (PLAN-005 M5, A-03a). Two independent EditorCores — separate
+ * Session-only A/B/C tactic variants (PLAN-005 M5 + user 2026-08-20). Independent EditorCores — separate
  * documents AND separate undo histories — living purely in memory: nothing is written to schema,
  * JSON or localStorage (RULE-05), so a refresh still means a clean pitch.
  */
@@ -7,7 +7,7 @@ import { createEmptyDocument } from '@/domain'
 import { seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
 
-export type VariantId = 'A' | 'B'
+export type VariantId = 'A' | 'B' | 'C'
 
 export class VariantSession {
   private cores: Partial<Record<VariantId, EditorCore>> = {}

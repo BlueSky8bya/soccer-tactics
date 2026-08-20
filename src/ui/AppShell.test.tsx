@@ -218,23 +218,24 @@ describe('AppShell (simple mode, ADR-0009)', () => {
 })
 
 describe('session A/B variants (PLAN-005 M5)', () => {
-  it('clone → B active with an independent doc; switch stops playback and clears selection', async () => {
+  it('empty slot click clones the board in; switch stops playback and clears selection', async () => {
     markTourSeen()
     const { App } = await import('@/app/App')
     render(<App />)
-    // A active, B missing (disabled) until cloned
-    const bBtn = screen.getByRole('button', { name: 'B' })
-    expect((bBtn as HTMLButtonElement).disabled).toBe(true)
+    // A active; B and C render as empty clone-in slots
+    expect(screen.getByTitle(/지금 판을 B안으로 복제/)).toBeTruthy()
+    expect(screen.getByTitle(/지금 판을 C안으로 복제/)).toBeTruthy()
     await act(async () => {
       screen.getByRole('button', { name: /양 팀 채우기/ }).click()
     })
     await act(async () => {
-      screen.getByRole('button', { name: /B안 복제|→ B안 복제/ }).click()
+      screen.getByTitle(/지금 판을 B안으로 복제/).click()
     })
-    expect((screen.getByRole('button', { name: 'B' }) as HTMLButtonElement).disabled).toBe(false)
     expect(
       (screen.getByRole('button', { name: 'B' }) as HTMLButtonElement).getAttribute('aria-pressed'),
     ).toBe('true')
+    // C is still an empty slot
+    expect(screen.getByTitle(/지금 판을 C안으로 복제/)).toBeTruthy()
     // switching back stops playback and clears selection
     useUiStore.setState((st) => ({
       playback: { ...st.playback, playing: true, t: 2 },

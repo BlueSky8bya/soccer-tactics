@@ -67,3 +67,21 @@ describe('VariantSession', () => {
     expect(JSON.stringify(s.activeCore.getDocument())).not.toContain('"variant"')
   })
 })
+
+describe('third slot (user 2026-08-20)', () => {
+  it('C clones from the ACTIVE variant and stays independent of A and B', () => {
+    const s = new VariantSession(seededCore())
+    const team = s.activeCore.getDocument().teams[0]!
+    addPlayer(s.activeCore, team.id, { x: 10, y: 10 }) // A: +1
+    s.cloneActiveTo('B')
+    addPlayer(s.activeCore, team.id, { x: 20, y: 20 }) // B: +1 more
+    s.cloneActiveTo('C') // C copies B
+    const cCount = s.activeCore.getDocument().players.length
+    addPlayer(s.activeCore, team.id, { x: 30, y: 30 }) // C: +1 more
+    expect(s.activeCore.getDocument().players.length).toBe(cCount + 1)
+    s.switchTo('B')
+    expect(s.activeCore.getDocument().players.length).toBe(cCount)
+    s.switchTo('A')
+    expect(s.activeCore.getDocument().players.length).toBe(cCount - 1)
+  })
+})

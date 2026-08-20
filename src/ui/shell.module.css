@@ -964,7 +964,7 @@
   width: 100%;
   border-radius: 10px;
   height: 34px;
-  padding: 0 12px;
+  padding: 0 10px;
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -1334,4 +1334,70 @@
 .stepChip[aria-current='step'] {
   box-shadow: 0 0 0 3px var(--st-accent-soft);
   border-color: var(--st-accent);
+}
+
+/* faint shortcut hint on panel buttons */
+.btnKbd {
+  margin-left: auto;
+  padding-left: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--st-text-3);
+  opacity: 0.75;
+  flex: none;
+}
+
+/* A/B/C variant segmented control */
+.variantBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: color-mix(in srgb, var(--st-surface-2) 80%, transparent);
+  border: 1px solid var(--st-border);
+  border-radius: 999px;
+}
+
+.variantLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--st-text-3);
+  padding: 0 4px;
+}
+
+.variantChip {
+  width: 30px;
+  min-width: 30px;
+  height: 26px;
+  padding: 0;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.variantEmpty {
+  border: 1px dashed var(--st-border-strong);
+  color: var(--st-text-3);
+  background: transparent;
+}
+
+.variantPlus {
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 1px;
+  opacity: 0.7;
+}
+
+/* team color dot in the 팀 구성 card */
+.teamName {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.teamDotSmall {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12) inset;
 }

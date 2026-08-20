@@ -31,16 +31,15 @@ export function AppShell() {
   const variants = useVariantSession()
   useEditorKeyboard()
 
-  const switchVariant = (id: 'A' | 'B') => {
+  const switchVariant = (id: 'A' | 'B' | 'C') => {
     if (!variants || !variants.has(id) || variants.activeId === id) return
     // Switching stops playback and drops the selection - they belong to the old board (M5).
     ui.returnToAuthoringStart()
     ui.clearSelection()
     variants.switchTo(id)
   }
-  const cloneVariant = () => {
-    if (!variants) return
-    const target = variants.activeId === 'A' ? 'B' : 'A'
+  const cloneInto = (target: 'A' | 'B' | 'C') => {
+    if (!variants || variants.has(target)) return
     ui.returnToAuthoringStart()
     ui.clearSelection()
     variants.cloneActiveTo(target)
@@ -73,28 +72,33 @@ export function AppShell() {
         <span className={styles.hintInline}>{t('simple.topHint')}</span>
         <span className={styles.spacer} />
         {variants && (
-          <span className={styles.group} role="group" aria-label={t('variant.label')}>
-            {(['A', 'B'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                className={`${styles.btn} ${variants.activeId === v ? styles.btnActive : ''}`}
-                onClick={() => switchVariant(v)}
-                disabled={!variants.has(v)}
-                aria-pressed={variants.activeId === v}
-                title={t('variant.switchTo', { v })}
-              >
-                {v}
-              </button>
-            ))}
-            <button
-              type="button"
-              className={styles.btn}
-              onClick={cloneVariant}
-              title={t('variant.cloneHint')}
-            >
-              {t('variant.clone', { v: variants.activeId === 'A' ? 'B' : 'A' })}
-            </button>
+          <span className={styles.variantBar} role="group" aria-label={t('variant.label')}>
+            <span className={styles.variantLabel}>{t('variant.label')}</span>
+            {(['A', 'B', 'C'] as const).map((v) =>
+              variants.has(v) ? (
+                <button
+                  key={v}
+                  type="button"
+                  className={`${styles.btn} ${styles.variantChip} ${variants.activeId === v ? styles.btnActive : ''}`}
+                  onClick={() => switchVariant(v)}
+                  aria-pressed={variants.activeId === v}
+                  title={t('variant.switchTo', { v })}
+                >
+                  {v}
+                </button>
+              ) : (
+                <button
+                  key={v}
+                  type="button"
+                  className={`${styles.btn} ${styles.variantChip} ${styles.variantEmpty}`}
+                  onClick={() => cloneInto(v)}
+                  title={t('variant.cloneInto', { v })}
+                >
+                  {v}
+                  <span className={styles.variantPlus}>+</span>
+                </button>
+              ),
+            )}
           </span>
         )}
         <span className={styles.group}>

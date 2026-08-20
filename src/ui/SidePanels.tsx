@@ -19,9 +19,17 @@ export function ActionsPanel() {
   const away = doc.teams[1]
   const [homeF, setHomeF] = useState('4-3-3')
   const [awayF, setAwayF] = useState('4-4-2')
-  const formationSelect = (value: string, onChange: (v: string) => void, label: string) => (
+  const formationSelect = (
+    value: string,
+    onChange: (v: string) => void,
+    label: string,
+    color?: string,
+  ) => (
     <label className={styles.panelField}>
-      <span>{label}</span>
+      <span className={styles.teamName}>
+        {color && <span className={styles.teamDotSmall} style={{ background: color }} />}
+        {label}
+      </span>
       <select
         className={styles.panelSelect}
         value={value}
@@ -39,8 +47,8 @@ export function ActionsPanel() {
     <aside className={styles.sideLeft} aria-label={t('panel.actions')}>
       <div className={styles.panelCard}>
         <div className={styles.sectionLabel}>{t('panel.team')}</div>
-        {formationSelect(homeF, setHomeF, home?.name ?? 'Home')}
-        {formationSelect(awayF, setAwayF, away?.name ?? 'Away')}
+        {formationSelect(homeF, setHomeF, home?.name ?? 'Home', home?.color)}
+        {formationSelect(awayF, setAwayF, away?.name ?? 'Away', away?.color)}
         <button
           type="button"
           className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintBlue}`}
@@ -78,9 +86,10 @@ export function ActionsPanel() {
             const n = clearAllMovements(core)
             flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
           }}
-          title={t('panel.clearAll')}
+          title={`${t('panel.clearAll')} (Shift+Delete)`}
         >
           ⌫ {t('panel.clearAll')}
+          <span className={styles.btnKbd}>⇧Del</span>
         </button>
         <button
           type="button"
@@ -94,9 +103,10 @@ export function ActionsPanel() {
             u.clearSelection()
             u.returnToAuthoringStart()
           }}
-          title={t('panel.reset')}
+          title={`${t('panel.reset')} (Shift+R)`}
         >
           🗑 {t('panel.reset')}
+          <span className={styles.btnKbd}>⇧R</span>
         </button>
         <div className={styles.muted}>{t('panel.clearHint')}</div>
       </div>

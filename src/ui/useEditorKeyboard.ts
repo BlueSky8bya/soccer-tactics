@@ -1,7 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { useEditor } from '@/editor/EditorContext'
 import { removeEntities } from '@/editor/commands'
-import { removeStepSegment, setSegmentStep } from '@/editor/stepCommands'
+import { clearAllMovements, removeStepSegment, setSegmentStep } from '@/editor/stepCommands'
+import { replaceDocument } from '@/editor/moreCommands'
+import { createEmptyDocument } from '@/domain'
+import { seedDefaultTeams } from '@/editor/commands'
+import { t } from './i18n'
 import { useUiStore } from '@/editor/uiStore'
 import { returnToStart, togglePlayback } from '@/editor/usePlayback'
 import { compile } from '@/engine/compile'
@@ -95,6 +99,13 @@ export function useEditorKeyboard(): void {
           return
         case 'Delete':
         case 'Backspace': {
+          // Shift+Delete = clear EVERY authored movement (same as the panel button).
+          if (e.shiftKey) {
+            e.preventDefault()
+            const n = clearAllMovements(core)
+            ui.flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
+            return
+          }
           if (ui.selectedSegmentId) {
             e.preventDefault()
             removeStepSegment(core, ui.selectedSegmentId)
@@ -111,6 +122,19 @@ export function useEditorKeyboard(): void {
           }
           return
         }
+        case 'r':
+          // Shift+R = fresh board (undoable replace, same as the panel button).
+          if (e.shiftKey) {
+            e.preventDefault()
+            replaceDocument(
+              core,
+              seedDefaultTeams(createEmptyDocument({ title: t('doc.untitled') })),
+            )
+            ui.clearSelection()
+            ui.returnToAuthoringStart()
+            ui.flashToast(t('panel.resetDone'))
+          }
+          return
         default: {
           // 1-9 → step select; with a movement selected → move it to that step.
           if (/^[1-9]$/.test(key)) {

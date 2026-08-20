@@ -572,3 +572,12 @@ Change:
 - 스키마 변경 없음(기존 optional `possessed.offset` 활용).
 Validation: typecheck/lint/test 119(+3)/build/harness/format PASS; Playwright: 왼쪽 드롭=왼쪽 유지(dx -13px), 위로 재배치(dy -14px), 스냅 패스 후 수신자 왼쪽(온 방향) 유지(dx -13px), 콘솔 클린.
 
+### CHG-20260820-048 — FEAT/UX — 정리 단축키·전술안 A/B/C 세그먼트·팀 색 표시 (사용자 지시 3건)
+
+Problem: ① 움직임 전체 지우기/새로 시작에 단축키 없음, 버튼에 표기도 없음 ② A/B 2안뿐이고 복제 버튼이 별도라 어색 ③ 팀 구성 카드에 홈/어웨이 색 구분 없음.
+Change:
+- **Shift+Delete** = 움직임 전체 지우기, **Shift+R** = 새로 시작(패널 버튼과 동일 동작·토스트). 버튼 우측에 희미한 ⇧Del/⇧R 표기(.btnKbd), ? 오버레이 편집 그룹에도 추가.
+- 전술안 **A/B/C** 세그먼트 컨트롤(헤더 알약): 채워진 슬롯 클릭=전환(활성 하이라이트), **빈 슬롯(점선 +) 클릭=지금 판을 그 안으로 복제 후 전환** — 별도 복제 버튼 제거, HCI 단순화. VariantId에 'C' 추가(세션 메모리 전용 동일).
+- 팀 구성 Home/Away 라벨 앞에 팀 색 점(teamDotSmall).
+Validation: typecheck/lint/test 120(variant C +1)/build/harness/format PASS; Playwright: 팀 점 2색(blue/red), Shift+Delete로 segments 1→0+토스트, Shift+R로 선수 0→undo 22, kbd 표기 2개, A→B→C 복제·C 활성, 스크린샷 육안 확인, 콘솔 클린.
+
