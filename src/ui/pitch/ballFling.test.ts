@@ -49,7 +49,7 @@ describe('ball fling physics (pure, deterministic)', () => {
 
   it('a shot into the goal mouth is CAUGHT by the net (angle preserved, rest inside)', () => {
     const goal = { top: 34 - 3.66, bot: 34 + 3.66, depth: 2 }
-    const r = simulateFling({ x: 4, y: 33 }, { x: -32, y: 2 }, PITCH, goal)
+    const r = simulateFling({ x: 2, y: 33 }, { x: -38, y: 2 }, PITCH, goal)
     expect(r.goal).toBeDefined()
     expect(r.goal!.side).toBe('left')
     expect(r.goal!.v.x).toBeLessThan(0) // incoming velocity recorded for the FX angle
@@ -67,6 +67,10 @@ describe('ball fling physics (pure, deterministic)', () => {
     }
     // rests INSIDE the net box, never through the back
     expect(r.final.x).toBeLessThan(0.6)
+    // even a maximum-speed rocket never rebounds back onto the field
+    const rocket = simulateFling({ x: 3, y: 34 }, { x: -40, y: 0 }, PITCH, goal)
+    expect(rocket.goal).toBeDefined()
+    expect(rocket.final.x).toBeLessThanOrEqual(-0.049)
     expect(r.final.x).toBeGreaterThanOrEqual(-2)
     expect(r.final.y).toBeGreaterThan(goal.top)
     expect(r.final.y).toBeLessThan(goal.bot)

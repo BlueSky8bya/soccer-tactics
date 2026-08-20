@@ -279,15 +279,17 @@ export function beautifyStroke(
   ids: (i: number) => string,
   opts: BeautifyOptions = {},
 ): Waypoint[] {
+  // Tuned 2026-08-21 (user: 개떡같이 그려도 실제 플레이처럼): heavier smoothing, larger
+  // simplification and rounder tension — hand jitter dies, deliberate detours (>~2m) survive.
   const step = opts.step ?? 0.5
-  const eps0 = opts.epsilon ?? 1.0
-  const straightTol = opts.straightTolerance ?? 1.2
-  const axisDeg = opts.axisSnapDeg ?? 6
-  const maxW = opts.maxWaypoints ?? 6
-  const tension = opts.tension ?? 0.45
+  const eps0 = opts.epsilon ?? 1.8
+  const straightTol = opts.straightTolerance ?? 1.6
+  const axisDeg = opts.axisSnapDeg ?? 7
+  const maxW = opts.maxWaypoints ?? 5
+  const tension = opts.tension ?? 0.5
   if (raw.length < 2) return raw.map((p, i) => ({ id: ids(i), p }))
   const res = resamplePolyline(raw, step)
-  const sm = smoothPolyline(res, 2)
+  const sm = smoothPolyline(res, 4)
   const first = sm[0]!
   const last = sm[sm.length - 1]!
   // Straight intent

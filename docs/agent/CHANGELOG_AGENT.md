@@ -987,3 +987,13 @@ Problem: 소유 상태로 달릴 때 공이 옆구리 고정 오프셋에 붙어
 Change:
 - stateAt possessed 계산: 홀더가 이동 중이면 공이 헤딩 방향 1.9m 앞을 리드. 런 시작/끝 0.35s 동안 사이드 캐리 지점과 결정론적 블렌드 — 저작 앵커(고스트·패스 원점)와 시작·도착 자세 일치 유지. ResolvedPlayer에 moveT/moveDur 추가. 순수 함수(t) — 결정론·GIF 자동 반영.
 Validation: typecheck/lint/test 158(+1 골든: 초반=사이드, 중반=+1.9m 리드·측면 0.15m 이내, 종료 후=사이드 복귀)/build/harness/format PASS. Playwright: 재생 중반 공이 #7 앞(+x 13.8px, 측면 4px) — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-099 — FEAT/FIX — 손그림 보정·재생 골 그물 FX·그물 밀봉·FX 클리핑
+
+Problem: (1) 손으로 대충 그린 경로의 지터가 재생에 그대로(사용자: 개떡같이 그려도 실제 플레이처럼). (2) 애니메이션 슛 골인엔 그물 FX 없음. (3) FX 아크가 골망 밖으로 새어나옴. (4) 초고속 플링이 그물 안쪽에서 필드로 되튕겨 나올 수 있음.
+Change:
+- beautifyStroke 기본값 강화: smoothing 2→4패스, epsilon 1.0→1.8m, straightTol 1.2→1.6, maxW 6→5, tension 0.5 — 손 지터 소멸, 의도한 큰 우회는 보존. 40샘플 지터 스트로크 → 5웨이포인트.
+- 재생 골 감지: 골 마우스 안(±3.66m)에서 끝나는 저작 패스/슛을 사전 계산, 재생 t가 도착 시각을 '교차'하는 순간 동일 그물 FX+공 팝(도착=재생 종료 틱에서 playing이 이미 false여도 발화 — 교차 감지). 재시작/루프/역스크럽 시 재무장.
+- FX를 그물 상자 clipPath(좌/우)로 클리핑 — 골망 밖 유출 0.
+- 시뮬: inNet 시 마우스 평면 단방향(들어오기만) — 최고속(40m/s) 로켓도 되튕겨 나오지 않음(골든 추가). 그물 흡수 k 12→16.
+Validation: typecheck/lint/test 158/build/harness/format PASS. Playwright: 지터 보정 5wp, 재생 슛 FX(각도 0=우측 뒤판), 플링 FX 클리핑 확인·그물 안착 — ALL PASS, 콘솔 클린.

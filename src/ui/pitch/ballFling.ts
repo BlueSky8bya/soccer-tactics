@@ -18,7 +18,7 @@ export const FLING_FLIGHT_K = 1.2
 export const FLING_ROLL_K = 3.2
 export const FLING_TRANSITION_SPEED = 12
 /** Net absorption drag once inside a goal — the catch. */
-export const FLING_NET_K = 12
+export const FLING_NET_K = 16
 /** Rolling stops below this speed. */
 export const FLING_STOP_SPEED = 1.5
 /** Wall bounce energy retention (pitch boundary). */
@@ -157,6 +157,15 @@ export function simulateFling(
         hit(p.x, goal.bot - 0.1, 0, 1)
         p.y = 2 * (goal.bot - 0.1) - p.y
         v.y = -v.y * NET_REST
+      }
+      // the mesh WRAPS the ball (user 2026-08-21): once caught it can never rebound back onto
+      // the field — the mouth plane only lets the ball in, never out
+      if (goalHit!.side === 'left' && p.x > -0.05) {
+        p.x = -0.05
+        v.x = -Math.abs(v.x) * NET_REST
+      } else if (goalHit!.side === 'right' && p.x < L + 0.05) {
+        p.x = L + 0.05
+        v.x = Math.abs(v.x) * NET_REST
       }
     } else {
       // pitch boundary bounce (goal line / touch line)

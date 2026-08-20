@@ -1079,6 +1079,74 @@ export function SimplePitch() {
   const drag = ui.drag
   const selection = ui.selection
   const isPlaying = ui.playback.playing
+
+  // GOAL during PLAYBACK (user 2026-08-21): an authored pass/shot whose path ENDS inside a goal
+  // fires the same net-catch ripple as the fling. Precomputed per document+timings.
+  const goalArrivals = (() => {
+    const L2 = doc.pitch.length
+    const gw = 7.32 / 2
+    const top = doc.pitch.width / 2 - gw
+    const bot = doc.pitch.width / 2 + gw
+    const out: { segId: Id; t: number; pos: Vec2; angleDeg: number; strength: number }[] = []
+    const ballTrack = sceneTracks(doc).find((tr) => tr.entityId === doc.ball.id)
+    if (!ballTrack) return out
+    for (const sg of ballTrack.segments) {
+      if (sg.kind !== 'travel' || sg.id.startsWith('gen-')) continue
+      const wps = sg.path.waypoints
+      const end = wps[wps.length - 1]?.p
+      if (!end) continue
+      const inMouthY = end.y > top && end.y < bot
+      if (!inMouthY) continue
+      const leftNet = end.x <= 0.15 && end.x >= -2.5
+      const rightNet = end.x >= L2 - 0.15 && end.x <= L2 + 2.5
+      if (!leftNet && !rightNet) continue
+      const tm = compiled.segmentTimes[sg.id]
+      if (!tm) continue
+      const prev = wps[wps.length - 2]?.p ?? end
+      const dx = end.x - prev.x
+      const dy = end.y - prev.y
+      const normal =
+        Math.abs(dx) >= Math.abs(dy)
+          ? { x: Math.sign(dx) || (leftNet ? -1 : 1), y: 0 }
+          : { x: 0, y: Math.sign(dy) || 1 }
+      const lut = buildPathLUT(sg.path)
+      const dur = Math.max(0.05, tm.end - tm.start)
+      const speed = lut.length / dur
+      out.push({
+        segId: sg.id,
+        t: tm.end,
+        pos: end,
+        angleDeg: (Math.atan2(normal.y, normal.x) * 180) / Math.PI,
+        strength: Math.max(0.55, Math.min(1.35, speed / 18)),
+      })
+    }
+    return out
+  })()
+  const firedGoalFx = useRef<Set<Id>>(new Set())
+  const prevPlayT = useRef(0)
+  useEffect(() => {
+    const t2 = ui.playback.t
+    const prevT = prevPlayT.current
+    if (t2 < prevT - 0.2) firedGoalFx.current.clear() // restart / loop / scrub back
+    prevPlayT.current = t2
+    // CROSSING detection — the arrival often IS the playback end, where `playing` already
+    // flipped false on the same tick; the ripple must still fire.
+    for (const g of goalArrivals) {
+      if (prevT < g.t && t2 >= g.t && !firedGoalFx.current.has(g.segId)) {
+        firedGoalFx.current.add(g.segId)
+        setNetFx({
+          pos: g.pos,
+          angleDeg: g.angleDeg,
+          strength: g.strength,
+          key: (flingKeyRef.current += 1),
+        })
+        pulseKey.current++
+        setPulses((prev) => ({ ...prev, [doc.ball.id]: pulseKey.current }))
+        window.setTimeout(() => setNetFx(null), 800)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ui.playback.t, isPlaying])
   /** Frame is away from the authoring start: playing, paused mid-play, held result, or step preview. */
   const viewingFrame = isPlaying || ui.playback.t > 0
   const draftColor = ui.pathDraft
@@ -1314,34 +1382,45 @@ export function SimplePitch() {
       }
     >
       <PitchMarkings pitch={doc.pitch} />
+      <defs>
+        {/* the ripple lives INSIDE the netting only (user 2026-08-21: 밖으로 새면 어색) */}
+        <clipPath id="net-clip-left">
+          <rect x={-2} y={W / 2 - 3.66} width={2.2} height={7.32} />
+        </clipPath>
+        <clipPath id="net-clip-right">
+          <rect x={L - 0.2} y={W / 2 - 3.66} width={2.2} height={7.32} />
+        </clipPath>
+      </defs>
       {netFx && (
-        <g
-          key={netFx.key}
-          className={styles.netFx}
-          transform={`translate(${netFx.pos.x} ${netFx.pos.y}) rotate(${netFx.angleDeg}) scale(${netFx.strength})`}
-        >
-          {/* pocket: the mesh wraps the ball, stretches past, snaps back (elastic) */}
-          <path d="M 0 -1.1 Q 1.9 0 0 1.1 Q 0.5 0 0 -1.1 Z" className={styles.netFxPocket} />
-          <path
-            d="M 0 -0.9 Q 1.3 0 0 0.9"
-            className={styles.netFxArc}
-            style={{ animationDelay: '0s' }}
-          />
-          <path
-            d="M 0 -1.4 Q 1.9 0 0 1.4"
-            className={styles.netFxArc}
-            style={{ animationDelay: '0.05s' }}
-          />
-          <path
-            d="M 0 -1.9 Q 2.4 0 0 1.9"
-            className={styles.netFxArc}
-            style={{ animationDelay: '0.1s' }}
-          />
-          <path
-            d="M 0 -2.4 Q 2.9 0 0 2.4"
-            className={styles.netFxArc}
-            style={{ animationDelay: '0.16s' }}
-          />
+        <g clipPath={netFx.pos.x < L / 2 ? 'url(#net-clip-left)' : 'url(#net-clip-right)'}>
+          <g
+            key={netFx.key}
+            className={styles.netFx}
+            transform={`translate(${netFx.pos.x} ${netFx.pos.y}) rotate(${netFx.angleDeg}) scale(${netFx.strength})`}
+          >
+            {/* pocket: the mesh wraps the ball, stretches past, snaps back (elastic) */}
+            <path d="M 0 -1.1 Q 1.9 0 0 1.1 Q 0.5 0 0 -1.1 Z" className={styles.netFxPocket} />
+            <path
+              d="M 0 -0.9 Q 1.3 0 0 0.9"
+              className={styles.netFxArc}
+              style={{ animationDelay: '0s' }}
+            />
+            <path
+              d="M 0 -1.4 Q 1.9 0 0 1.4"
+              className={styles.netFxArc}
+              style={{ animationDelay: '0.05s' }}
+            />
+            <path
+              d="M 0 -1.9 Q 2.4 0 0 1.9"
+              className={styles.netFxArc}
+              style={{ animationDelay: '0.1s' }}
+            />
+            <path
+              d="M 0 -2.4 Q 2.9 0 0 2.4"
+              className={styles.netFxArc}
+              style={{ animationDelay: '0.16s' }}
+            />
+          </g>
         </g>
       )}
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />
