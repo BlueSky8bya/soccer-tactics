@@ -590,3 +590,9 @@ Change:
 - **Ctrl+선수 클릭 = 선택에 추가**, 이미 선택된 멤버 Ctrl+클릭 = 빼기(토글), **Ctrl+누른 채 드래그 = 추가 후 그룹 전체 이동**. gestureIntent에 press-token-additive 추가(truth table 테스트 포함). 잔디 Ctrl+클릭=선수 투입은 그대로.
 Validation: typecheck/lint/test 120/build/harness/format PASS; Playwright: 클릭 1→Ctrl+클릭 2→재클릭 1(토글), Ctrl+드래그로 3명 추가·그룹 60,36px 이동, X로 segments 0, 버튼 overflow 없음, 콘솔 클린.
 
+### CHG-20260820-050 — FIX — 조작법 상단 실선(미니 투어 버튼) 제거 (사용자 지시)
+
+Problem: 조작법 패널 상단에 실선처럼 깨져 보이는 요소 — 미니 투어 진입 버튼이 잘못 렌더링됨.
+Change: 버튼 제거(사용자: 없애줘). MINI_TOUR_STEPS 자체는 보존(진입점 없음, 추후 ? 오버레이 등으로 재노출 가능).
+Validation: typecheck/lint/test 120/build/harness/format PASS; 조작법 패널 스크린샷 육안 확인(라벨 아래 바로 카드), 콘솔 클린.
+
