@@ -180,6 +180,30 @@ export function addStepPass(
         ...(off ? { offset: off } : {}),
       })
     }
+    // A pass drawn from the LIVE ball token while a chain exists must still LAUNCH from where
+    // the ball will BE (user 2026-08-21: 선택하면 원점이 시작 지점까지 늘어나는 오류). The ball's
+    // future = its holder's last known spot (+carry) or the ball chain's own end. Origins the
+    // user placed anywhere on the holder's ring (≤3.2m) are THEIR choice and stay untouched.
+    const lastSeg = track.segments[track.segments.length - 1]
+    const holderFuture =
+      lastSeg && lastSeg.kind === 'possessed' ? lastKnownPosition(doc, lastSeg.holderId) : undefined
+    const anchor = holderFuture ?? lastKnownPosition(doc, doc.ball.id)
+    const off =
+      lastSeg && lastSeg.kind === 'possessed' && lastSeg.offset
+        ? lastSeg.offset
+        : { x: 1.75, y: 1.15 }
+    const expected = holderFuture
+      ? { x: holderFuture.x + off.x, y: holderFuture.y + off.y }
+      : anchor
+    const first = waypoints[0]
+    if (first && Math.hypot(first.p.x - anchor.x, first.p.y - anchor.y) > 3.2) {
+      const dx = expected.x - first.p.x
+      const dy = expected.y - first.p.y
+      first.p = { x: expected.x, y: expected.y }
+      if (first.handleIn) first.handleIn = { x: first.handleIn.x + dx, y: first.handleIn.y + dy }
+      if (first.handleOut)
+        first.handleOut = { x: first.handleOut.x + dx, y: first.handleOut.y + dy }
+    }
     track.segments.push({
       id,
       kind: 'travel',
@@ -200,7 +224,11 @@ export function addStepPass(
  * Receiver for a pass, tried in order: positions at the arrival time → resting (t=0) positions →
  * every authored future spot (ghosts) → each player's final position. First radius hit wins.
  */
-export function resolvePassReceiverInDraft(doc: TacticDocument, segmentId: Id): void {
+export function resolvePassReceiverInDraft(
+  doc: TacticDocument,
+  segmentId: Id,
+  opts?: { preserveEndDirection?: boolean },
+): void {
   const compiled = compile(doc)
   const arrival = compiled.segmentTimes[segmentId]?.end ?? 0
   const rs = stateAt(compiled, doc, arrival)
@@ -220,7 +248,7 @@ export function resolvePassReceiverInDraft(doc: TacticDocument, segmentId: Id): 
     doc.players.map((p) => ({ id: p.id, pos: lastKnownPosition(doc, p.id) })),
   ]
   for (const candidates of candidateSets) {
-    syncTravelReceiverInDraft(doc, segmentId, candidates, RECEIVE_RADIUS_M)
+    syncTravelReceiverInDraft(doc, segmentId, candidates, RECEIVE_RADIUS_M, opts)
     const seg = findSegment(doc, segmentId)
     if (seg && seg.segment.kind === 'travel' && seg.segment.receiverId) break
   }

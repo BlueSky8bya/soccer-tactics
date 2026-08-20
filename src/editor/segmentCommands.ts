@@ -313,6 +313,7 @@ export function syncTravelReceiverInDraft(
   segmentId: Id,
   playersAtArrival: readonly { id: Id; pos: Vec2 }[],
   radius = RECEIVE_RADIUS_M,
+  opts?: { preserveEndDirection?: boolean },
 ): void {
   const f = findSegment(draft, segmentId)
   if (!f || f.segment.kind !== 'travel') return
@@ -333,7 +334,12 @@ export function syncTravelReceiverInDraft(
   // back from the end for the first waypoint clearly outside the receiver — that chord is the
   // approach line, and resting on it makes arrow tip = ball = next origin one single joint.
   let recvOffset: Vec2 | undefined
-  if (near) {
+  if (near && opts?.preserveEndDirection) {
+    // Explicit carry placement (ball-ghost orbit): the user CHOSE this side — keep it.
+    const rel = { x: end.x - near.pos.x, y: end.y - near.pos.y }
+    if (Math.hypot(rel.x, rel.y) >= 0.3) recvOffset = carryOffset(rel)
+  }
+  if (near && !recvOffset) {
     let approach: Vec2 | undefined
     for (let k = seg.path.waypoints.length - 2; k >= 0; k--) {
       const w = seg.path.waypoints[k]!.p

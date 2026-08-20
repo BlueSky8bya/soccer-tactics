@@ -1026,3 +1026,11 @@ Validation: typecheck/lint/test 159(+체인 경계 촘촘 샘플 골든)/build/h
 Problem: 빈 안의 +가 호버에서만 나타나 "B 전환인지 + 복제인지" 인지 불가(사용자).
 Change: 상태별 시각 언어 분리 — 활성=흰 필(기존), 존재·비활성=회색 텍스트+호버 배경(전환 초대), 빈 슬롯=inset 링+상시 '+' 접미(만들기 정체성), 호버 시 accent-soft 배경·accent 링/텍스트로 데워짐. 호버 전용 ::after 트릭 제거.
 Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright: A 존재·비활성 / B 활성 / C+ 빈(텍스트에 + 포함) 구조 검증 + 확대 스크린샷.
+
+### CHG-20260821-104 — FIX/FEAT — 패스 원점 체인 스냅(늘어남 오류) + 공 고스트 궤도 배치
+
+Problem: (1) 체인이 진행된 상태에서 라이브 공 토큰으로 새 패스를 그리면 저작 원점이 공의 '현재'(과거) 위치 — 선택하면 경로가 시작점까지 늘어나 보이고 애니메이션도 그 지점부터 발사(사용자 사진 1·2). (2) 캐리된 공 고스트의 위치(선수 기준 방향)를 원형으로 조정할 수단 없음(사진 3).
+Change:
+- addStepPass: 원점이 공의 미래 앵커(소유 홀더의 마지막 위치, 없으면 공 체인 끝)에서 3.2m 초과 이탈 시 캐리 지점으로 스냅 — 링 위(≤3.2m) 어디든 사용자가 그린 원점은 존중, 목표점 불변.
+- 공 고스트 드래그 = 홀더 궤도: adjust-ghost-end가 수신자 있는 공 travel이면 드래그를 캐리 링(2.0~2.6m)에 구속(orbitCenter), 커밋 시 preserveEndDirection으로 수신자 재동기화가 접근측 스냅으로 덮지 않음(syncTravelReceiver 옵션 신설). 체인된 다음 원점은 정션 팔로우로 동반.
+Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright orbitfix.cjs: 체인 후 라이브 공에서 골로 패스 → 원점=정션(≤3.0m), 고스트를 수신자 위로 드래그 → rel (0.00, −2.60) 링 정각 안착 — ALL PASS, 콘솔 클린.

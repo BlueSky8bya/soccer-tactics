@@ -35,6 +35,7 @@ import { MIN_POINT_DIST_PX, mapPenPressure, mouseSpeedPressure, smoothPressure }
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
 import { useUiStore } from '@/editor/uiStore'
 import { useCompiled, useResolvedState } from '@/editor/useCompiled'
+import { carryOffset } from '@/engine/compile'
 import { beautifyStroke, buildPathLUT, pointAtDistance } from '@/engine/path'
 import { stateAt } from '@/engine/stateAt'
 import { DrawingLayer, PenStroke } from '@/renderer/DrawingLayer'
@@ -109,6 +110,9 @@ type Gesture =
       startClient: { x: number; y: number }
       started: boolean
       wpId: Id | null
+      /** Ball-ghost orbit (2026-08-21): drag the carried ball AROUND its holder — the end is
+       *  constrained to the carry ring and the chosen side survives receiver re-sync. */
+      orbitCenter?: Vec2
     }
   | {
       type: 'add'
@@ -478,7 +482,10 @@ export function SimplePitch() {
         const doc2 = d as TacticDocument
         relayoutStepsInDraft(doc2)
         const f = findSegment(doc2, g.segmentId)
-        if (f && f.segment.kind === 'travel') resolvePassReceiverInDraft(doc2, g.segmentId)
+        if (f && f.segment.kind === 'travel')
+          resolvePassReceiverInDraft(doc2, g.segmentId, {
+            preserveEndDirection: !!g.orbitCenter,
+          })
       })
       core.commit()
       return
@@ -863,11 +870,24 @@ export function SimplePitch() {
         pressToken(yieldId!)
         return
       case 'adjust-ghost-end': {
-        // Plain drag on a ghost = fine-tune that movement's end.
+        // Plain drag on a ghost = fine-tune that movement's end. A CARRIED ball ghost instead
+        // ORBITS its holder: the drag slides the ball around the carry ring (user 2026-08-21).
         const segId = ghostTop!.segId
         const f = segId ? findSegment(core.getDocument(), segId) : null
         if (!f || !('path' in f.segment)) return
         const wps = f.segment.path.waypoints
+        let orbitCenter: Vec2 | undefined
+        if (
+          ghostTop!.entityId === doc.ball.id &&
+          f.segment.kind === 'travel' &&
+          f.segment.receiverId
+        ) {
+          const tmEnd = compiled.segmentTimes[segId]?.end
+          if (tmEnd !== undefined) {
+            const rs = stateAt(compiled, doc, tmEnd + 0.05)
+            orbitCenter = rs.players[f.segment.receiverId]?.pos
+          }
+        }
         st.returnToAuthoringStart()
         st.selectSegment(segId)
         gesture.current = {
@@ -878,6 +898,7 @@ export function SimplePitch() {
           startClient: { x: e.clientX, y: e.clientY },
           started: false,
           wpId: wps[wps.length - 1]!.id,
+          ...(orbitCenter ? { orbitCenter } : {}),
         }
         svg.setPointerCapture(e.pointerId)
         return
@@ -1001,15 +1022,16 @@ export function SimplePitch() {
           )
         })
       }
-      if (g.wpId)
+      if (g.wpId) {
+        let target = clampToPitch(pt, doc.pitch)
+        if (g.orbitCenter) {
+          const off = carryOffset({ x: pt.x - g.orbitCenter.x, y: pt.y - g.orbitCenter.y })
+          target = { x: g.orbitCenter.x + off.x, y: g.orbitCenter.y + off.y }
+        }
         core.update((d) =>
-          bendMoveWaypointInDraft(
-            d as TacticDocument,
-            g.segmentId,
-            g.wpId!,
-            clampToPitch(pt, doc.pitch),
-          ),
+          bendMoveWaypointInDraft(d as TacticDocument, g.segmentId, g.wpId!, target),
         )
+      }
       return
     }
 
