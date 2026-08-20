@@ -980,3 +980,10 @@ Change:
 - 공 드래그 중 부착 범위(2.6m) 내 선수를 드롭 타깃으로 점등 — 선택과 동일한 리프트+테두리+팝(벗어나면 즉시 해제).
 - 토큰 재보정: 선수 r 1.35m·공 0.68m(1.5→1.2→1.35 절충). 고스트 1.5/0.68, 폰트·GIF 동반.
 Validation: typecheck/lint/test 157(그물 법선 골든 포함)/build/harness/format PASS. Playwright: 타깃 점등→이탈 해제, r 1.35, 대각 슛 net fx 법선 회전 발화 — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-098 — FEAT — 드리블 시 공이 진행 방향 앞에서 리드 (엔진, 결정론)
+
+Problem: 소유 상태로 달릴 때 공이 옆구리 고정 오프셋에 붙어 어색(사용자: 실제 드리블처럼 앞에).
+Change:
+- stateAt possessed 계산: 홀더가 이동 중이면 공이 헤딩 방향 1.9m 앞을 리드. 런 시작/끝 0.35s 동안 사이드 캐리 지점과 결정론적 블렌드 — 저작 앵커(고스트·패스 원점)와 시작·도착 자세 일치 유지. ResolvedPlayer에 moveT/moveDur 추가. 순수 함수(t) — 결정론·GIF 자동 반영.
+Validation: typecheck/lint/test 158(+1 골든: 초반=사이드, 중반=+1.9m 리드·측면 0.15m 이내, 종료 후=사이드 복귀)/build/harness/format PASS. Playwright: 재생 중반 공이 #7 앞(+x 13.8px, 측면 4px) — ALL PASS, 콘솔 클린.

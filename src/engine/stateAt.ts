@@ -19,7 +19,15 @@ export interface ResolvedPlayer {
   heading?: number
   moving: boolean
   segmentId?: Id
+  /** Local time inside the current move and its duration — dribble blend ramp input. */
+  moveT?: number
+  moveDur?: number
 }
+
+/** Dribbling: the ball rides AHEAD of the run (a touch in front of the feet), not on the hip. */
+export const DRIBBLE_AHEAD_M = 1.9
+/** Seconds to blend side-carry ↔ ahead at the start/end of a run (deterministic ramp). */
+const DRIBBLE_RAMP_S = 0.35
 
 export type BallStatus = 'possessed' | 'travel' | 'loose'
 
@@ -96,6 +104,8 @@ function resolvePlayer(segs: CompiledSegment[], home: Vec2, t: number): Resolved
         moving: true,
         heading: headingAtDistance(seg.schedule.lut, s),
         segmentId: seg.id,
+        moveT: lt,
+        moveDur: scheduleDuration(seg.schedule),
       }
     }
     // hold: stay where the previous segment ended
@@ -133,7 +143,21 @@ function resolveBall(
   }
   const holderPos = (id: Id, offset: Vec2): Vec2 | undefined => {
     const p = players[id]
-    return p ? { x: p.pos.x + offset.x, y: p.pos.y + offset.y } : undefined
+    if (!p) return undefined
+    // DRIBBLE (user 2026-08-21): while the holder RUNS, the ball rides ahead of them in the
+    // movement direction — like a real touch-and-go — blending back to the side-carry spot at
+    // the start/end of the run so authored anchors (ghosts, pass origins) stay consistent.
+    if (p.moving && p.heading !== undefined && p.moveT !== undefined && p.moveDur) {
+      const edge = Math.min(p.moveT, p.moveDur - p.moveT)
+      const r = Math.max(0, Math.min(1, edge / DRIBBLE_RAMP_S))
+      const ax = Math.cos(p.heading) * DRIBBLE_AHEAD_M
+      const ay = Math.sin(p.heading) * DRIBBLE_AHEAD_M
+      return {
+        x: p.pos.x + offset.x * (1 - r) + ax * r,
+        y: p.pos.y + offset.y * (1 - r) + ay * r,
+      }
+    }
+    return { x: p.pos.x + offset.x, y: p.pos.y + offset.y }
   }
 
   if (!track || track.segments.length === 0) {
