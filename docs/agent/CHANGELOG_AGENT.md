@@ -547,3 +547,9 @@ Change:
 - **재디자인**: 제목 입력 제거(정적 브랜드 "⚽ 전술 보드"), 헤더/하단바 frosted(blur+hairline), 하단바=중앙 부유 알약(재생 그룹 | 구분선 | 단계 칩+구간 재생), 좌측 패널=카드 2장(팀 구성: 포메이션+채우기(파랑)+공 투입(초록) / 정리: 전체 지우기·새로 시작(빨강 틴트)), 우측 조작법·미니 투어도 카드화. 토스트 위치 하단 바 위로.
 Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright(r9.cjs): 피커 열림→5 지정→닫힘·chip5 반영, 제목 input 부재, 스크린샷 육안 확인(카드/부유 바/셰브론), m8 회귀(재생 중 경로 숨김) PASS, 콘솔 클린.
 
+### CHG-20260820-045 — FIX — 단계 피커 최상위 렌더·좌측 패널 비율 (사용자 지시 2건)
+
+Problem: ① 인라인 단계 피커가 다른 경로의 배지/토큰에 가려짐(SVG 페인트 순서) ② 좌측 패널 버튼/셀렉트 비율이 안 맞음(열 176px에 라벨이 빠듯).
+Change: 피커를 SVG 마지막 child로 이동(항상 최상위); 좌측 열 212px·우측 244px, panelBtn 높이 34·패딩 12·12.5px 통일, select 높이 30·전체 너비, 라벨 열 44px.
+Validation: typecheck/lint/test 116/build/harness/format PASS; Playwright: 피커=svg last child 확인+스크린샷(배지 위에 렌더), 좌측 패널 스크린샷 육안 확인, 콘솔 클린.
+

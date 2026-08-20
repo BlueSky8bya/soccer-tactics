@@ -844,48 +844,6 @@ export function SimplePitch() {
         dropKey={ballDrop?.key ?? 0}
         pulseKey={pulses[doc.ball.id]}
       />
-      {stepPicker && !viewingFrame && (
-        <g
-          data-step-picker="true"
-          className={styles.stepPicker}
-          transform={`translate(${Math.min(Math.max(stepPicker.at.x, 11), L - 11)}, ${Math.max(stepPicker.at.y - 3.4, 2)})`}
-        >
-          <rect
-            x={-10.4}
-            y={-1.5}
-            width={20.8}
-            height={3}
-            rx={1.5}
-            className={styles.stepPickerBg}
-          />
-          {Array.from({ length: 9 }, (_, i) => i + 1).map((n, i) => {
-            const cur = stepOf(
-              (sceneTracks(doc)
-                .flatMap((tr) => tr.segments)
-                .find((sg) => sg.id === stepPicker.segId) ?? {}) as { step?: number },
-            )
-            return (
-              <g
-                key={n}
-                transform={`translate(${(i - 4) * 2.25}, 0)`}
-                className={`${styles.stepPickerItem} ${cur === n ? styles.stepPickerItemActive : ''}`}
-                role="button"
-                aria-label={t('simple.stepAssign', { n })}
-                onPointerDown={(e) => {
-                  e.stopPropagation()
-                  setSegmentStep(core, stepPicker.segId, n)
-                  setStepPicker(null)
-                }}
-              >
-                <circle r={1.02} />
-                <text textAnchor="middle" dominantBaseline="central">
-                  {n}
-                </text>
-              </g>
-            )
-          })}
-        </g>
-      )}
       {snapPos && ui.pathDraft && (
         <g className={styles.snapRing} transform={`translate(${snapPos.x}, ${snapPos.y})`}>
           <circle r={2.3} />
@@ -947,6 +905,48 @@ export function SimplePitch() {
             <circle cx={drag.raw.x} cy={drag.raw.y} r={1.0} className={styles.ballGhostDot} />
           </g>
         )}
+      {stepPicker && !viewingFrame && (
+        <g
+          data-step-picker="true"
+          className={styles.stepPicker}
+          transform={`translate(${Math.min(Math.max(stepPicker.at.x, 11), L - 11)}, ${Math.max(stepPicker.at.y - 3.4, 2)})`}
+        >
+          <rect
+            x={-10.4}
+            y={-1.5}
+            width={20.8}
+            height={3}
+            rx={1.5}
+            className={styles.stepPickerBg}
+          />
+          {Array.from({ length: 9 }, (_, i) => i + 1).map((n, i) => {
+            const cur = stepOf(
+              (sceneTracks(doc)
+                .flatMap((tr) => tr.segments)
+                .find((sg) => sg.id === stepPicker.segId) ?? {}) as { step?: number },
+            )
+            return (
+              <g
+                key={n}
+                transform={`translate(${(i - 4) * 2.25}, 0)`}
+                className={`${styles.stepPickerItem} ${cur === n ? styles.stepPickerItemActive : ''}`}
+                role="button"
+                aria-label={t('simple.stepAssign', { n })}
+                onPointerDown={(e) => {
+                  e.stopPropagation()
+                  setSegmentStep(core, stepPicker.segId, n)
+                  setStepPicker(null)
+                }}
+              >
+                <circle r={1.02} />
+                <text textAnchor="middle" dominantBaseline="central">
+                  {n}
+                </text>
+              </g>
+            )
+          })}
+        </g>
+      )}
     </svg>
   )
 }
