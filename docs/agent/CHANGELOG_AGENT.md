@@ -1062,3 +1062,9 @@ Change:
 - orbit-carry가 소유 오프셋 대신 해당 런의 carryEnd만 기록 — t0 공·다른 정션 완전 불변(바이트 검증). 원점=발사 불변식이 carryEnd를 자동 반영.
 - 잡는 동안 해당 고스트 1.3× 리프트+선명+그림자(ghostGrabbed).
 Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright midorbit.cjs: 하이라이트 표시, run1 경로 동일, run1.carryEnd=(0, 2.5)만 기록, 초기 공 불변, run2 무영향 — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-108 — FIX — 도착 호 일반화: 패스 1개만 있어도 화살촉→공 안착점 아치 연결
+
+Problem: 릴레이 호가 '연속 패스 쌍'에만 그려져 단일 도착(사진: 화살촉과 공 고스트가 끊겨 보임)에는 부재(사용자 재신고).
+Change: passLinks를 수신자 있는 모든 패스로 일반화 — 트림된 화살촉 끝 → 실제 안착점(stateAt: 전방 휴식·핀 반영)을 선수 테두리+0.55m 패딩을 지키는 호로 연결(반경 ≥1.9m, 선수 바깥으로 볼록). 쌍 조건 제거.
+Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright: 단일 대각 패스 → 호 1개 렌더 확인, 콘솔 클린.

@@ -1210,42 +1210,35 @@ export function SimplePitch() {
   const selection = ui.selection
   const isPlaying = ui.playback.playing
 
-  // Consecutive passes RELAYED by one player: the incoming arrow is END-TRIMMED 1.15m at the
-  // token, which visually breaks the flow — bridge from the visible TIP to the next pass start
-  // with an arc bowing around the holder (user 2026-08-21: 원 테두리 일부처럼 이어지게).
+  // Arrival arcs (user 2026-08-21): every pass's trimmed arrow tip connects to where the ball
+  // actually SETTLES (carried ghost — front-rest / pinned side included) with an arc skirting
+  // the receiver's edge at a small padding. Covers single arrivals AND pass→pass relays.
   const passLinks = (() => {
     const out: { d: string }[] = []
     const bt = sceneTracks(doc).find((tr) => tr.entityId === doc.ball.id)
     if (!bt) return out
-    const travels = bt.segments.filter(
-      (sg): sg is Extract<typeof sg, { kind: 'travel' }> =>
-        sg.kind === 'travel' && !sg.id.startsWith('gen-'),
-    )
-    for (let i = 0; i < travels.length - 1; i++) {
-      const A = travels[i]!
-      const B = travels[i + 1]!
-      const startB = B.path.waypoints[0]?.p
-      if (!startB) continue
-      const tm = compiled.segmentTimes[B.id]
+    for (const sg of bt.segments) {
+      if (sg.kind !== 'travel' || sg.id.startsWith('gen-') || !sg.receiverId) continue
+      const tm = compiled.segmentTimes[sg.id]
       if (!tm) continue
-      const holderId = A.receiverId
-      if (!holderId) continue
-      const hp = stateAt(compiled, doc, Math.max(0, tm.start - 0.05)).players[holderId]?.pos
+      const rs = stateAt(compiled, doc, tm.end + 0.05)
+      if (rs.ball.holderId !== sg.receiverId) continue
+      const rest = rs.ball.pos
+      const hp = rs.players[sg.receiverId]?.pos
       if (!hp) continue
-      const lutA = buildPathLUT(A.path)
-      const tipIn = pointAtDistance(lutA, Math.max(0, lutA.length - 1.15)) // visible arrow tip
-      const d1 = Math.hypot(tipIn.x - hp.x, tipIn.y - hp.y)
-      const d2 = Math.hypot(startB.x - hp.x, startB.y - hp.y)
-      // tip sits carry(≤2.6m) + trim(1.15m) out — allow up to 4.2m on the incoming side
+      const lut = buildPathLUT(sg.path)
+      const tip = pointAtDistance(lut, Math.max(0, lut.length - 1.15)) // visible arrow tip
+      const d1 = Math.hypot(tip.x - hp.x, tip.y - hp.y)
+      const d2 = Math.hypot(rest.x - hp.x, rest.y - hp.y)
       if (d1 > 4.2 || d2 > 3.4 || d1 < 0.3 || d2 < 0.3) continue
-      const chord = Math.hypot(startB.x - tipIn.x, startB.y - tipIn.y)
-      if (chord < 0.35) continue // already touching
-      const r = Math.max((d1 + d2) / 2, chord / 2 + 0.05)
-      // bow AWAY from the holder (outside the token): sweep from the cross product sign
-      const cross = (tipIn.x - hp.x) * (startB.y - hp.y) - (tipIn.y - hp.y) * (startB.x - hp.x)
+      const chord = Math.hypot(rest.x - tip.x, rest.y - tip.y)
+      if (chord < 0.35) continue // tip already lands on the ball
+      // the arc clears the token edge with padding, bowing AWAY from the player
+      const r = Math.max((d1 + d2) / 2, 1.35 + 0.55, chord / 2 + 0.05)
+      const cross = (tip.x - hp.x) * (rest.y - hp.y) - (tip.y - hp.y) * (rest.x - hp.x)
       const sweep = cross > 0 ? 1 : 0
       out.push({
-        d: `M ${tipIn.x} ${tipIn.y} A ${r} ${r} 0 0 ${sweep} ${startB.x} ${startB.y}`,
+        d: `M ${tip.x} ${tip.y} A ${r} ${r} 0 0 ${sweep} ${rest.x} ${rest.y}`,
       })
     }
     return out
