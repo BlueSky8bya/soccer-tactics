@@ -273,3 +273,18 @@ describe('shell hierarchy (PLAN-006 M2)', () => {
     expect(container.querySelector('input[type="range"]')).toBeNull()
   })
 })
+
+describe('playback staging (PLAN-006 M5)', () => {
+  it('marks the shell as playing so chrome can recede, and clears it on stop', async () => {
+    const { container } = setup()
+    expect(container.querySelector('[data-playing="true"]')).toBeNull()
+    await act(async () => {
+      useUiStore.setState((s) => ({ playback: { ...s.playback, playing: true } }))
+    })
+    expect(container.querySelector('[data-playing="true"]')).toBeTruthy()
+    await act(async () => {
+      useUiStore.getState().returnToAuthoringStart()
+    })
+    expect(container.querySelector('[data-playing="true"]')).toBeNull()
+  })
+})

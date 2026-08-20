@@ -688,3 +688,9 @@ Change:
 - **잉크 시작/커밋 확인**: Shift 드로우 시작 시 주체 토큰 1회 펄스, 경로 커밋 순간 다시 1회 펄스(화살표가 누구 것인지 즉시 인지).
 Validation: typecheck/lint/test 133(+4)/build/harness/format PASS; Playwright: 프레스 중 해당 토큰만 scale 1.035, 드로우 회귀 정상, 콘솔 클린.
 
+### CHG-20260820-061 — UX — PLAN-006 M5: 재생 무대 전환
+
+Problem: 재생 중에도 좌우 패널·헤더가 같은 대비로 남아 시선이 분산.
+Change: shell에 data-playing 부착 — 재생 중 헤더·양 패널 opacity 0.45로 물러남(위치 이동 없음, transition 토큰, 정지/종료 시 복귀). 경로 숨김·GIF parity·A/B/C 즉시 교체는 기존 유지.
+Validation: typecheck/lint/test 134(+1)/build/harness/format PASS; Playwright: 재생 중 패널 0.45 → held에서 1로 복귀(attr true→false 확인), 콘솔 클린.
+

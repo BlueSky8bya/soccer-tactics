@@ -89,7 +89,7 @@ export function AppShell() {
   const errors = compiled.issues.filter((i) => i.level === 'error')
 
   return (
-    <div className={styles.shell} data-simple="true">
+    <div className={styles.shell} data-simple="true" data-playing={ui.playback.playing}>
       <header className={styles.top}>
         <button
           type="button"

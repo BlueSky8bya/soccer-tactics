@@ -1480,3 +1480,17 @@
   border-color: var(--st-accent);
   background: var(--st-accent-soft);
 }
+
+/* M5: while the play runs, the stage takes over — chrome recedes without moving */
+.shell[data-playing='true'] .sideLeft,
+.shell[data-playing='true'] .sideRight,
+.shell[data-playing='true'] .top {
+  opacity: 0.45;
+  transition: opacity var(--st-motion-transition) var(--st-ease-standard);
+}
+
+.shell .sideLeft,
+.shell .sideRight,
+.shell .top {
+  transition: opacity var(--st-motion-transition) var(--st-ease-standard);
+}
