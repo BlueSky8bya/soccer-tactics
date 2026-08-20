@@ -223,39 +223,37 @@ export function AppShell() {
             {modeToggle}
             <span className={styles.barDivider} aria-hidden="true" />
             <span className={styles.barGroup}>
-              <button
-                type="button"
-                className={`${styles.btn} ${ui.annotate.tool === 'select' ? styles.btnActive : ''}`}
-                onClick={() => ui.setAnnotate({ tool: 'select' })}
-                title={t('draw.select')}
-                aria-label={t('draw.select')}
-                aria-pressed={ui.annotate.tool === 'select'}
-              >
-                <UiIcon name="cursor" />
-              </button>
-              <button
-                type="button"
-                className={`${styles.btn} ${ui.annotate.tool === 'pen' ? styles.btnActive : ''}`}
-                onClick={() => ui.setAnnotate({ tool: 'pen' })}
-                title={t('draw.pen')}
-                aria-label={t('draw.pen')}
-                aria-pressed={ui.annotate.tool === 'pen'}
-              >
-                <UiIcon name="pen" />
-              </button>
-              <button
-                type="button"
-                className={`${styles.btn} ${ui.annotate.tool === 'eraser' ? styles.btnActive : ''}`}
-                onClick={() => ui.setAnnotate({ tool: 'eraser' })}
-                title={t('draw.eraser')}
-                aria-label={t('draw.eraser')}
-                aria-pressed={ui.annotate.tool === 'eraser'}
-              >
-                <UiIcon name="eraser" />
-              </button>
-              <span className={styles.drawHint} aria-hidden="true">
-                D 전환 · Ctrl+Z 취소
-              </span>
+              {[
+                {
+                  tool: 'select' as const,
+                  icon: 'cursor' as const,
+                  key: 'V',
+                  label: t('draw.select'),
+                },
+                { tool: 'pen' as const, icon: 'pen' as const, key: 'P', label: t('draw.pen') },
+                {
+                  tool: 'eraser' as const,
+                  icon: 'eraser' as const,
+                  key: 'E',
+                  label: t('draw.eraser'),
+                },
+              ].map((d) => (
+                <span key={d.tool} className={styles.toolCol}>
+                  <span className={styles.toolKey} aria-hidden="true">
+                    {d.key}
+                  </span>
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${ui.annotate.tool === d.tool ? styles.btnActive : ''}`}
+                    onClick={() => ui.setAnnotate({ tool: d.tool })}
+                    title={`${d.label} (${d.key})`}
+                    aria-label={d.label}
+                    aria-pressed={ui.annotate.tool === d.tool}
+                  >
+                    <UiIcon name={d.icon} />
+                  </button>
+                </span>
+              ))}
             </span>
             <span className={styles.barDivider} aria-hidden="true" />
             {/* VIC 그림판식 2줄 색 트레이(17색) + 마지막 칸 '직접 고르기'(네이티브 색상판) */}
@@ -331,18 +329,9 @@ export function AppShell() {
                   ui.flashToast(t('draw.cleared', { n }))
                 }}
                 title={t('draw.clearAll')}
+                aria-label={t('draw.clearAll')}
               >
-                {t('draw.clearAll')}
-              </button>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.btnPrimary}`}
-                onClick={() => ui.setAnnotateOn(false)}
-                title={t('draw.exit')}
-                aria-label={t('draw.exit')}
-              >
-                <UiIcon name="close" />
-                <span className={styles.kbdOnPrimary}>Esc</span>
+                <UiIcon name="trash" />
               </button>
             </span>
           </div>

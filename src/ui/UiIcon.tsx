@@ -14,6 +14,7 @@ const PATHS: Record<string, string> = {
   eraser: 'M7 21h13 M5 15l9-9 5 5-7 7H8l-3-3z M11 9l5 5',
   close: 'M6 6l12 12 M18 6L6 18',
   cursor: 'M5 3l14 10-6.6 1.1L9.5 20z',
+  trash: 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v5 M14 11v5',
 }
 
 export function UiIcon({

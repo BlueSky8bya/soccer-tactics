@@ -1133,6 +1133,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 26px;
+  padding: 0 3px;
 }
 
 .colorTray {
@@ -1226,23 +1228,24 @@
   line-height: 14px;
 }
 
-/* faint shortcut chips inside the draw bar (user 2026-08-21: 단축키도 도구바에 표시) */
-.kbdOnPrimary {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 5px;
-  padding: 0 5px;
-  line-height: 17px;
-  white-space: nowrap;
+/* draw tools: faint shortcut key ABOVE each icon (user 2026-08-21) */
+.toolCol {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
 }
 
-.drawHint {
-  font-size: 11.5px;
+.toolKey {
+  font-size: 9.5px;
+  line-height: 11px;
   color: var(--st-text-3);
-  white-space: nowrap;
-  margin-left: 4px;
+  opacity: 0.8;
+  user-select: none;
+}
+
+.toolCol .btn {
+  height: 30px;
 }
 
 .playBtn {
@@ -1445,6 +1448,110 @@
   background: var(--st-surface);
   color: var(--st-text);
   font-weight: 400;
+}
+
+/* Apple-style custom dropdown (SelectMenu) — native popups cannot be themed */
+.selectMenu {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+}
+
+.selectBtn {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  height: 30px;
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-s);
+  background: var(--st-surface-2);
+  color: var(--st-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  transition:
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    border-color var(--st-motion-fast) var(--st-ease-out);
+}
+
+.selectBtn:hover {
+  background: var(--st-surface);
+  border-color: var(--st-border-strong);
+}
+
+.selectBtn:focus-visible {
+  outline: none;
+  border-color: var(--st-accent);
+  box-shadow: 0 0 0 3px var(--st-accent-soft);
+}
+
+.selectBtn svg {
+  color: var(--st-text-3);
+  flex: none;
+}
+
+.selectValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectPop {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-m);
+  box-shadow: var(--st-depth-overlay);
+  max-height: 264px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--st-border-strong) transparent;
+}
+
+.selectItem {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--st-text);
+  background: transparent;
+  border-radius: var(--st-radius-s);
+  width: 100%;
+  height: 28px;
+  padding: 0 10px 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.selectItem:hover {
+  background: var(--st-surface-2);
+}
+
+.selectItemOn {
+  background: var(--st-accent-soft);
+  color: var(--st-accent);
+  font-weight: 600;
+}
+
+.selectCheck {
+  width: 16px;
+  text-align: center;
+  font-size: 11px;
+  flex: none;
 }
 
 /* ---------- player card (selected player editor) ---------- */

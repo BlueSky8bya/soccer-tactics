@@ -896,3 +896,12 @@ Change:
 - GoalNet(보드)·GIF에서 포스트 원 제거 — 크로스바·프레임·메시만.
 - .panelSelect: appearance none + 커스텀 셰브론(데이터 URI), surface-2 배경·라운드·호버/포커스 링, color-scheme light(팝업 밝게), option 색 지정.
 Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright: goalPost 요소 0, select computed appearance none·커스텀 배경 확인, 크롭 스크린샷 양쪽 검수.
+
+### CHG-20260821-088 — UX — 커스텀 드롭다운 메뉴 + 그리기 바 다이어트 + 도구 단축키 V/P/E
+
+Problem: (1) 네이티브 select 팝업은 스타일 불가 — 파란 하이라이트 리스트가 디자인과 충돌. (2) 그리기 바가 재생 바보다 훨씬 넓음 — 힌트 텍스트·Esc 버튼·긴 '전체 지우기' 문구. (3) 도구 단축키 부재.
+Change:
+- 신규 SelectMenu 컴포넌트(자체 listbox 팝업: 라운드 카드·그림자·현재 항목 ✓·호버 행·바깥 클릭/Esc 닫힘) — 포메이션 Home/Away에 적용.
+- 그리기 바: "D 전환·Ctrl+Z" 힌트·Esc 종료 버튼 제거(D/Esc 단축키가 담당, 모드 배지로 복귀 가능), 전체 지우기는 휴지통 아이콘으로. 굵기 버튼 폭 축소. 재생 바와 폭 743↔799px.
+- 도구 단축키 V(선택)/P(펜)/E(지우개) + 아이콘 위 9.5px 흐릿한 키 라벨. keymap 가이드 갱신.
+Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright: 팝업 열림·3-5-2 선택 반영, 힌트/Esc 부재, 키 라벨 V,P,E, e/v 키로 도구 전환 — ALL PASS, 콘솔 클린.

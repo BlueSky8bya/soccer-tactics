@@ -4,6 +4,7 @@ import { replaceDocument } from '@/editor/moreCommands'
 import { clearAllMovements } from '@/editor/stepCommands'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { FORMATIONS } from '@/presets/formations'
+import { SelectMenu } from './SelectMenu'
 import { useState } from 'react'
 import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
@@ -30,17 +31,12 @@ export function ActionsPanel() {
         {color && <span className={styles.teamDotSmall} style={{ background: color }} />}
         {label}
       </span>
-      <select
-        className={styles.panelSelect}
+      <SelectMenu
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {FORMATIONS.map((f) => (
-          <option key={f.id} value={f.id}>
-            {f.id}
-          </option>
-        ))}
-      </select>
+        options={FORMATIONS.map((f) => ({ id: f.id }))}
+        onChange={onChange}
+        ariaLabel={label}
+      />
     </label>
   )
   return (

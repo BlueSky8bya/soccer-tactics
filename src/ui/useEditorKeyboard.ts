@@ -80,7 +80,9 @@ export function useEditorKeyboard(): void {
         if (key === 'd') {
           e.preventDefault()
           ui.setAnnotateOn(false)
-        }
+        } else if (key === 'v') ui.setAnnotate({ tool: 'select' })
+        else if (key === 'p') ui.setAnnotate({ tool: 'pen' })
+        else if (key === 'e') ui.setAnnotate({ tool: 'eraser' })
         return
       }
       if (key === 'd') {
