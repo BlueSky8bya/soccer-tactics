@@ -39,6 +39,7 @@ export type PointerIntent =
   | 'draw-chain' // Shift held after a draw: next zigzag leg from the last end
   | 'draw-from-token' // Shift+drag on a live token: movement from its original spot
   | 'press-token' // plain press on a live token: select / move (group aware)
+  | 'press-token-additive' // Ctrl+press on a token: ADD to the selection (click toggles, drag moves all)
   | 'bend-path' // drag on a path line: ALWAYS bend its curvature (C-01)
   | 'marquee' // drag on empty grass: rubber-band selection
   | 'add-home-player' // Ctrl+click on grass
@@ -59,7 +60,8 @@ export function resolvePointerIntent(
   // The chain continues on any non-token press while Shift stays down.
   if (mods.shift && left && ctx.chainActive && !hit.token) return 'draw-chain'
   if (hit.segment && !hit.token && left) return 'bend-path'
-  if (hit.token && left) return mods.shift ? 'draw-from-token' : 'press-token'
+  if (hit.token && left)
+    return mods.shift ? 'draw-from-token' : mods.ctrl ? 'press-token-additive' : 'press-token'
   if (!hit.token && !hit.segment && hit.insidePitch && (left || mods.button === 2)) {
     if (!mods.ctrl) return left ? 'marquee' : 'none'
     return left ? 'add-home-player' : 'add-away-player'

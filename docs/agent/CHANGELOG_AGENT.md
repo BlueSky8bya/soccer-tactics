@@ -581,3 +581,12 @@ Change:
 - 팀 구성 Home/Away 라벨 앞에 팀 색 점(teamDotSmall).
 Validation: typecheck/lint/test 120(variant C +1)/build/harness/format PASS; Playwright: 팀 점 2색(blue/red), Shift+Delete로 segments 1→0+토스트, Shift+R로 선수 0→undo 22, kbd 표기 2개, A→B→C 복제·C 활성, 스크린샷 육안 확인, 콘솔 클린.
 
+### CHG-20260820-049 — UX — 전체 지우기 단축키 X로 교체·버튼 글자 넘침 수정·Ctrl+클릭 추가 선택 (사용자 지시 3건)
+
+Problem: ① Shift+Delete가 누르기 힘듦 ② 정리 버튼 라벨+단축키 표기가 버튼 밖으로 뚫림 ③ 선수 다중 선택이 마퀴뿐 — 엔티티를 하나씩 추가 지정 불가.
+Change:
+- 움직임 전체 지우기 = **X** 한 키(Shift+Delete 대체). 버튼 표기/타이틀/? 오버레이 갱신.
+- panelBtn: overflow hidden·패딩/폰트 축소, btnKbd flex none — 라벨+표기가 항상 버튼 안(scrollWidth 검증).
+- **Ctrl+선수 클릭 = 선택에 추가**, 이미 선택된 멤버 Ctrl+클릭 = 빼기(토글), **Ctrl+누른 채 드래그 = 추가 후 그룹 전체 이동**. gestureIntent에 press-token-additive 추가(truth table 테스트 포함). 잔디 Ctrl+클릭=선수 투입은 그대로.
+Validation: typecheck/lint/test 121/build/harness/format PASS; Playwright: 클릭 1→Ctrl+클릭 2→재클릭 1(토글), Ctrl+드래그로 3명 추가·그룹 60,36px 이동, X로 segments 0, 버튼 overflow 없음, 콘솔 클린.
+

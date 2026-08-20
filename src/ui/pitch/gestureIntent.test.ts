@@ -50,6 +50,9 @@ describe('resolvePointerIntent', () => {
       'draw-from-token',
     )
     expect(resolvePointerIntent(hit({ token: true }), mods(), ctx())).toBe('press-token')
+    expect(resolvePointerIntent(hit({ token: true }), mods({ ctrl: true }), ctx())).toBe(
+      'press-token-additive', // Ctrl+click on a token adds to the selection (user 2026-08-20)
+    )
     expect(resolvePointerIntent(hit({ token: true, segment: true }), mods(), ctx())).toBe(
       'press-token',
     )

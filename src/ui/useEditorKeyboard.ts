@@ -97,15 +97,15 @@ export function useEditorKeyboard(): void {
           if (ui.selectedSegmentId) ui.selectSegment(null)
           else ui.clearSelection()
           return
+        case 'x': {
+          // X = clear EVERY authored movement (same as the panel button, one key).
+          e.preventDefault()
+          const n = clearAllMovements(core)
+          ui.flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
+          return
+        }
         case 'Delete':
         case 'Backspace': {
-          // Shift+Delete = clear EVERY authored movement (same as the panel button).
-          if (e.shiftKey) {
-            e.preventDefault()
-            const n = clearAllMovements(core)
-            ui.flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
-            return
-          }
           if (ui.selectedSegmentId) {
             e.preventDefault()
             removeStepSegment(core, ui.selectedSegmentId)

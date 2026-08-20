@@ -20,7 +20,7 @@ export const KEYMAP = {
     del: { label: 'Delete', hint: '선택한 것 삭제' },
     esc: { label: 'Esc', hint: '취소 / 선택 해제' },
     step: { label: '1~9', hint: '단계 선택 (경로를 선택했으면 그 경로의 단계 변경)' },
-    clearAll: { label: 'Shift+Delete', hint: '움직임 전체 지우기' },
+    clearAll: { label: 'X', hint: '움직임 전체 지우기' },
     reset: { label: 'Shift+R', hint: '새로 시작 (전체 초기화)' },
   },
 } as const
@@ -31,6 +31,7 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
   { label: '드래그', hint: '옮기기 (여러 명이면 같이)' },
   { label: '빈 잔디 드래그', hint: '박스로 여러 명 선택' },
+  { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)' },
   { label: '공 → 선수 드롭', hint: '그 선수가 공 보유' },
   { label: '선수 클릭', hint: '등번호·이름·포지션 편집' },
 ]

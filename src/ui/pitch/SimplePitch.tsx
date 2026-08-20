@@ -61,6 +61,9 @@ type Gesture =
       lastPt: Vec2
       /** Last applied group offset (incremental translation of homes + paths). */
       prevRaw?: Vec2
+      /** Ctrl+press: a plain CLICK on an already-selected member removes it from the selection. */
+      additive?: boolean
+      wasSelected?: boolean
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2 }
   | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[] }
@@ -258,8 +261,11 @@ export function SimplePitch() {
       return
     }
 
-    // token drag
-    if (!g.started) return
+    // token: plain Ctrl+CLICK (no drag) on a selected member toggles it OFF (multi-select).
+    if (!g.started) {
+      if (commit && g.additive && g.wasSelected) st.select(st.selection.filter((id) => id !== g.id))
+      return
+    }
     const drag = st.drag
     if (!commit) {
       core.cancel()
@@ -381,10 +387,12 @@ export function SimplePitch() {
       setStepPicker(null)
     }
 
-    const pressToken = (entityId: Id) => {
+    const pressToken = (entityId: Id, additive = false) => {
       st.returnToAuthoringStart()
-      // Keep an existing multi-selection when grabbing one of its members (group drag).
-      if (!st.selection.includes(entityId)) st.select([entityId])
+      const wasSelected = st.selection.includes(entityId)
+      // Ctrl+press ADDS to the selection (user 2026-08-20); a plain press on a non-member replaces
+      // it; grabbing a member keeps the multi-selection (group drag).
+      if (!wasSelected) st.select(additive ? [...st.selection, entityId] : [entityId])
       const sel = useUiStore.getState().selection
       const group = new Map<Id, Vec2>()
       for (const id of sel.length > 1 && sel.includes(entityId) ? sel : [entityId]) {
@@ -407,6 +415,8 @@ export function SimplePitch() {
         group,
         started: false,
         lastPt: pt,
+        additive,
+        wasSelected,
       }
       svg.setPointerCapture(e.pointerId)
     }
@@ -497,6 +507,9 @@ export function SimplePitch() {
       }
       case 'press-token':
         pressToken(tokenEntityId!)
+        return
+      case 'press-token-additive':
+        pressToken(tokenEntityId!, true)
         return
       case 'bend-path': {
         // Path drag is ALWAYS bend (C-01) - group moves use live token drags only.

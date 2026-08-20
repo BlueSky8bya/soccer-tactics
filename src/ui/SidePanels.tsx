@@ -86,10 +86,10 @@ export function ActionsPanel() {
             const n = clearAllMovements(core)
             flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
           }}
-          title={`${t('panel.clearAll')} (Shift+Delete)`}
+          title={`${t('panel.clearAll')} (X)`}
         >
           ⌫ {t('panel.clearAll')}
-          <span className={styles.btnKbd}>⇧Del</span>
+          <span className={styles.btnKbd}>X</span>
         </button>
         <button
           type="button"
