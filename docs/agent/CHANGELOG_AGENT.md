@@ -780,3 +780,9 @@ Validation: typecheck/lint/test 136(+1)/build/harness/format PASS; Playwright: �
 Change: CHG-070의 "단계 내 자연 속도"를 폐기하고 v3 규칙 복원 — 같은 단계는 가장 느린 멤버 길이에 맞춰 **같이 시작·같이 끝남**. (원래 불만의 원인이던 5초 패딩은 playableEnd로 이미 해결. 고스트 이어 그리기 자동 단계+1·스루패스 동기화는 유지.) ADR·테스트 갱신.
 Validation: typecheck/lint/test 136/build/harness/format PASS; Playwright: 20px+200px 같은 단계 → 두 창 모두 [0, 3.25] 동일.
 
+### CHG-20260820-073 — FIX — GIF 선수 색 누락 (CSS 변수 해석)
+
+Problem: 팀 색이 var(--st-team-a) 형태라 캔버스 fillStyle이 무시 — GIF에서 선수가 흰 원으로 나옴.
+Change: exportGif에 resolveColor — var()면 documentElement 계산값(폴백: var 기본값 → VISUAL.teamHome/Away)으로 해석.
+Validation: typecheck/lint/test 136/build/harness/format PASS; 실제 GIF 추출 육안 확인(파랑/빨강+번호+away 키라인), 콘솔 클린.
+

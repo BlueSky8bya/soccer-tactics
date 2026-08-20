@@ -62,6 +62,18 @@ function drawPitch(ctx: CanvasRenderingContext2D, doc: TacticDocument, k: number
   }
 }
 
+/** Canvas can't resolve CSS var() colors (SVG can) — read the computed value instead. */
+function resolveColor(c: string | undefined, fallback: string): string {
+  if (!c) return fallback
+  const m = c.match(/^var\((--[\w-]+)\s*(?:,\s*([^)]+))?\)$/)
+  if (!m) return c
+  const computed =
+    typeof document !== 'undefined'
+      ? getComputedStyle(document.documentElement).getPropertyValue(m[1]!).trim()
+      : ''
+  return computed || m[2]?.trim() || fallback
+}
+
 /** Render one tactical frame (playback look: tokens + ball only). */
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
@@ -72,7 +84,12 @@ export function drawFrame(
 ): void {
   drawPitch(ctx, doc, k)
   const rs = stateAt(compiled, doc, t)
-  const teamColor = new Map(doc.teams.map((tm) => [tm.id, tm.color]))
+  const teamColor = new Map(
+    doc.teams.map((tm, i) => [
+      tm.id,
+      resolveColor(tm.color, i === 0 ? VISUAL.teamHome : VISUAL.teamAway),
+    ]),
+  )
   const awayTeamId = doc.teams[1]?.id
   for (const p of doc.players) {
     const pos = rs.players[p.id]?.pos ?? p.home
