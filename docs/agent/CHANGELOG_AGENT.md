@@ -437,3 +437,15 @@ Change:
 - uiStore `setCurrentStep` clamp를 MAX_STEP(9)로 통일(DOC-04).
 Validation: typecheck/lint/test 101/build/harness/format PASS; Playwright(m2.cjs): 배지→액션바, picker 1→5(chip5 used), 바에서 단계 재생, 삭제→segments 0, 전체 지우기→segments 0·선수 22 유지, Ctrl+Z 한 번에 2개 복원, 콘솔 클린.
 
+### CHG-20260820-038 — REFACTOR/FEAT — 순수 제스처 intent 판정·경로 드래그=항상 휘기·체인 상한 안내 (PLAN-005 M3)
+
+Problem: SimplePitch 포인터 라우팅이 target/modifier 분기에 얽혀 있고(FRAG-02), path drag가 선택 상태에 따라 이동/휘기로 갈라졌으며(C-01), 지그재그 체인이 9단계에서 조용히 같은 단계에 누적됐다(A-05). toast 상태는 있는데 렌더러가 없었다.
+Change:
+- 신규 `gestureIntent.ts`: DOM 없는 `resolvePointerIntent(hit, mods, ctx)` — 한 press = 한 intent(10종 truth table). SimplePitch pointerdown은 flag 축약 → resolver → switch로 단일 제스처만 시작.
+- **path drag = 항상 bend** (C-01, 계획대로): 선택된 소유자의 경로 드래그 시 전체 이동하던 분기·translate 플래그 제거. 그룹 이동은 라이브 토큰 드래그 전용(마퀴 후 토큰 잡아 끌기, 기존 유지).
+- 체인 오버플로 가드(A-05): 9단계 다음 leg는 생성 전 차단 + 이유 toast(`simple.stepLimit`). 명시적 9단계 병렬 작성은 허용. `nextChainStep` 순수 함수.
+- AppShell에 toast 렌더러 추가(role=status, aria-live) — flashToast가 실제로 보이게 됨(기존 공백 수정).
+- keymap: 배지 클릭 안내를 "움직임 선택 — 단계·재생·삭제 카드 표시"로 갱신.
+- A-04 보류에 따라 route handle·ghost handle 분리는 구현하지 않음(Shift 유지).
+Validation: typecheck/lint/test 107(gestureIntent 6 신규)/build/harness/format PASS; Playwright(m3.cjs): 소유자 선택 중 경로 드래그 bbox h 0→90(휘기)·홈 0px(이동 없음), 그룹 토큰 드래그 60,40(홈+경로), 체인 8→9 후 3번째 leg 차단(segments 불변)+toast 표시, 콘솔 클린.
+

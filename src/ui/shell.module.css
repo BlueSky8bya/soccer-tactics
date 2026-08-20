@@ -1251,3 +1251,20 @@
 .playerName {
   width: 96px;
 }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 74px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--st-text-1) 92%, transparent);
+  color: var(--st-surface);
+  font-size: 12.5px;
+  padding: 7px 14px;
+  border-radius: var(--st-radius-pill);
+  box-shadow: var(--st-shadow-2);
+  z-index: 60;
+  pointer-events: none;
+  max-width: 70vw;
+  text-align: center;
+}

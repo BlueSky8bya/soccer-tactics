@@ -161,6 +161,11 @@ export function AppShell() {
         </div>
       </footer>
 
+      {ui.toast && (
+        <div className={styles.toast} role="status" aria-live="polite">
+          {ui.toast}
+        </div>
+      )}
       <ShortcutsOverlay />
       <TourOverlay />
     </div>
