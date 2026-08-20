@@ -11,7 +11,7 @@ const hit = (over: Partial<PointerHit> = {}): PointerHit => ({
 })
 const mods = (over: Partial<PointerMods> = {}): PointerMods => ({
   button: 0,
-  shift: false,
+  draw: false,
   ctrl: false,
   ...over,
 })
@@ -23,8 +23,8 @@ const ctx = (over: Partial<PointerContext> = {}): PointerContext => ({
 
 /** Same press → same result (PLAN-005 M3): the truth table of the interaction contract. */
 describe('resolvePointerIntent', () => {
-  it('ghost presses: Shift draws from there, overlap yields to the live token, plain adjusts the end', () => {
-    expect(resolvePointerIntent(hit({ ghost: true }), mods({ shift: true }), ctx())).toBe(
+  it('ghost presses: Alt draws from there, overlap yields to the live token, plain adjusts the end', () => {
+    expect(resolvePointerIntent(hit({ ghost: true }), mods({ draw: true }), ctx())).toBe(
       'draw-from-ghost',
     )
     expect(
@@ -35,18 +35,18 @@ describe('resolvePointerIntent', () => {
 
   it('path drag is ALWAYS bend — selection state is not even an input (C-01)', () => {
     expect(resolvePointerIntent(hit({ segment: true }), mods(), ctx())).toBe('bend-path')
-    // even mid-chain with Shift down, a press on a segment (not token) continues the chain instead
+    // even mid-chain with Alt down, a press on a segment (not token) continues the chain instead
     expect(
       resolvePointerIntent(
         hit({ segment: true }),
-        mods({ shift: true }),
+        mods({ draw: true }),
         ctx({ chainActive: true }),
       ),
     ).toBe('draw-chain')
   })
 
-  it('token presses: Shift draws, plain selects/moves; token beats segment underneath', () => {
-    expect(resolvePointerIntent(hit({ token: true }), mods({ shift: true }), ctx())).toBe(
+  it('token presses: Alt draws, plain selects/moves; token beats segment underneath', () => {
+    expect(resolvePointerIntent(hit({ token: true }), mods({ draw: true }), ctx())).toBe(
       'draw-from-token',
     )
     expect(resolvePointerIntent(hit({ token: true }), mods(), ctx())).toBe('press-token')
@@ -58,13 +58,13 @@ describe('resolvePointerIntent', () => {
     )
   })
 
-  it('chain continues on any non-token press while Shift stays down', () => {
-    expect(resolvePointerIntent(hit(), mods({ shift: true }), ctx({ chainActive: true }))).toBe(
+  it('chain continues on any non-token press while Alt stays down', () => {
+    expect(resolvePointerIntent(hit(), mods({ draw: true }), ctx({ chainActive: true }))).toBe(
       'draw-chain',
     )
     // pressing another token breaks out of the chain (draws from that token instead)
     expect(
-      resolvePointerIntent(hit({ token: true }), mods({ shift: true }), ctx({ chainActive: true })),
+      resolvePointerIntent(hit({ token: true }), mods({ draw: true }), ctx({ chainActive: true })),
     ).toBe('draw-from-token')
   })
 

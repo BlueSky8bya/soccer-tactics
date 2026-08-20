@@ -65,8 +65,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'run',
     title: '이동 경로',
-    body: 'Shift를 누른 채 선수를 끌면 이동 경로가 그려져요. (그냥 끌면 위치만 이동해요) 흐린 토큰을 Shift+드래그하면 그 위치에서 이어서 그려요.',
-    kbd: 'Shift+드래그',
+    body: 'Alt를 누른 채 선수를 끌면 이동 경로가 그려져요. (그냥 끌면 위치만 이동해요) 흐린 토큰을 Alt+드래그하면 그 위치에서 이어서 그려요.',
+    kbd: 'Alt+드래그',
     placement: 'side',
     avoid: () => '[data-kind="ball"]',
     available: (c) => c.doc.players.length > 0,
@@ -79,8 +79,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'pass',
     title: '패스',
-    body: 'Shift를 누른 채 공을 받을 선수까지 끌면 패스예요. 공을 선수 위에 그냥 놓으면 그 선수가 공을 가져요.',
-    kbd: 'Shift+드래그',
+    body: 'Alt를 누른 채 공을 받을 선수까지 끌면 패스예요. 공을 선수 위에 그냥 놓으면 그 선수가 공을 가져요.',
+    kbd: 'Alt+드래그',
     placement: 'side',
     available: (c) => c.doc.players.length > 0,
     target: () => '[data-kind="ball"]',
@@ -127,7 +127,7 @@ export const MINI_TOUR_STEPS: TourStep[] = [
   {
     id: 'mini-bend',
     title: '경로 살짝 구부리기',
-    body: '아무 경로나 중간을 잡아 당겨 보세요. 곡선이 됩니다. (경로가 없으면 선수를 Shift+드래그로 하나 만들고요)',
+    body: '아무 경로나 중간을 잡아 당겨 보세요. 곡선이 됩니다. (경로가 없으면 선수를 Alt+드래그로 하나 만들고요)',
     kbd: '경로 드래그',
     target: () => '[data-segment]',
     done: (ctx) => ctx.doc !== ctx.entry,

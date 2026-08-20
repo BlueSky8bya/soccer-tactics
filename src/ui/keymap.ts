@@ -38,8 +38,8 @@ export const PLACE_BINDINGS: Binding[] = [
 
 /** 경로 그리기·다듬기·재생. */
 export const ANIM_BINDINGS: Binding[] = [
-  { label: 'Shift+드래그', hint: '선수는 이동 경로, 공은 패스' },
-  { label: '흐린 토큰 Shift+드래그', hint: '그 위치에서 이어서 그리기' },
+  { label: 'Alt+드래그', hint: '선수는 이동 경로, 공은 패스' },
+  { label: '흐린 토큰 Alt+드래그', hint: '그 위치에서 이어서 그리기' },
   { label: '흐린 토큰 드래그', hint: '그 움직임의 끝 위치 미세조정' },
   { label: '경로 클릭', hint: '선택 후 Delete 삭제, 숫자키로 단계 변경' },
   { label: '경로 드래그', hint: '잡은 지점을 당겨 곡선으로 휘기' },

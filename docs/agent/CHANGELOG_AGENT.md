@@ -722,3 +722,9 @@ Change:
 - 선수 드래그(단일 포함)를 그룹과 동일한 **경로 전체 평행이동**으로 통일 — 경유점+양 핸들이 같이 움직여 곡선 형태 완전 보존. 공 단독 드래그만 기존 절대 이동(드롭이 보유/루즈 결정) 유지.
 Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: 수신자 +11.4,+5.7m 드래그 후 패스 끝 delta 불일치 **0.00m**·수신자 유지, 곡선 런 드래그 후 형태 시그니처(구간 거리) 동일, 콘솔 클린.
 
+### CHG-20260820-066 — UX — 경로 작성 수정자 Shift → Alt (사용자 지시)
+
+Problem: Shift가 누르기 불편 — 왼쪽 Alt가 편하다는 사용자 결정.
+Change: 경로 작성 계열 전부 Alt로 교체 — 토큰/고스트 드로우, 지그재그 체인(Alt 유지), 고스트 활성 표시(drawKeyHeld). gestureIntent의 수정자 필드를 `draw`로 일반화(호출부가 Alt 바인딩). Alt keydown/up preventDefault로 브라우저 메뉴 포커스 차단. 안내(조작법/투어/? 오버레이) 전부 갱신. Shift+드래그는 이제 일반 이동과 동일. ADR-0009 v4 항목 갱신.
+Validation: typecheck/lint/test 134/build/harness/format PASS; Playwright: Alt+드래그=경로 1개, Shift+드래그=이동(경로 불생성), Alt 체인 2leg steps [1,2], 콘솔 클린.
+

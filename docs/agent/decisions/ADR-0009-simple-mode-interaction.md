@@ -54,5 +54,5 @@ QA 루프 후에도 사용자 판정: "사용법이 너무 복잡해 … 너무 
 - **체인 상한(A-05a)**: Shift 지그재그가 9단계를 넘으면 생성 전 차단 + 이유 토스트.
 - **세션 A/B 변형(A-03a)**: 헤더 A|B + 복제. 독립 EditorCore/undo, 메모리 한정 — 새로고침이면 소멸(경량 원칙 유지).
 - **재생 중 시선**: ~~active 경로 강조~~ → **재생 중에는 경로/화살표/배지 전부 페이드 아웃**(사용자 지시 2026-08-20 "애니메이션 진행할 때는 화살표 안 보이게") — 움직이는 토큰이 곧 플레이. 일시정지·결과 화면·미리보기 frame에서는 경로가 phase 감쇠(past 0.22/future 0.45, active casing 강조)로 다시 보임. 고스트 농도는 전역 단계 순위 감쇠(바닥 0.18).
-- **A-04(route handle)는 보류**: Shift+드래그가 유일한 경로 작성 진입점으로 유지. 재평가 시 별도 Amendment.
+- **A-04(route handle)는 보류**: 수정자+드래그가 유일한 경로 작성 진입점. **2026-08-20 사용자 지시로 수정자를 Shift → Alt(왼쪽)로 교체**(누르기 편함). 브라우저 메뉴 포커스는 keydown/up preventDefault로 차단.
 - 제거된 dead state: `animMode`/`timelineExpanded`/`autoReactOpen`/`theme`(uiStore), scrubGhost/animToggle CSS. v2의 "애니메이션 모드 토글" 언어는 안내에서 "경로 그리기·다듬기"로 대체.

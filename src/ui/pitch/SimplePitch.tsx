@@ -104,7 +104,7 @@ export function SimplePitch() {
   const svgRef = useRef<SVGSVGElement>(null)
   const gesture = useRef<Gesture | null>(null)
   const [marquee, setMarquee] = useState<{ a: Vec2; b: Vec2 } | null>(null)
-  const [shiftHeld, setShiftHeld] = useState(false)
+  const [drawKeyHeld, setDrawKeyHeld] = useState(false)
   /** While drawing: the target (player now / any future ghost) the stroke end is snapped to. */
   const [snapPos, setSnapPos] = useState<Vec2 | null>(null)
   /** Ball drop feedback (D-03): UI-only offset spring from the release point to the settled home. */
@@ -115,7 +115,7 @@ export function SimplePitch() {
   const [attachFx, setAttachFx] = useState<{ id: Id; key: number } | null>(null)
   /** Token currently pressed (pointer down, drag not started) — quick lift ack (M4). */
   const [pressedId, setPressedId] = useState<Id | null>(null)
-  /** Unbroken Shift chain: next press continues from the entity's last position, step auto +1. */
+  /** Unbroken Alt chain: next press continues from the entity's last position, step auto +1. */
   const chain = useRef<{ entityId: Id; step: number } | null>(null)
 
   const L = doc.pitch.length
@@ -332,16 +332,20 @@ export function SimplePitch() {
   // so the ball ghost under a receiver is still reachable — QA: 공이 클릭이 안 돼).
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') setShiftHeld(true)
+      if (e.key === 'Alt') {
+        e.preventDefault() // keep the browser menu from grabbing focus
+        setDrawKeyHeld(true)
+      }
     }
     const up = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
-        setShiftHeld(false)
+      if (e.key === 'Alt') {
+        e.preventDefault()
+        setDrawKeyHeld(false)
         chain.current = null
       }
     }
     const blur = () => {
-      setShiftHeld(false)
+      setDrawKeyHeld(false)
       chain.current = null
     }
     window.addEventListener('keydown', down)
@@ -493,7 +497,7 @@ export function SimplePitch() {
         token: !!tokenEl,
         insidePitch: pt.x >= 0 && pt.x <= L && pt.y >= 0 && pt.y <= W,
       },
-      { button: e.button, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey },
+      { button: e.button, draw: e.altKey, ctrl: e.ctrlKey || e.metaKey },
       { liveTokenNearGhost: !!nearPlayer || nearBall, chainActive: !!chain.current },
     )
 
@@ -531,13 +535,13 @@ export function SimplePitch() {
         return
       }
       case 'draw-chain': {
-        // Unbroken Shift chain: this press continues the zigzag from the last end.
+        // Unbroken Alt chain: this press continues the zigzag from the last end.
         const entityId = chain.current!.entityId
         startDraw(entityId, e.pointerId, lastKnownPosition(core.getDocument(), entityId))
         return
       }
       case 'draw-from-token': {
-        // Shift+drag on the token = draw a movement from its ORIGINAL spot.
+        // Alt+drag on the token = draw a movement from its ORIGINAL spot.
         st.returnToAuthoringStart()
         const entityId = tokenEntityId!
         const startPos =
@@ -991,7 +995,7 @@ export function SimplePitch() {
             key={g.id}
             className={styles.ghostToken}
             transform={`translate(${g.pos.x}, ${g.pos.y})`}
-            style={{ opacity: shiftHeld ? Math.min(0.85, g.opacity + 0.25) : g.opacity }}
+            style={{ opacity: drawKeyHeld ? Math.min(0.85, g.opacity + 0.25) : g.opacity }}
             data-ghost={g.entityId}
             data-move-seg={g.segId}
             data-gx={g.pos.x}
