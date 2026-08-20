@@ -712,6 +712,7 @@ export function SimplePitch() {
   }
 
   // Dev-only QA hook: headless probes can inspect the real document/compiled state.
+  // eslint-disable no-underscore-dangle
   if (import.meta.env.DEV) {
     ;(window as unknown as Record<string, unknown>).__stDoc = doc
     ;(window as unknown as Record<string, unknown>).__stCompiled = compiled
