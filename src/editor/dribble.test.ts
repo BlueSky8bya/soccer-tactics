@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyDocument } from '@/domain'
-import { compile } from './compile'
-import { DRIBBLE_AHEAD_M, stateAt } from './stateAt'
-import { applyFormations, seedDefaultTeams } from '@/editor/commands'
-import { EditorCore } from '@/editor/editorCore'
-import { makePath, moveBallStartInDraft } from '@/editor/segmentCommands'
-import { addStepRun } from '@/editor/stepCommands'
+import { compile } from '@/engine/compile'
+import { DRIBBLE_AHEAD_M, stateAt } from '@/engine/stateAt'
+import { applyFormations, seedDefaultTeams } from './commands'
+import { EditorCore } from './editorCore'
+import { makePath, moveBallStartInDraft } from './segmentCommands'
+import { addStepRun } from './stepCommands'
 import type { TacticDocument } from '@/domain/types'
 
 describe('dribbling carries the ball AHEAD of the run (user 2026-08-21)', () => {
