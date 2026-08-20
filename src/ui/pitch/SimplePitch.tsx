@@ -457,8 +457,13 @@ export function SimplePitch() {
       // wall bounces (pure sim), and only the RESTING spot becomes the document position.
       const vel = commit && g.samples ? flingVelocity(g.samples, performance.now()) : null
       const speed = vel ? Math.hypot(vel.x, vel.y) : 0
+      // Released ON a player (the drop-target highlight is showing) = GIVE, never a throw —
+      // the promise the highlight makes wins over release velocity (user 2026-08-21).
+      const releasedOnPlayer = d.players.some(
+        (p) => Math.hypot(p.home.x - at.x, p.home.y - at.y) <= 2.6,
+      )
       let fling: ReturnType<typeof simulateFling> | null = null
-      if (vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
+      if (!releasedOnPlayer && vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
         const gw = 7.32 / 2
         fling = simulateFling(at, vel, doc.pitch, {
           top: doc.pitch.width / 2 - gw,

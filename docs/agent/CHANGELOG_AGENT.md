@@ -997,3 +997,9 @@ Change:
 - FX를 그물 상자 clipPath(좌/우)로 클리핑 — 골망 밖 유출 0.
 - 시뮬: inNet 시 마우스 평면 단방향(들어오기만) — 최고속(40m/s) 로켓도 되튕겨 나오지 않음(골든 추가). 그물 흡수 k 12→16.
 Validation: typecheck/lint/test 158/build/harness/format PASS. Playwright: 지터 보정 5wp, 재생 슛 FX(각도 0=우측 뒤판), 플링 FX 클리핑 확인·그물 안착 — ALL PASS, 콘솔 클린.
+
+### CHG-20260821-100 — FIX — 선수 위에 공 놓기 = 무조건 부여 (플링 억제)
+
+Problem: 선수 바로 위에서 놓아도 릴리즈 속도(≥10m/s)가 쉽게 넘어 굴러감 판정 — 드롭 타깃 하이라이트가 약속한 것과 다름(사용자).
+Change: 릴리즈 지점이 선수 부착 범위(2.6m) 안이면 플링을 아예 건너뜀 — 하이라이트된 선수에게 부여. 빈 잔디 릴리즈만 던지기.
+Validation: typecheck/lint/test 158/build/harness/format PASS. Playwright: 빠른 드래그로 선수 위 릴리즈 → #7 보유·공 2.0m 부착, 빈 잔디 플링 회귀 ALL PASS, 콘솔 클린.
