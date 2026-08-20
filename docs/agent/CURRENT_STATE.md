@@ -1,12 +1,15 @@
 # Current State
 
-Last Updated: 2026-08-20 (세션 12, PLAN-005 M1~M7 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제·intent resolver·active 강조·세션 A/B·미니 투어·dead state 정리. 게이트 116 tests PASS, 사용자 브라우저 체감 확인 대기)
+Last Updated: 2026-08-21 (세션 13, PLAN-008 완료 — 자유 그리기 펜/지우개. 게이트 146 tests PASS) (직전: 2026-08-20 세션 12, PLAN-005 M1~M7 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제·intent resolver·active 강조·세션 A/B·미니 투어·dead state 정리. 게이트 116 tests PASS, 사용자 브라우저 체감 확인 대기)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 
 ## Current Objective
 
-PLAN-20260821-006 (대대적 리디자인, 승인 2026-08-20) 진행 중 — **M0~M7 전부 완료·AGENT-VERIFIED** (토큰·재질 → 셸 계층 → 22명 판독성 → 마이크로 인터랙션 → 재생 무대 → a11y → 사후 증거/성능/감사). 다음: 사용자 Browser Acceptance Checklist → 피드백 라운드. **PLAN-007(겹침 선택 대개편) M0~M4 완료** — 기하 후보 히트·호버 예고·재클릭 순환, 골든 G1~G7 보존(ADR-0009 v5). PLAN-005는 완료·배포됨(Vercel 자동 배포, GitHub push 상시 위임).
+**PLAN-008(자유 그리기, 2026-08-21) 완료** — 펜(freehand)+획 단위 지우개, 하단 바 전환(D/Esc),
+색 4·굵기 3, GIF 포함. 사용자 결정 D-01~D-04는 ACTIVE_PLAN에 기록. QA 후속(2026-08-20):
+고스트 정션 동반 이동(CHG-077), 패스 도착 부착(CHG-078), 접근측 안착(CHG-079), 드리블→패스
+경계 캐리 잔상(CHG-080). PLAN-006 리디자인은 **M0~M7 전부 완료·AGENT-VERIFIED** (토큰·재질 → 셸 계층 → 22명 판독성 → 마이크로 인터랙션 → 재생 무대 → a11y → 사후 증거/성능/감사). 다음: 사용자 Browser Acceptance Checklist → 피드백 라운드. **PLAN-007(겹침 선택 대개편) M0~M4 완료** — 기하 후보 히트·호버 예고·재클릭 순환, 골든 G1~G7 보존(ADR-0009 v5). PLAN-005는 완료·배포됨(Vercel 자동 배포, GitHub push 상시 위임).
 
 ### PLAN-005 요약 (2026-08-20, 커밋 d246f43…)
 
