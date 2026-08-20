@@ -1137,3 +1137,9 @@ Validation: Playwright focus probe — 무선택 시 dim 없음, 선수 선택 �
 Problem: CHG-118의 포커스는 시각 감쇠만 — 겹친 다른 엔티티의 경로/고스트가 여전히 press를 가로챘고(오클릭), 잔디 클릭은 편집 중에도 선수를 추가했으며, 공 단독 클릭은 포커스 미발동.
 Change: ① press 파이프라인에서 포커스 중 비포커스 엔티티의 ghost/segment 후보 제거(라이브 토큰은 유지 — 포커스 전환 수단) ② 포커스 중 빈 잔디 클릭 = 선택 해제(선수 추가 안 함; 비포커스 상태의 잔디 클릭은 기존대로 추가) ③ 공 클릭도 공 타임라인 포커스(선수 포커스는 공 동반, 공 포커스는 공만).
 Validation: typecheck/lint/test 169/build/harness/format PASS. Playwright focus probe 5 시나리오: 잔디 해제+무추가, 선수 포커스 감쇠, 겹친 타 경로 그랩 차단, 비포커스 정상 픽, 공 단독 포커스 — ALL PASS.
+
+### CHG-20260821-120 — UX — 포커스 중 비포커스 엔티티의 라이브 토큰(0번 시점)도 감쇠
+
+Problem: 포커스가 경로·고스트·배지만 흐리게 하고 라이브 토큰은 원래 강도 유지 — "2번 선수의 0번 시점도 흐릿하게 보여야지"(사용자).
+Change: 선수 토큰을 focus wrapper `<g.tokenFocusDim>`(opacity 0.4, transition)로 감싸 비포커스 엔티티만 감쇠. 클릭 가능성은 유지(포커스 전환 수단). 공 토큰은 포커스 집합에 항상 포함되므로 불변.
+Validation: typecheck/lint/test 169/build/harness/format PASS. focus probe 시나리오 6 추가(포커스 A 선명·B 토큰 감쇠) — ALL PASS.

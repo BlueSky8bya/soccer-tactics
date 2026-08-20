@@ -1801,25 +1801,29 @@ export function SimplePitch() {
           rp?.moving && isPlaying ? -Math.abs(Math.sin(ui.playback.t * 6.5 + pi * 1.3)) * bobAmp : 0
         const pos0 = rp?.pos ?? p.home
         return (
-          <AnimatedToken
+          <g
             key={p.id}
-            id={p.id}
-            kind="player"
-            pos={bob ? { x: pos0.x, y: pos0.y + bob } : pos0}
-            awayKeyline={p.teamId === doc.teams[1]?.id}
-            color={teamColorOf(doc, p.id)}
-            number={p.number}
-            label={p.label && p.role ? `${p.label}(${p.role})` : (p.label ?? p.role)}
-            selected={selection.includes(p.id) || dropTargetId === p.id}
-            hovered={hoverKey === `player:${p.id}`}
-            dragging={drag?.id === p.id}
-            pressed={pressedId === p.id && drag?.id !== p.id}
-            heading={rp?.heading}
-            moving={!!rp?.moving && isPlaying}
-            dropFrom={null}
-            dropKey={0}
-            pulseKey={pulses[p.id]}
-          />
+            className={focusIds.size > 0 && !focusIds.has(p.id) ? styles.tokenFocusDim : undefined}
+          >
+            <AnimatedToken
+              id={p.id}
+              kind="player"
+              pos={bob ? { x: pos0.x, y: pos0.y + bob } : pos0}
+              awayKeyline={p.teamId === doc.teams[1]?.id}
+              color={teamColorOf(doc, p.id)}
+              number={p.number}
+              label={p.label && p.role ? `${p.label}(${p.role})` : (p.label ?? p.role)}
+              selected={selection.includes(p.id) || dropTargetId === p.id}
+              hovered={hoverKey === `player:${p.id}`}
+              dragging={drag?.id === p.id}
+              pressed={pressedId === p.id && drag?.id !== p.id}
+              heading={rp?.heading}
+              moving={!!rp?.moving && isPlaying}
+              dropFrom={null}
+              dropKey={0}
+              pulseKey={pulses[p.id]}
+            />
+          </g>
         )
       })}
       <AnimatedToken

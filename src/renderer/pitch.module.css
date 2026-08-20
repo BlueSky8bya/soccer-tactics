@@ -210,6 +210,12 @@
   opacity: 0.35;
 }
 
+/* Focus mode (2026-08-21): non-focused entities' LIVE tokens recede too — still clickable. */
+.tokenFocusDim {
+  opacity: 0.4;
+  transition: opacity var(--st-motion-base) var(--st-ease-out);
+}
+
 .pathHit {
   fill: none;
   stroke: transparent;
