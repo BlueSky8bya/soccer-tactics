@@ -172,6 +172,9 @@ export function SimplePitch() {
   const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
   const flingDoneRef = useRef<(() => void) | null>(null)
   const flingKeyRef = useRef(0)
+  /** Net bulge FX at the catch moment — angle follows the incoming shot. */
+  const [netFx, setNetFx] = useState<{ pos: Vec2; angleDeg: number; key: number } | null>(null)
+  const netFxAtRef = useRef<{ t: number; pos: Vec2; angleDeg: number } | null>(null)
   /** In-place 1-9 picker opened by clicking a step badge (faster than the action bar). */
   const [stepPicker, setStepPicker] = useState<{ segId: Id; at: Vec2 } | null>(null)
   /** One-shot expanding ring when the ball ATTACHES to a player (immersion feedback). */
@@ -448,7 +451,12 @@ export function SimplePitch() {
       const speed = vel ? Math.hypot(vel.x, vel.y) : 0
       let fling: ReturnType<typeof simulateFling> | null = null
       if (vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
-        fling = simulateFling(at, vel, doc.pitch)
+        const gw = 7.32 / 2
+        fling = simulateFling(at, vel, doc.pitch, {
+          top: doc.pitch.width / 2 - gw,
+          bot: doc.pitch.width / 2 + gw,
+          depth: 2,
+        })
         at = fling.final
       }
       const near = d.players
@@ -479,6 +487,13 @@ export function SimplePitch() {
       }
       if (fling && fling.duration > 0.05) {
         // roll the visual along the simulated path; settle/attach feedback fires on arrival
+        netFxAtRef.current = fling.goal
+          ? {
+              t: fling.goal.t,
+              pos: fling.goal.pos,
+              angleDeg: (Math.atan2(fling.goal.v.y, fling.goal.v.x) * 180) / Math.PI,
+            }
+          : null
         flingDoneRef.current = settleAndAttach
         setFlingAnim({ points: fling.points, key: (flingKeyRef.current += 1) })
       } else {
@@ -513,6 +528,12 @@ export function SimplePitch() {
         return
       }
       while (idx < pts.length - 2 && pts[idx + 1]!.t <= el) idx++
+      const nf = netFxAtRef.current
+      if (nf && el >= nf.t) {
+        netFxAtRef.current = null
+        setNetFx({ pos: nf.pos, angleDeg: nf.angleDeg, key: (flingKeyRef.current += 1) })
+        window.setTimeout(() => setNetFx(null), 520)
+      }
       const a = pts[idx]!
       const b = pts[Math.min(idx + 1, pts.length - 1)]!
       const f = b.t > a.t ? (el - a.t) / (b.t - a.t) : 0
@@ -1265,6 +1286,16 @@ export function SimplePitch() {
       }
     >
       <PitchMarkings pitch={doc.pitch} />
+      {netFx && (
+        <g
+          key={netFx.key}
+          className={styles.netFx}
+          transform={`translate(${netFx.pos.x} ${netFx.pos.y}) rotate(${netFx.angleDeg})`}
+        >
+          <path d="M 0 -2.2 Q 2.6 0 0 2.2" className={styles.netFxArcOuter} />
+          <path d="M 0 -1.5 Q 1.7 0 0 1.5" className={styles.netFxArcInner} />
+        </g>
+      )}
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />
       {annotDraft && (
         <g pointerEvents="none">

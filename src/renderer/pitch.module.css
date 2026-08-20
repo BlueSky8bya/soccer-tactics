@@ -65,6 +65,41 @@
   opacity: 0.95;
 }
 
+/* goal-net catch bulge (fling FX): mesh arcs punch outward along the shot, then relax */
+.netFx {
+  pointer-events: none;
+}
+
+.netFxArcOuter,
+.netFxArcInner {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 0.14;
+  stroke-dasharray: 0.35 0.28;
+  transform-origin: 0 0;
+  animation: netPunch 0.48s var(--st-ease-pop) forwards;
+}
+
+.netFxArcInner {
+  stroke-width: 0.18;
+  animation-delay: 0.03s;
+}
+
+@keyframes netPunch {
+  0% {
+    transform: scaleX(0.15);
+    opacity: 0.95;
+  }
+  55% {
+    transform: scaleX(1.18);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scaleX(0.85);
+    opacity: 0;
+  }
+}
+
 /* ---------- tokens ---------- */
 
 .token {

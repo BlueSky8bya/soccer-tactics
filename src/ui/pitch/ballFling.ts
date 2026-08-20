@@ -11,9 +11,14 @@ export const FLING_MIN_SPEED = 10
 /** If the pointer rested longer than this before release, it is a PLACE, not a throw. */
 export const FLING_STALE_MS = 120
 /** Speed cap — a wild swipe still lands on the pitch, not in the car park. */
-export const FLING_MAX_SPEED = 30
-/** Exponential drag coefficient k: v(t) = v0·e^(−kt) — grass rolling feel. */
-export const FLING_DRAG_K = 2.4
+export const FLING_MAX_SPEED = 40
+/** Two-phase drag (user 2026-08-21: 세게 던지면 또르륵 말고 쭉 날아가게):
+ *  above the transition speed the ball CARRIES with little drag, below it the grass grabs it. */
+export const FLING_FLIGHT_K = 1.2
+export const FLING_ROLL_K = 3.2
+export const FLING_TRANSITION_SPEED = 12
+/** Net absorption drag once inside a goal — the catch. */
+export const FLING_NET_K = 12
 /** Rolling stops below this speed. */
 export const FLING_STOP_SPEED = 1.5
 /** Wall bounce energy retention (pitch boundary). */
@@ -61,13 +66,28 @@ export interface FlingResult {
   points: FlingPoint[]
   final: Vec2
   duration: number
+  /** Set when the ball flew into a goal mouth — the net catch moment (FX hook). */
+  goal?: { t: number; pos: Vec2; v: Vec2; side: 'left' | 'right' }
 }
 
-/** Integrate the roll: exponential drag, boundary bounces, fixed 120Hz steps (deterministic). */
+export interface GoalGeom {
+  /** Goal mouth top/bottom (y, metres) and net depth behind the goal line. */
+  top: number
+  bot: number
+  depth: number
+}
+
+/**
+ * Integrate the roll: two-phase drag (flight → grass), boundary bounces, goal-net capture,
+ * fixed 120Hz steps (deterministic). A ball crossing a goal line inside the mouth enters the
+ * net box: the net absorbs it hard (k=12), the back/side netting barely rebounds, and the
+ * catch moment is reported for the bulge FX.
+ */
 export function simulateFling(
   p0: Vec2,
   v0: Vec2,
   pitch: { length: number; width: number },
+  goal?: GoalGeom,
 ): FlingResult {
   const L = pitch.length
   const W = pitch.width
@@ -75,35 +95,72 @@ export function simulateFling(
   const s = speed0 > FLING_MAX_SPEED ? FLING_MAX_SPEED / speed0 : 1
   const p = { x: p0.x, y: p0.y }
   const v = { x: v0.x * s, y: v0.y * s }
-  const decay = Math.exp(-FLING_DRAG_K * DT)
   const points: FlingPoint[] = [{ x: p.x, y: p.y, t: 0, d: 0 }]
   let t = 0
   let d = 0
+  let goalHit: FlingResult['goal'] | undefined
+  let inNet = false
+  const NET_REST = 0.05
   while (Math.hypot(v.x, v.y) > FLING_STOP_SPEED && t < MAX_T) {
     t += DT
     const px = p.x
     const py = p.y
     p.x += v.x * DT
     p.y += v.y * DT
-    // pitch boundary bounce (goal line / touch line)
-    if (p.x < 0) {
-      p.x = -p.x
-      v.x = -v.x * FLING_RESTITUTION
-    } else if (p.x > L) {
-      p.x = 2 * L - p.x
-      v.x = -v.x * FLING_RESTITUTION
+    const inMouth = goal ? p.y > goal.top && p.y < goal.bot : false
+    if (!inNet && goal && inMouth && ((p.x < 0 && v.x < 0) || (p.x > L && v.x > 0))) {
+      // GOAL — the net takes over from here
+      inNet = true
+      const side = p.x < 0 ? 'left' : 'right'
+      goalHit = {
+        t,
+        pos: { x: side === 'left' ? 0 : L, y: p.y },
+        v: { x: v.x, y: v.y },
+        side,
+      }
     }
-    if (p.y < 0) {
-      p.y = -p.y
-      v.y = -v.y * FLING_RESTITUTION
-    } else if (p.y > W) {
-      p.y = 2 * W - p.y
-      v.y = -v.y * FLING_RESTITUTION
+    if (inNet && goal) {
+      // net box walls: back stanchion + side netting, nearly dead on impact
+      const backL = -goal.depth + 0.15
+      const backR = L + goal.depth - 0.15
+      if (p.x < backL) {
+        p.x = 2 * backL - p.x
+        v.x = -v.x * NET_REST
+      } else if (p.x > backR) {
+        p.x = 2 * backR - p.x
+        v.x = -v.x * NET_REST
+      }
+      if (p.y < goal.top + 0.1) {
+        p.y = 2 * (goal.top + 0.1) - p.y
+        v.y = -v.y * NET_REST
+      } else if (p.y > goal.bot - 0.1) {
+        p.y = 2 * (goal.bot - 0.1) - p.y
+        v.y = -v.y * NET_REST
+      }
+    } else {
+      // pitch boundary bounce (goal line / touch line)
+      if (p.x < 0) {
+        p.x = -p.x
+        v.x = -v.x * FLING_RESTITUTION
+      } else if (p.x > L) {
+        p.x = 2 * L - p.x
+        v.x = -v.x * FLING_RESTITUTION
+      }
+      if (p.y < 0) {
+        p.y = -p.y
+        v.y = -v.y * FLING_RESTITUTION
+      } else if (p.y > W) {
+        p.y = 2 * W - p.y
+        v.y = -v.y * FLING_RESTITUTION
+      }
     }
+    const speed = Math.hypot(v.x, v.y)
+    const k = inNet ? FLING_NET_K : speed > FLING_TRANSITION_SPEED ? FLING_FLIGHT_K : FLING_ROLL_K
+    const decay = Math.exp(-k * DT)
     v.x *= decay
     v.y *= decay
     d += Math.hypot(p.x - px, p.y - py)
     points.push({ x: p.x, y: p.y, t, d })
   }
-  return { points, final: { x: p.x, y: p.y }, duration: t }
+  return { points, final: { x: p.x, y: p.y }, duration: t, ...(goalHit ? { goal: goalHit } : {}) }
 }

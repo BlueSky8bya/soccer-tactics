@@ -953,3 +953,12 @@ Validation: typecheck/lint/test 156/build/harness/format PASS.
 
 Change: 하단 바의 "결과 화면 — ↺(Home)으로 원위치…" 설명 필 삭제(i18n·CSS 정리). 처음으로(Home)·반복(G) 버튼에 그리기 도구(V/P/E)와 동일한 아이콘 위 흐릿한 키 라벨.
 Validation: typecheck/lint/test 156/build/harness/format PASS. Playwright: toolKey Home·G 표시, 자연 종료 후 설명 필 부재, 스크린샷 검수.
+
+### CHG-20260821-095 — FEAT — 골 그물 캐치 + 던지기 비행감 (2단 감쇠)
+
+Problem: (1) 골대에 들어가도 경계선처럼 튕김 — 그물 감기는 맛 없음. (2) 세게 던져도 또르륵 굴러가는 느낌(사용자).
+Change:
+- simulateFling에 골 지오메트리: 골 마우스(7.32m)를 골라인 밖으로 통과하면 GOAL — 그물 흡수(k=12), 뒷·옆 그물 반발 0.05, 그물 상자 안에서 정지. 캐치 순간(t·위치·입사 속도) 리포트.
+- 그물 출렁 FX: 캐치 시점에 입사각으로 회전한 메시 아크 2겹이 바깥으로 펀치(scaleX 0.15→1.18→0.85, --st-ease-pop, 0.48s) 후 소멸 — 촤르륵.
+- 2단 감쇠: 12m/s 초과 = 비행(k 1.2, 쭉 뻗음) / 이하 = 잔디(k 3.2, 빠른 정지). 상한 40m/s. 세게 던지면 ~25m 캐리.
+Validation: typecheck/lint/test 157(+1 골 캐치 골든: 마우스 안=캐치·안착, 밖=바운스)/build/harness/format PASS. Playwright: 골 방향 플릭 → netFx 표시, 공이 그물 안(-1.8, 34) 안착, 스크린샷 검수, 콘솔 클린. (교훈: designTokens 테스트가 raw cubic-bezier 금지 — 이징은 토큰만)

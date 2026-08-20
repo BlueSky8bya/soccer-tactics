@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FLING_MAX_SPEED, FLING_STOP_SPEED, flingVelocity, simulateFling } from './ballFling'
+import { FLING_STOP_SPEED, flingVelocity, simulateFling } from './ballFling'
 
 const PITCH = { length: 105, width: 68 }
 
@@ -47,13 +47,31 @@ describe('ball fling physics (pure, deterministic)', () => {
     expect(Math.min(...r.points.map((p) => p.x))).toBeLessThan(103)
   })
 
+  it('a shot into the goal mouth is CAUGHT by the net (angle preserved, rest inside)', () => {
+    const goal = { top: 34 - 3.66, bot: 34 + 3.66, depth: 2 }
+    const r = simulateFling({ x: 8, y: 33 }, { x: -22, y: 1.5 }, PITCH, goal)
+    expect(r.goal).toBeDefined()
+    expect(r.goal!.side).toBe('left')
+    expect(r.goal!.v.x).toBeLessThan(0) // incoming velocity recorded for the FX angle
+    // rests INSIDE the net box, never through the back
+    expect(r.final.x).toBeLessThan(0.6)
+    expect(r.final.x).toBeGreaterThanOrEqual(-2)
+    expect(r.final.y).toBeGreaterThan(goal.top)
+    expect(r.final.y).toBeLessThan(goal.bot)
+    // outside the mouth the same shot just bounces (stays on the pitch)
+    const wide = simulateFling({ x: 8, y: 20 }, { x: -22, y: 0 }, PITCH, goal)
+    expect(wide.goal).toBeUndefined()
+    expect(wide.final.x).toBeGreaterThanOrEqual(0)
+  })
+
   it('caps wild swipe speeds and stays deterministic', () => {
     const a = simulateFling({ x: 10, y: 10 }, { x: 500, y: 0 }, PITCH)
     const b = simulateFling({ x: 10, y: 10 }, { x: 500, y: 0 }, PITCH)
     expect(a.final).toEqual(b.final)
     // capped: distance bounded by v_max/k
     const dist = a.points[a.points.length - 1]!.d
-    expect(dist).toBeLessThanOrEqual(FLING_MAX_SPEED / 2.4 + 1)
+    // two-phase bound: flight carry (40→12 @k1.2) + roll (12→1.5 @k3.2)
+    expect(dist).toBeLessThanOrEqual((40 - 12) / 1.2 + (12 - 1.5) / 3.2 + 2)
     // spin data monotonic
     for (let i = 1; i < a.points.length; i++)
       expect(a.points[i]!.d).toBeGreaterThanOrEqual(a.points[i - 1]!.d)
