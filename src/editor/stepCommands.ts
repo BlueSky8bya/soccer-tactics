@@ -4,7 +4,7 @@
  * Steps are stored on the segments (`step`); triggers are derived here, so the engine,
  * persistence and old documents are untouched.
  */
-import type { Id, Path, TacticDocument, Vec2, Waypoint } from '@/domain/types'
+import type { Track, Id, Path, TacticDocument, Vec2, Waypoint } from '@/domain/types'
 import { GEN_PREFIX } from '@/engine/opponent'
 import { carryOffset, compile } from '@/engine/compile'
 import { buildPathLUT } from '@/engine/path'
@@ -219,6 +219,16 @@ export function addStepRun(
   return id
 }
 
+/** Highest authored step on the ball track (0 when no pass exists yet). */
+export function lastBallStep(track: Track | undefined): number {
+  let max = 0
+  for (const sg of track?.segments ?? []) {
+    if (!('path' in sg) || sg.id.startsWith(GEN_PREFIX)) continue
+    max = Math.max(max, stepOf(sg))
+  }
+  return max
+}
+
 /** Ball pass drawn in simple mode: create + step + relayout + receiver at arrival — one undo step. */
 export function addStepPass(
   core: EditorCore,
@@ -230,6 +240,10 @@ export function addStepPass(
   core.transaction('Add pass', (d) => {
     const doc = d as TacticDocument
     const track = ensureTrack(doc, doc.ball.id, 'ball')
+    // ONE ball: its passes are inherently sequential. A new pass can never fire at/before an
+    // existing one (user 2026-08-21: 마지막 단계 이후 이어 그렸는데 0단계에서 발사) — drawing
+    // from the live ball at a result frame used to inherit the step CHIP (1) and launch at t0.
+    step = Math.max(step, lastBallStep(track) + 1)
     const last = track.segments[track.segments.length - 1]
     const holder = passerFor(doc, track, holderHint)
     if (holder && !(last && last.kind === 'possessed' && last.holderId === holder)) {

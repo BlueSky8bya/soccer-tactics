@@ -12,6 +12,7 @@ import {
   newIdFor,
   sceneOf,
   moveTravelEndInDraft,
+  findTrack,
 } from '@/editor/segmentCommands'
 import {
   MAX_STEP,
@@ -23,6 +24,7 @@ import {
   relayoutStepsInDraft,
   resolvePassReceiverInDraft,
   stepOf,
+  lastBallStep,
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
@@ -314,10 +316,14 @@ export function SimplePitch() {
       ui.flashToast(t('simple.tooShort'))
       return
     }
-    const step = Math.max(
+    let step = Math.max(
       chain.current && chain.current.entityId === entityId ? chain.current.step : st.currentStep,
       minStep ?? 1,
     )
+    // The ball's passes are strictly sequential — continuing after the last pass always lands
+    // on the NEXT step, whatever the chip says (user 2026-08-21: 0단계 발사 버그).
+    if (entityId === doc.ball.id)
+      step = Math.max(step, lastBallStep(findTrack(core.getDocument(), doc.ball.id)) + 1)
     // Chain past the last step: block BEFORE creating anything and say why (A-05).
     if (step > MAX_STEP) {
       ui.flashToast(t('simple.stepLimit'))
@@ -1522,6 +1528,22 @@ export function SimplePitch() {
 
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
   // placeStepBadges nudges overlapping badges apart deterministically (B-03).
+  // FOCUS (user 2026-08-21): while editing one entity, only ITS timeline stays vivid — plus
+  // the ball's, which always travels with the play. Everything else recedes so a crowded
+  // board stays readable.
+  const focusIds = (() => {
+    const set = new Set<Id>(selection)
+    if (ui.selectedSegmentId) {
+      const f = findSegment(doc, ui.selectedSegmentId)
+      if (f) set.add(f.track.entityId)
+    }
+    // the ball TOKEN alone is not an editing focus — it belongs to every play; only a player
+    // selection or a selected segment narrows the board
+    if (set.size === 1 && set.has(doc.ball.id) && !ui.selectedSegmentId) return new Set<Id>()
+    if (set.size > 0) set.add(doc.ball.id)
+    return set
+  })()
+
   const badgeAnchors = doc.scenes[0]
     ? doc.scenes[0].timeline.tracks.flatMap((tr) =>
         tr.segments
@@ -1708,7 +1730,7 @@ export function SimplePitch() {
         <PathLayer
           doc={doc}
           teamColorOf={(pid) => teamColorOf(doc, pid)}
-          selectedEntityIds={selection}
+          selectedEntityIds={focusIds.size > 0 ? [...focusIds] : selection}
           selectedSegmentId={ui.selectedSegmentId}
           attachedStart={attachedStart}
           draft={
@@ -1720,7 +1742,7 @@ export function SimplePitch() {
                 }
               : null
           }
-          dimOthers={false}
+          dimOthers={focusIds.size > 0}
           pathPhase={viewingFrame ? pathPhase : undefined}
           stepMuted={stepMuted}
           hoverSegmentId={hoverKey?.startsWith('segment:') ? hoverKey.slice(8) : null}
@@ -1737,6 +1759,9 @@ export function SimplePitch() {
           <g
             key={b.id}
             className={styles.stepBadge}
+            style={{
+              opacity: focusIds.size > 0 && !focusIds.has(b.entityId) ? 0.25 : undefined,
+            }}
             transform={`translate(${b.end.x}, ${b.end.y})`}
             onPointerDown={(e) => {
               // Select + open the in-place 1-9 picker right here (user 2026-08-20: 단계 바꾸기 간소화).
@@ -1833,9 +1858,9 @@ export function SimplePitch() {
             transform={`translate(${g.pos.x}, ${g.pos.y})`}
             style={{
               opacity:
-                drawKeyHeld || hoverKey === `ghost:${g.segId}:${g.entityId}`
+                (drawKeyHeld || hoverKey === `ghost:${g.segId}:${g.entityId}`
                   ? Math.min(0.9, g.opacity + 0.3)
-                  : g.opacity,
+                  : g.opacity) * (focusIds.size > 0 && !focusIds.has(g.entityId) ? 0.25 : 1),
             }}
             data-ghost={g.entityId}
             data-move-seg={g.segId}

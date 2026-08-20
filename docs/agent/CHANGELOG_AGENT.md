@@ -1119,3 +1119,15 @@ Validation: typecheck/lint/test 167/build/harness/format PASS. 신규: malformed
 Problem: 하단 바에서 GIF 버튼만 라벨 패턴(단축키/이름 흐릿하게 위, 동작 아래) 미적용 — 이웃(Home·G 반복)과 불일치(사용자 요청).
 Change: toolCol/toolKey로 감싸 흐릿한 "GIF" 위 + 버튼 텍스트 "내보내기"(busy 시 … 유지). aria/title 불변.
 Validation: typecheck/lint/test 167/build/harness/format PASS. Playwright footer 스크린샷 검수, 콘솔 클린.
+
+### CHG-20260821-117 — FIX — 공 패스 step 단조 강제: 마지막 단계 이후 이어그린 패스가 0단계 발사되던 버그
+
+Problem: 결과 화면(마지막 단계 재생 후)에서 라이브 공을 Alt+드래그해 이어 그리면 `draw-from-token` 경로에 minStep이 없어 새 패스가 step 칩 값(예: 1)을 상속 — relayout이 1단계 시작(t≈0)에 발사시키고 원점 스냅이 초기 보유자 위치로 끌어가 "0단계에서 쭈욱 나가는" 궤적 폭주(사용자 스크린샷 2건).
+Change: 공은 하나 — 패스는 물리적으로 순차. `addStepPass`가 `step = max(요청, 기존 공 트랙 마지막 step + 1)` 강제(`lastBallStep` 헬퍼, command 레벨이라 모든 진입 경로 보호). finishDraw도 동일 규칙 미러링(토스트·체인 번호 정합).
+Validation: typecheck/lint/test 169/build/harness/format PASS. 신규 ballStepOrder.test 2건: 4단계 체인 각자 시각 발사 + step 1 요청이 4로 승격·t0에 pass A만 비행.
+
+### CHG-20260821-118 — UX — 편집 포커스: 선택한 선수(+공) 타임라인만 선명, 나머지 후퇴
+
+Problem: 복잡한 장면에서 특정 선수 수정 시 모든 경로·고스트·배지가 동일 강도로 보여 구분 불가(사용자: "해당 선수의 타임라인들만 하이라이팅되면 좋겠어. 공도 포함").
+Change: focusIds = 선택 토큰 ∪ 선택 세그먼트의 엔티티, 비어있지 않으면 공 자동 포함. PathLayer dimOthers 활성(비포커스 경로 opacity 0.35), 고스트·단계 배지 0.25 감쇠. 공 토큰 단독 선택은 포커스 미발동(공은 모든 플레이 공용).
+Validation: Playwright focus probe — 무선택 시 dim 없음, 선수 선택 시 자기 경로+공 경로 선명·타 선수 dim, 콘솔 클린 — ALL PASS. 스크린샷 검수.
