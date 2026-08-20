@@ -111,6 +111,9 @@ export function ghostOpacityForStep(stepRank: number, boosted: boolean): number 
 export function placeStepBadges(
   anchors: { id: Id; at: Vec2 }[],
   minGap = 2.6,
+  /** Busy spots to stay clear of (tokens, ghosts) — user 2026-08-21: 밀도 있는 곳 회피. */
+  obstacles: readonly Vec2[] = [],
+  obstacleGap = 2.4,
 ): { id: Id; at: Vec2 }[] {
   const placed: Vec2[] = []
   const CANDIDATES: Vec2[] = [
@@ -119,15 +122,31 @@ export function placeStepBadges(
     { x: 2.4, y: -1.9 },
     { x: -2.4, y: -1.9 },
     { x: 2.4, y: 1.9 },
+    { x: -2.4, y: 1.9 },
+    { x: 3.6, y: 0 },
+    { x: -3.6, y: 0 },
   ]
   return anchors.map((a) => {
     let best: Vec2 = { x: a.at.x, y: a.at.y - 1.9 }
+    let bestScore = -Infinity
     for (const c of CANDIDATES) {
       const cand = { x: a.at.x + c.x, y: a.at.y + c.y }
       const clash = placed.some((q) => Math.hypot(q.x - cand.x, q.y - cand.y) < minGap)
-      if (!clash) {
+      if (clash) continue
+      // score by distance to the nearest obstacle — pick the calmest nearby spot
+      let nearest = Infinity
+      for (const o of obstacles) {
+        const d = Math.hypot(o.x - cand.x, o.y - cand.y)
+        if (d < nearest) nearest = d
+      }
+      if (nearest >= obstacleGap) {
         best = cand
+        bestScore = Infinity
         break
+      }
+      if (nearest > bestScore) {
+        bestScore = nearest
+        best = cand
       }
     }
     placed.push(best)

@@ -52,10 +52,11 @@ describe('dribbling carries the ball AHEAD of the run (user 2026-08-21)', () => 
     expect(mid.ball.pos.x - mr.pos.x).toBeCloseTo(DRIBBLE_AHEAD_M, 1)
     expect(Math.abs(mid.ball.pos.y - mr.pos.y)).toBeLessThan(0.15)
 
-    // after the run: back at the side-carry spot (authored anchors stay valid)
+    // after the run the ball RESTS OUT FRONT where the dribble left it (user 사진1) — it
+    // never swings back to the initial side.
     const after = stateAt(cm, doc, dur + 0.5)
     const ar = after.players[runner.id]!
-    expect(after.ball.pos.x - ar.pos.x).toBeLessThan(0) // resting on the LEFT again
+    expect(after.ball.pos.x - ar.pos.x).toBeCloseTo(DRIBBLE_AHEAD_M, 1)
   })
 
   it('CHAINED runs keep the ball out front through the step boundary (no side-dip)', () => {
@@ -103,9 +104,9 @@ describe('dribbling carries the ball AHEAD of the run (user 2026-08-21)', () => 
       expect(rs.ball.pos.x - pr.pos.x).toBeGreaterThan(DRIBBLE_AHEAD_M - 0.35)
       expect(Math.abs(rs.ball.pos.y - pr.pos.y)).toBeLessThan(0.2)
     }
-    // the TRUE end of the chain still settles back to the side spot
+    // after the chain the ball stays out front too (2026-08-21 v3 rule)
     const done = stateAt(cm, doc, step1Dur * 2 + 0.6)
     const pr = done.players[runner.id]!
-    expect(done.ball.pos.x - pr.pos.x).toBeLessThan(0)
+    expect(done.ball.pos.x - pr.pos.x).toBeCloseTo(DRIBBLE_AHEAD_M, 1)
   })
 })

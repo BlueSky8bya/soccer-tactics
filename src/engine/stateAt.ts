@@ -19,8 +19,9 @@ export interface ResolvedPlayer {
   heading?: number
   moving: boolean
   segmentId?: Id
-  /** Dribble carry: when set, the possessed ball rides ahead by ramp∈[0,1] along `heading`. */
-  carryAhead?: { heading: number; ramp: number }
+  /** Dribble carry: the possessed ball rides ahead by ramp∈[0,1] along `heading`, blending
+   *  from `from` (previous carry vector; authored side offset when absent). */
+  carryAhead?: { heading: number; ramp: number; from?: Vec2 }
 }
 
 /** Dribbling: the ball rides AHEAD of the run (a touch in front of the feet), not on the hip. */
@@ -102,24 +103,31 @@ function resolvePlayer(segs: CompiledSegment[], home: Vec2, t: number): Resolved
   if (seg) {
     if (seg.kind === 'move') {
       const lt = t - seg.start
-      const dur = scheduleDuration(seg.schedule)
       const pos = schedulePosAt(seg.schedule, lt)
       const s = distanceAlong(seg, lt)
       const i = moves.findIndex((m) => m.id === seg.id)
       const prevM = moves[i - 1]
-      const nextM = moves[i + 1]
       // CHAIN RULES: a run that continues from / into another run keeps the ball out front
       // through the boundary — the side-dip only happens at the TRUE start and end of a dribble.
       const chainIn = !!prevM && seg.start - prevM.end <= DRIBBLE_CHAIN_GAP_S
-      const chainOut = !!nextM && nextM.start - seg.end <= DRIBBLE_CHAIN_GAP_S
-      const edge = Math.min(chainIn ? Infinity : lt, chainOut ? Infinity : dur - lt)
       const heading = headingAtDistance(seg.schedule.lut, s)
+      // The ball NEVER swings back to the hip at a run's end (user 2026-08-21 사진1) — it stays
+      // out front where the dribble left it. Only the ramp INTO the dribble blends, and it
+      // blends from wherever the ball was carried before (previous run's front, or the side).
+      const edge = chainIn ? Infinity : lt
+      const from = prevM
+        ? aheadVec(headingAtDistance(prevM.schedule.lut, prevM.schedule.lut.length))
+        : undefined
       return {
         pos,
         moving: true,
         heading,
         segmentId: seg.id,
-        carryAhead: { heading, ramp: Math.max(0, Math.min(1, edge / DRIBBLE_RAMP_S)) },
+        carryAhead: {
+          heading,
+          ramp: Math.max(0, Math.min(1, edge / DRIBBLE_RAMP_S)),
+          ...(from ? { from } : {}),
+        },
       }
     }
     // hold: stay where the previous segment ended
@@ -130,20 +138,22 @@ function resolvePlayer(segs: CompiledSegment[], home: Vec2, t: number): Resolved
   return { pos: home, moving: false }
 }
 
-/** Standing INSIDE a dribble chain (short wait between two runs): the ball stays out front,
- *  facing where the previous run pointed — it must not swing to the hip and back. */
+/** Ahead-of-the-feet carry vector for a heading. */
+function aheadVec(heading: number): Vec2 {
+  return { x: Math.cos(heading) * DRIBBLE_AHEAD_M, y: Math.sin(heading) * DRIBBLE_AHEAD_M }
+}
+
+/** Standing AFTER any dribble: the ball rests out front where the last run pointed — for good
+ *  (user 2026-08-21 사진1: 드리볼하던 그대로). It never swings back to the initial side. */
 function standingCarry(
   moves: Extract<CompiledSegment, { kind: 'move' }>[],
   t: number,
-): { carryAhead?: { heading: number; ramp: number } } {
+): { carryAhead?: { heading: number; ramp: number; from?: Vec2 } } {
   let prevM: (typeof moves)[number] | undefined
-  let nextM: (typeof moves)[number] | undefined
   for (const m of moves) {
     if (m.end <= t + 1e-6) prevM = m
-    if (!nextM && m.start >= t - 1e-6) nextM = m
   }
-  if (!prevM || !nextM) return {}
-  if (nextM.start - prevM.end > DRIBBLE_CHAIN_GAP_S) return {}
+  if (!prevM) return {}
   const heading = headingAtDistance(prevM.schedule.lut, prevM.schedule.lut.length)
   return { carryAhead: { heading, ramp: 1 } }
 }
@@ -181,11 +191,12 @@ function resolveBall(
     // the start/end of the run so authored anchors (ghosts, pass origins) stay consistent.
     if (p.carryAhead) {
       const r = p.carryAhead.ramp
+      const base = p.carryAhead.from ?? offset
       const ax = Math.cos(p.carryAhead.heading) * DRIBBLE_AHEAD_M
       const ay = Math.sin(p.carryAhead.heading) * DRIBBLE_AHEAD_M
       return {
-        x: p.pos.x + offset.x * (1 - r) + ax * r,
-        y: p.pos.y + offset.y * (1 - r) + ay * r,
+        x: p.pos.x + base.x * (1 - r) + ax * r,
+        y: p.pos.y + base.y * (1 - r) + ay * r,
       }
     }
     return { x: p.pos.x + offset.x, y: p.pos.y + offset.y }

@@ -155,7 +155,7 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
                     <circle
                       cx={w.p.x}
                       cy={w.p.y}
-                      r={i === 0 ? 0.55 : 0.7}
+                      r={i === 0 ? 0.38 : 0.48}
                       className={i === 0 ? styles.waypointStart : styles.waypoint}
                     />
                   </>

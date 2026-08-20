@@ -5,7 +5,6 @@ import { addPlayer, setEntityHome } from '@/editor/commands'
 import { clampToPitch } from '@/editor/geometry'
 import {
   findSegment,
-  findTrack,
   lastKnownPosition,
   moveBallStartInDraft,
   shiftBallAnchorsForPlayerInDraft,
@@ -305,7 +304,10 @@ export function SimplePitch() {
       return
     }
     if (entityId === doc.ball.id)
-      addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId)
+      // ghost-continue draws (minStep set) chose their origin DELIBERATELY — never snap it
+      addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId, {
+        exactOrigin: minStep !== undefined,
+      })
     else addStepRun(core, entityId, waypoints, step)
     // commit confirmation: subject pops again as the arrow lands (M4)
     pulseKey.current++
@@ -519,7 +521,7 @@ export function SimplePitch() {
       // Released ON a player (the drop-target highlight is showing) = GIVE, never a throw —
       // the promise the highlight makes wins over release velocity (user 2026-08-21).
       const releasedOnPlayer = d.players.some(
-        (p) => Math.hypot(p.home.x - at.x, p.home.y - at.y) <= 2.6,
+        (p) => Math.hypot(p.home.x - at.x, p.home.y - at.y) <= 2.7,
       )
       let fling: ReturnType<typeof simulateFling> | null = null
       if (!releasedOnPlayer && vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
@@ -533,7 +535,7 @@ export function SimplePitch() {
       }
       const near = d.players
         .map((p) => ({ p, dist: Math.hypot(p.home.x - at.x, p.home.y - at.y) }))
-        .filter((x) => x.dist <= 2.6)
+        .filter((x) => x.dist <= 2.7) // ring max is exactly 2.6 — leave float headroom
         .sort((a, b) => a.dist - b.dist)[0]
       core.update((dd) => moveBallStartInDraft(dd as TacticDocument, at, near?.p.id ?? null))
       core.commit()
@@ -1068,7 +1070,7 @@ export function SimplePitch() {
       core.begin(g.id === doc.ball.id ? 'Move ball' : 'Move player')
     }
     g.lastPt = pt
-    const raw = clampToPitch({ x: pt.x + g.grab.x, y: pt.y + g.grab.y }, doc.pitch)
+    let raw = clampToPitch({ x: pt.x + g.grab.x, y: pt.y + g.grab.y }, doc.pitch)
     if (g.group.size > 1 || g.id !== doc.ball.id) {
       // Player drags (single or marquee group): translate homes AND whole authored paths in
       // parallel — curves keep their exact shape (user 2026-08-20: 과도하게 꺾임 해결). The ball
@@ -1098,6 +1100,14 @@ export function SimplePitch() {
       return
     }
     // Ball alone: absolute move; the drop decides holder/loose in endGesture.
+    // Near its HOLDER the drag ORBITS the carry ring (user 2026-08-21 사진2): pick the side
+    // without disturbing the pass shape; pull farther than 3.4m to actually take the ball away.
+    const holderId0 = doc.ball.initialHolderId
+    const holderHome0 = holderId0 ? doc.players.find((pl) => pl.id === holderId0)?.home : undefined
+    if (holderHome0 && Math.hypot(raw.x - holderHome0.x, raw.y - holderHome0.y) <= 3.4) {
+      const off = carryOffset({ x: raw.x - holderHome0.x, y: raw.y - holderHome0.y })
+      raw = { x: holderHome0.x + off.x, y: holderHome0.y + off.y }
+    }
     const origin = g.group.get(g.id) ?? g.home
     const delta = { x: raw.x - origin.x, y: raw.y - origin.y }
     // velocity window for the fling (keep the last ~10 samples)
@@ -1107,13 +1117,14 @@ export function SimplePitch() {
     // who would RECEIVE the ball if dropped here (attach range) — light them up
     const over = doc.players
       .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - raw.x, pl.home.y - raw.y) }))
-      .filter((x) => x.dist <= 2.6)
+      .filter((x) => x.dist <= 2.7)
       .sort((a, b) => a.dist - b.dist)[0]
     setDropTargetId((prev) => (prev === (over?.id ?? null) ? prev : (over?.id ?? null)))
     core.update((d) => {
       setEntityHome(d as TacticDocument, g.id, { x: origin.x + delta.x, y: origin.y + delta.y })
-      const tr = findTrack(d as TacticDocument, d.ball.id)
-      if (!tr || tr.segments.length === 0) delete d.ball.initialHolderId
+      // NOTE: initialHolderId is NOT touched mid-drag — the commit (moveBallStartInDraft)
+      // decides holder/loose. Deleting it here orphaned the possession chain and made passes
+      // launch from t=0 (user 2026-08-21: 5단계 공이 초기 위치에서 발사).
     })
     st.setDrag({ id: g.id, grab: g.grab, raw, guides: [], snapped: false })
   }
@@ -1400,7 +1411,14 @@ export function SimplePitch() {
           }),
       )
     : []
-  const badgeSpots = new Map(placeStepBadges(badgeAnchors).map((b) => [b.id, b.at]))
+  const badgeObstacles: Vec2[] = [
+    ...doc.players.map((p) => resolved.players[p.id]?.pos ?? p.home),
+    resolved.ball.pos,
+    ...ghosts.map((g) => g.pos),
+  ]
+  const badgeSpots = new Map(
+    placeStepBadges(badgeAnchors, 2.6, badgeObstacles).map((b) => [b.id, b.at]),
+  )
   const badges = badgeAnchors.map((b) => ({ ...b, end: badgeSpots.get(b.id) ?? b.at }))
 
   // PLAN-007: pick with the CURRENT render's inputs (hover rAF + cycling reuse this).

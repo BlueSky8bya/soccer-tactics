@@ -109,6 +109,27 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     }
   }
 
+  // SELF-HEAL (user 2026-08-21): a ball travel with NO preceding possession while a holder is
+  // known leaves the ball parked at its initial spot until the pass fires. Reinsert the
+  // possession so the ball rides with its holder up to the launch.
+  for (const track of scene.timeline.tracks) {
+    if (track.entityKind !== 'ball') continue
+    const firstPathIdx = track.segments.findIndex((s2) => 'path' in s2)
+    if (firstPathIdx < 0) break
+    const before = track.segments[firstPathIdx - 1]
+    const holder = draft.ball.initialHolderId
+    if (!before && holder) {
+      track.segments.splice(firstPathIdx, 0, {
+        id: newId('seg'),
+        kind: 'possessed',
+        trigger: { type: 'at', t: 0 },
+        timing: { duration: 0 },
+        holderId: holder,
+      })
+    }
+    break
+  }
+
   // Ball possessions with an absolute time: keep them at/before the pass they precede.
   for (const track of scene.timeline.tracks) {
     if (track.entityKind !== 'ball') continue
@@ -147,6 +168,19 @@ export function addStepRun(
       step: stepOf({ step }),
     })
     relayoutStepsInDraft(doc)
+    // A run drawn AFTER a loose pass can become its receiver (user 2026-08-21 사진4): re-resolve
+    // any receiverless pass ending near this run's end so the ball attaches to the carry ring
+    // instead of stacking exactly on the player ghost.
+    const runEnd = waypoints[waypoints.length - 1]?.p
+    if (runEnd) {
+      const ballTrack = findTrack(doc, doc.ball.id)
+      for (const sg of ballTrack?.segments ?? []) {
+        if (sg.kind !== 'travel' || sg.id.startsWith('gen-') || sg.receiverId) continue
+        const end = sg.path.waypoints[sg.path.waypoints.length - 1]?.p
+        if (end && Math.hypot(end.x - runEnd.x, end.y - runEnd.y) <= RECEIVE_RADIUS_M)
+          resolvePassReceiverInDraft(doc, sg.id)
+      }
+    }
   })
   return id
 }
@@ -157,6 +191,7 @@ export function addStepPass(
   waypoints: Waypoint[],
   step: number,
   holderHint?: Id,
+  opts?: { exactOrigin?: boolean },
 ): Id {
   const id = newId('seg')
   core.transaction('Add pass', (d) => {
@@ -196,7 +231,11 @@ export function addStepPass(
       ? { x: holderFuture.x + off.x, y: holderFuture.y + off.y }
       : anchor
     const first = waypoints[0]
-    if (first && Math.hypot(first.p.x - anchor.x, first.p.y - anchor.y) > 3.2) {
+    if (
+      !opts?.exactOrigin &&
+      first &&
+      Math.hypot(first.p.x - anchor.x, first.p.y - anchor.y) > 3.2
+    ) {
       const dx = expected.x - first.p.x
       const dy = expected.y - first.p.y
       first.p = { x: expected.x, y: expected.y }
