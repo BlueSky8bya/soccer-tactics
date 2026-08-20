@@ -817,3 +817,11 @@ Problem: 단계 2·3을 잇는 선수 고스트를 드래그하면 그 지점에
 Change:
 - stepCommands.ts bendMoveWaypointInDraft: 마지막 웨이포인트 이동 시 shiftJunctionAnchorsInDraft 호출(신규). 정션 근처의 (1) 같은 엔티티 체인 다음 움직임 원점(0.75m), (2) 이 선수가 받는 패스의 끝·이 선수가 그 지점에서 차는 패스의 원점(3.5m=RECEIVE_RADIUS_M, 캐리 오프셋 ≤2.6m 포함)을 같은 델타로 평행이동(웨이포인트+양 핸들). 먼 앵커(패스 원점·다음 목적지)는 불변 — 사용자가 조준한 곳 유지.
 Validation: typecheck/lint/test 144(+2)/build/harness/format PASS. 단위 2건(체인 원점+도착 패스 끝 동반, 나가는 패스 캐리 원점 동반·타깃 불변). Playwright junction.cjs: 스루패스+체인 런 구성 후 고스트 6.65/4.33m 드래그 → passEnd·run2Start 동반, passStart·run2End 불변, 콘솔 클린.
+
+### CHG-20260820-078 — FIX — 패스 도착점이 수신 선수에게 부착(캐리 지점 스냅)
+
+Problem: 패스가 수신 반경(3.5m) 안에 떨어져 수신자·소유권은 만들어지지만 저작된 끝 웨이포인트는 릴리스 지점에 그대로 남음 → 공 고스트가 중간 거점 선수 옆에 둥둥 떠서 "소지" 느낌이 없음(사용자: "중간 거점 선수에게 공이 안 소지되어있어").
+Change:
+- segmentCommands.ts syncTravelReceiverInDraft: 수신자 확정 시 끝 웨이포인트를 수신자 도착 위치+캐리 오프셋(2.0~2.6m)으로 스냅(웨이포인트+핸들 평행이동). 옛 끝점 0.75m 내에서 시작하던 이후 공 경로(그 고스트에서 이어 그린 다음 패스) 원점도 같은 델타로 동반 이동 — 체인 안 끊김.
+- stepCommands.ts 스루패스 도착 동기화 허용 오차 1.5m → 3.0m (스냅된 끝점이 수신자 이동 끝에서 캐리 오프셋만큼 떨어지므로).
+Validation: typecheck/lint/test 145(+1)/build/harness/format PASS. 단위: 3m 짧게 릴리스 → 끝점이 캐리 밴드(1.9~2.7m) 스냅+수신자+소유 오프셋, 체인 패스 원점 부착(≤0.8m). Playwright attach.cjs: 릴레이 선수에게 공 고스트 발밑 부착(2.60m), possessed offset 생성, 이어 그린 패스 원점 glue 0.00m, 콘솔 클린. (QA 부산물: 프로브 좌표 변환을 viewBox 선형→getScreenCTM으로 교정 — letterbox 오차로 1.0m 공 고스트를 놓치던 문제)

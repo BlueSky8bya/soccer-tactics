@@ -435,4 +435,41 @@ describe('through ball sync (user 2026-08-20: 미래 지점 패스)', () => {
     expect(wps(passId)[wps(passId).length - 1]!.p.x).toBeCloseTo(targetBefore.x, 5)
     expect(wps(passId)[wps(passId).length - 1]!.p.y).toBeCloseTo(targetBefore.y, 5)
   })
+
+  it('a pass landing near a player ATTACHES: end snaps to the carried spot, chained pass follows', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    const relay = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    // released ~3m short of the relay player — inside RECEIVE_RADIUS_M, but visibly detached
+    const released = { x: relay.home.x - 3, y: relay.home.y }
+    const passId = addStepPass(core, makePath([d.ball.home, released]).waypoints, 1, holder.id)
+    const seg = (id: string) =>
+      core
+        .getDocument()
+        .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+        .find((s) => s.id === id)!
+    const p1 = seg(passId)
+    if (!('path' in p1) || p1.kind !== 'travel') throw new Error('not a travel')
+    expect(p1.receiverId).toBe(relay.id)
+    const end = p1.path.waypoints[p1.path.waypoints.length - 1]!.p
+    const dist = Math.hypot(end.x - relay.home.x, end.y - relay.home.y)
+    // carried spot: within the carry-offset band, not the raw release point
+    expect(dist).toBeGreaterThanOrEqual(1.9)
+    expect(dist).toBeLessThanOrEqual(2.7)
+    // chained NEXT pass drawn from that ghost starts at the SNAPPED spot and stays glued
+    const pass2Id = addStepPass(
+      core,
+      makePath([{ ...end }, { x: relay.home.x, y: relay.home.y - 20 }]).waypoints,
+      2,
+      relay.id,
+    )
+    const p2 = seg(pass2Id)
+    if (!('path' in p2)) throw new Error('no path')
+    const p1end = seg(passId)
+    if (!('path' in p1end)) throw new Error('no path')
+    const e1 = p1end.path.waypoints[p1end.path.waypoints.length - 1]!.p
+    const s2 = p2.path.waypoints[0]!.p
+    expect(Math.hypot(e1.x - s2.x, e1.y - s2.y)).toBeLessThanOrEqual(0.8)
+  })
 })

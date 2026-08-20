@@ -342,6 +342,36 @@ export function syncTravelReceiverInDraft(
   }
   if (receiver) seg.receiverId = receiver
   else delete seg.receiverId
+  // ATTACH the landing to the receiver (user 2026-08-20: "중간 거점 선수에게 공이 안 소지되어
+  // 있어"): the authored end used to stay wherever the user released — up to 3.5m off — so the
+  // ball ghost floated beside the relay player instead of resting at their feet. Snap the end
+  // waypoint to the receiver's carried spot; any LATER ball path chained from the old end (the
+  // next pass drawn from that ghost) moves with it so the chain never tears.
+  if (near && recvOffset) {
+    const endWp = seg.path.waypoints[seg.path.waypoints.length - 1]!
+    const to = { x: near.pos.x + recvOffset.x, y: near.pos.y + recvOffset.y }
+    const inc = { x: to.x - endWp.p.x, y: to.y - endWp.p.y }
+    if (Math.hypot(inc.x, inc.y) > 1e-9) {
+      const oldEnd = endWp.p
+      endWp.p = to
+      if (endWp.handleIn)
+        endWp.handleIn = { x: endWp.handleIn.x + inc.x, y: endWp.handleIn.y + inc.y }
+      if (endWp.handleOut)
+        endWp.handleOut = { x: endWp.handleOut.x + inc.x, y: endWp.handleOut.y + inc.y }
+      for (let j = f.index + 1; j < f.track.segments.length; j++) {
+        const later = f.track.segments[j]!
+        if (!('path' in later) || later.id.startsWith('gen-')) continue
+        const first = later.path.waypoints[0]
+        if (first && Math.hypot(first.p.x - oldEnd.x, first.p.y - oldEnd.y) <= 0.75) {
+          first.p = { x: first.p.x + inc.x, y: first.p.y + inc.y }
+          if (first.handleIn)
+            first.handleIn = { x: first.handleIn.x + inc.x, y: first.handleIn.y + inc.y }
+          if (first.handleOut)
+            first.handleOut = { x: first.handleOut.x + inc.x, y: first.handleOut.y + inc.y }
+        }
+      }
+    }
+  }
   if (seg.travelKind === 'pass' || seg.travelKind === 'loose')
     seg.travelKind = receiver ? 'pass' : 'loose'
   const nx = f.track.segments[f.index + 1]

@@ -96,7 +96,9 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
         if (!('path' in run) || run.id.startsWith(GEN_PREFIX)) continue
         if (run.trigger.type !== 'at' || !('duration' in run.timing)) continue
         const rEnd = run.path.waypoints[run.path.waypoints.length - 1]?.p
-        if (!rEnd || Math.hypot(rEnd.x - end.x, rEnd.y - end.y) > 1.5) continue
+        // Pass ends now rest at the receiver's CARRIED spot (2.0–2.6m carry offset from their
+        // arrival) — the through-ball match tolerance must cover that attachment distance.
+        if (!rEnd || Math.hypot(rEnd.x - end.x, rEnd.y - end.y) > 3.0) continue
         const receiverArrives = run.trigger.t + run.timing.duration
         const synced = receiverArrives - seg.trigger.t
         if (synced > seg.timing.duration) {
