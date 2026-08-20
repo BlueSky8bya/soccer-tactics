@@ -1095,3 +1095,9 @@ Validation: typecheck/lint/test 161/build/harness/format PASS. 신규 테스트 
 Problem: 받은 패스의 도착 고스트를 회전하면 일반 bend(`bendMoveWaypointInDraft`)를 거쳐 전체 waypoint가 `smoothWaypoints`로 재생성 — 이전 패스 곡률·hold 파괴(S1), commit 시 receiver 재선택으로 더 가까운 선수에게 수신자 탈취(R9).
 Change: `moveTravelEndInDraft` 신설(segmentCommands) — 끝 waypoint+그 handle만 평행이동, resmooth 없음, receiver 불변, follow possession offset을 ring clamp+`offsetLocked`로 고정, 옛 끝점에서 이어진 체인 원점(≤0.75m)만 동행. SimplePitch에 `orbit-receive` 제스처 신설(도착 고스트 press 라우팅, drag threshold, ring 제약, commit 시 relayout 1회·receiver resolve 없음). bend commit의 receiver resolve는 '끝 waypoint를 잡았을 때'로 조건화 — 내부 곡률 bend는 수신자 재해석 금지.
 Validation: typecheck/lint/test 162/build/harness/format PASS. 유닛: 국소성 계약(비인접 waypoint·hold byte 불변, thief 0.4m 근접에도 receiver 고정, offsetLocked, 체인 동행). Playwright s1_orbit probe: 곡선 패스 도착 고스트 90° 회전 → 링 안착(2.53m), interior waypoint/d-prefix byte 불변, 콘솔 클린 — ALL PASS.
+
+### CHG-20260821-113 — EDITOR — bend 국소화: 잡은 점 ±1만 재스무딩 (감사 1안 M3, R12-B)
+
+Problem: `bendMoveWaypointInDraft`가 매 drag마다 전체 waypoint 배열을 `smoothWaypoints` 결과로 교체 — 모든 `hold` 삭제, 비인접 handle 전부 재작성(감사 R12-B). S1의 '곡률이 멋대로 변한다'의 절반이 이 전역 재스무딩.
+Change: 잡은 waypoint의 p만 갱신 후 Catmull-Rom handle을 [i−1, i, i+1] 창에만 재계산(smoothWaypoints와 동일 공식·tension 0.5). id·hold·비인접 handle은 in-place라 byte 불변. n<3 폴리라인은 handle 미생성(기존 동일). junction follow(isEnd) 유지.
+Validation: typecheck/lint/test 163/build/harness/format PASS. 신규 테스트: wp[3] hold 0.5 + sentinel handle(99,99)·wp[4] handle(77,77)이 wp[1] bend 후 byte 동일, id 안정.

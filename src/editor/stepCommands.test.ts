@@ -593,3 +593,62 @@ describe('receive-junction orbit (ADR-0010 D3 — audit S1/R9)', () => {
     expect(wps(pass2Id)[0]!.p.y).toBeCloseTo(pass2StartBefore.y + inc.y, 5)
   })
 })
+
+describe('local bend (ADR-0010 — audit R12-B)', () => {
+  it('bend preserves waypoint holds and non-adjacent handles', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const runner = d.players[2]!
+    const runId = addStepRun(
+      core,
+      runner.id,
+      makePath([
+        runner.home,
+        { x: runner.home.x + 6, y: runner.home.y },
+        { x: runner.home.x + 12, y: runner.home.y + 3 },
+        { x: runner.home.x + 18, y: runner.home.y - 2 },
+        { x: runner.home.x + 24, y: runner.home.y },
+      ]).waypoints,
+      1,
+    )
+    // author a hold + a custom handle far from the grab point
+    core.transaction('meta', (dd) => {
+      const x = (dd as TacticDocument).scenes[0]!.timeline.tracks.flatMap((t) => t.segments).find(
+        (y) => y.id === runId,
+      )!
+      if ('path' in x) {
+        x.path.waypoints[3]!.hold = 0.5
+        x.path.waypoints[3]!.handleIn = { x: 99, y: 99 } // sentinel: must survive untouched
+        x.path.waypoints[4]!.handleIn = { x: 77, y: 77 }
+      }
+    })
+    const wps = () => {
+      const x = core
+        .getDocument()
+        .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+        .find((y) => y.id === runId)!
+      if (!('path' in x)) throw new Error('no path')
+      return x.path.waypoints
+    }
+    const before = wps().map((w) => JSON.stringify(w))
+    const grabId = wps()[1]!.id
+    core.transaction('bend', (dd) =>
+      bendMoveWaypointInDraft(dd as TacticDocument, runId, grabId, {
+        x: runner.home.x + 6,
+        y: runner.home.y + 5,
+      }),
+    )
+    const after = wps()
+    // grabbed point moved; its window (0..2) may re-smooth
+    expect(after[1]!.p.y).toBeCloseTo(runner.home.y + 5, 6)
+    // NON-ADJACENT waypoints are byte-identical: position, handles AND hold (audit R12-B)
+    expect(JSON.stringify(after[3])).toBe(before[3])
+    expect(JSON.stringify(after[4])).toBe(before[4])
+    expect(after[3]!.hold).toBe(0.5)
+    expect(after[3]!.handleIn).toEqual({ x: 99, y: 99 })
+    // ids stable everywhere
+    expect(after.map((w) => w.id)).toEqual(
+      JSON.parse(`[${before.map((b) => JSON.stringify(JSON.parse(b).id)).join(',')}]`),
+    )
+  })
+})

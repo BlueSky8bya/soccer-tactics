@@ -7,7 +7,6 @@
 import type { Id, Path, TacticDocument, Vec2, Waypoint } from '@/domain/types'
 import { GEN_PREFIX } from '@/engine/opponent'
 import { carryOffset, compile } from '@/engine/compile'
-import { smoothWaypoints } from '@/engine/path'
 import { buildPathLUT } from '@/engine/path'
 import { stateAt } from '@/engine/stateAt'
 import { newId } from './commands'
@@ -362,7 +361,12 @@ export function bendGrabWaypointInDraft(
   return id
 }
 
-/** Move a waypoint and re-smooth the whole path (Catmull-Rom handles) — the "bend" feel. */
+/**
+ * Move a waypoint and re-smooth LOCALLY (ADR-0010 / audit R12-B): only the grabbed point and
+ * its two neighbours get fresh Catmull-Rom handles — every other waypoint keeps its position,
+ * handles AND `hold` byte-for-byte. The old whole-path resmooth silently deleted holds and
+ * rewrote non-adjacent curvature on every drag.
+ */
 export function bendMoveWaypointInDraft(
   doc: TacticDocument,
   segmentId: Id,
@@ -376,11 +380,29 @@ export function bendMoveWaypointInDraft(
   if (i < 0) return
   const isEnd = i === wps.length - 1
   const old = { x: wps[i]!.p.x, y: wps[i]!.p.y }
-  const pts = wps.map((w, k) => (k === i ? { x: to.x, y: to.y } : w.p))
-  f.segment.path.waypoints = smoothWaypoints(
-    pts,
-    wps.map((w) => w.id),
-  )
+  wps[i]!.p = { x: to.x, y: to.y }
+  // Catmull-Rom handle refresh for the affected window only (same formula as smoothWaypoints)
+  const n = wps.length
+  const TENSION = 0.5
+  for (let k = Math.max(0, i - 1); k <= Math.min(n - 1, i + 1); k++) {
+    if (n < 3) break
+    const p0 = wps[Math.max(0, k - 1)]!.p
+    const p1 = wps[k]!.p
+    const p2 = wps[Math.min(n - 1, k + 1)]!.p
+    const w = wps[k]!
+    if (k > 0) {
+      w.handleIn = {
+        x: p1.x - ((p2.x - p0.x) * TENSION) / 3,
+        y: p1.y - ((p2.y - p0.y) * TENSION) / 3,
+      }
+    }
+    if (k < n - 1) {
+      w.handleOut = {
+        x: p1.x + ((p2.x - p0.x) * TENSION) / 3,
+        y: p1.y + ((p2.y - p0.y) * TENSION) / 3,
+      }
+    }
+  }
   const inc = { x: to.x - old.x, y: to.y - old.y }
   if (isEnd && (inc.x !== 0 || inc.y !== 0))
     shiftJunctionAnchorsInDraft(doc, f.track.entityId, segmentId, old, inc)
