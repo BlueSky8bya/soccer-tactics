@@ -287,7 +287,8 @@ describe('360-degree carry direction (user 2026-08-20)', () => {
     const d = core.getDocument()
     const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
     const mate = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
-    // pass lands 1m to the LEFT of the mate
+    // pass released 1m to the LEFT of the mate — but the ball ARRIVES from the holder's side,
+    // and the first touch keeps it on that approach side (CHG-079: release scatter is ignored)
     addStepPass(
       core,
       makePath([d.ball.home, { x: mate.home.x - 1.0, y: mate.home.y }]).waypoints,
@@ -300,7 +301,9 @@ describe('360-degree carry direction (user 2026-08-20)', () => {
       offset?: { x: number; y: number }
     }
     expect(recv?.offset).toBeDefined()
-    expect(recv.offset!.x).toBeLessThan(0) // held on the arrival side
+    const approach = { x: d.ball.home.x - mate.home.x, y: d.ball.home.y - mate.home.y }
+    const dot = recv.offset!.x * approach.x + recv.offset!.y * approach.y
+    expect(dot).toBeGreaterThan(0) // held on the side the ball came from
   })
 })
 
@@ -471,5 +474,32 @@ describe('through ball sync (user 2026-08-20: 미래 지점 패스)', () => {
     const e1 = p1end.path.waypoints[p1end.path.waypoints.length - 1]!.p
     const s2 = p2.path.waypoints[0]!.p
     expect(Math.hypot(e1.x - s2.x, e1.y - s2.y)).toBeLessThanOrEqual(0.8)
+  })
+
+  it('a pass released PAST the receiver still rests on the APPROACH side (first touch)', () => {
+    const core = filled()
+    const d = core.getDocument()
+    const holder = d.players.find((p) => p.id === d.ball.initialHolderId)!
+    const relay = d.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
+    // ball approaches from the LEFT; the user overshoots and releases 2.5m to the RIGHT
+    const released = { x: relay.home.x + 2.5, y: relay.home.y }
+    const passId = addStepPass(
+      core,
+      makePath([d.ball.home, { x: relay.home.x - 8, y: relay.home.y }, released]).waypoints,
+      1,
+      holder.id,
+    )
+    const seg = core
+      .getDocument()
+      .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+      .find((s2) => s2.id === passId)!
+    if (!('path' in seg) || seg.kind !== 'travel') throw new Error('not a travel')
+    expect(seg.receiverId).toBe(relay.id)
+    const end = seg.path.waypoints[seg.path.waypoints.length - 1]!.p
+    // rests on the LEFT (approach) side, never the overshot far side
+    expect(end.x).toBeLessThan(relay.home.x)
+    const dist = Math.hypot(end.x - relay.home.x, end.y - relay.home.y)
+    expect(dist).toBeGreaterThanOrEqual(1.9)
+    expect(dist).toBeLessThanOrEqual(2.7)
   })
 })

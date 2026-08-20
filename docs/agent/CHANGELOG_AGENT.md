@@ -825,3 +825,11 @@ Change:
 - segmentCommands.ts syncTravelReceiverInDraft: 수신자 확정 시 끝 웨이포인트를 수신자 도착 위치+캐리 오프셋(2.0~2.6m)으로 스냅(웨이포인트+핸들 평행이동). 옛 끝점 0.75m 내에서 시작하던 이후 공 경로(그 고스트에서 이어 그린 다음 패스) 원점도 같은 델타로 동반 이동 — 체인 안 끊김.
 - stepCommands.ts 스루패스 도착 동기화 허용 오차 1.5m → 3.0m (스냅된 끝점이 수신자 이동 끝에서 캐리 오프셋만큼 떨어지므로).
 Validation: typecheck/lint/test 145(+1)/build/harness/format PASS. 단위: 3m 짧게 릴리스 → 끝점이 캐리 밴드(1.9~2.7m) 스냅+수신자+소유 오프셋, 체인 패스 원점 부착(≤0.8m). Playwright attach.cjs: 릴레이 선수에게 공 고스트 발밑 부착(2.60m), possessed offset 생성, 이어 그린 패스 원점 glue 0.00m, 콘솔 클린. (QA 부산물: 프로브 좌표 변환을 viewBox 선형→getScreenCTM으로 교정 — letterbox 오차로 1.0m 공 고스트를 놓치던 문제)
+
+### CHG-20260820-079 — FIX — 수신 공 안착을 릴리스 지점이 아닌 "들어오는 쪽"으로
+
+Problem: 수신 오프셋이 릴리스 방향을 따라감 — 토큰을 지나쳐 놓으면 공이 반대편(먼 쪽)에 앉아, 트림된 도착 화살표 끝·공 고스트·다음 패스 시작이 세 군데로 엇갈림(사용자: "축구공이 내가 원하는 곳에 안 렌더돼서 화살표 끝과 다음 화살표 시작이 엇갈려").
+Change:
+- segmentCommands.ts syncTravelReceiverInDraft: recvOffset을 접근 방향(끝에서 역방향으로 수신자에게서 3m 이상 떨어진 첫 웨이포인트로의 현)으로 계산 — 퍼스트터치처럼 공이 온 쪽에 안착. 릴리스 산포는 무시(폴백: rel ≥0.3m → 기본 오른발 방향). 결과: 화살표 끝 = 공 = 다음 원점이 한 접점.
+- 기존 테스트 "side the pass arrived from"이 실제로는 릴리스 쪽을 단언하고 있었음 — 이름대로 접근 방향 내적 >0으로 교정.
+Validation: typecheck/lint/test 146(+1)/build/harness/format PASS. 단위: 오버슛 릴리스(수신자 지나 2.5m) → 접근쪽 캐리 밴드 안착. Playwright approach.cjs: 오버슛+체인 아웃패스 → approach-side true, 부착 2.60m, 접합 0.00m, 콘솔 클린.

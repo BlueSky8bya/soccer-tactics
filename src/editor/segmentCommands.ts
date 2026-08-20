@@ -327,18 +327,25 @@ export function syncTravelReceiverInDraft(
     .filter((x) => x.dist <= radius)
     .sort((a, b) => a.dist - b.dist)[0]
   const receiver = near?.id
-  // Carry angle after the catch = where the pass landed relative to the receiver (360°).
-  // Snapped-on-target passes land dead-centre — fall back to the side the ball CAME from.
+  // Carry spot after the catch = the side the ball ARRIVES from (first touch), NOT wherever the
+  // release scattered (user 2026-08-20: releasing past the token parked the ball on the FAR side,
+  // so the incoming arrow tip, the resting ball and the next pass origin all disagreed). Walk
+  // back from the end for the first waypoint clearly outside the receiver — that chord is the
+  // approach line, and resting on it makes arrow tip = ball = next origin one single joint.
   let recvOffset: Vec2 | undefined
   if (near) {
-    const rel = { x: end.x - near.pos.x, y: end.y - near.pos.y }
-    if (Math.hypot(rel.x, rel.y) >= 0.3) recvOffset = carryOffset(rel)
-    else {
-      const prevWp = seg.path.waypoints[seg.path.waypoints.length - 2]?.p
-      recvOffset = prevWp
-        ? carryOffset({ x: prevWp.x - end.x, y: prevWp.y - end.y })
-        : carryOffset(rel)
+    let approach: Vec2 | undefined
+    for (let k = seg.path.waypoints.length - 2; k >= 0; k--) {
+      const w = seg.path.waypoints[k]!.p
+      const v = { x: w.x - near.pos.x, y: w.y - near.pos.y }
+      if (Math.hypot(v.x, v.y) >= 3.0) {
+        approach = v
+        break
+      }
     }
+    const rel = { x: end.x - near.pos.x, y: end.y - near.pos.y }
+    const v = approach ?? (Math.hypot(rel.x, rel.y) >= 0.3 ? rel : undefined)
+    recvOffset = carryOffset(v ?? { x: 1.75, y: 1.15 })
   }
   if (receiver) seg.receiverId = receiver
   else delete seg.receiverId
