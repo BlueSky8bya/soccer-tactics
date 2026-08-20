@@ -1020,3 +1020,9 @@ Change:
 - 그물 클로스: 링/포켓 폐기 → 그물 라인이 프레임(포스트·백 스탠션)에 핀 고정된 채 임팩트 제어점만 불룩해지는 Q-커브 3겹, 감쇠 진동 진폭 e^(−4.2t)·sin(8.5t)(rAF, 0.95s, 음수 스윙=안쪽 반동) + 전면 플래시. 뒤판/옆그물 각각 자기 벽에서. 클립 확장(늘어남 여유). fling·재생 공용 fireNetImpact.
 - 드리블 체인 규칙: 간격 ≤0.8s로 이어지는 런은 한 드리블 — 경계 램프 억제(Infinity edge), 체인 사이 짧은 대기 중에도 직전 헤딩 방향 전방 유지(standingCarry). 옆구리 복귀는 체인의 진짜 시작·끝에서만.
 Validation: typecheck/lint/test 159(+체인 경계 촘촘 샘플 골든)/build/harness/format PASS. Playwright: 릴레이 호 렌더, 클로스 앵커=백 코너(−1.85, 30.34) 정합·클립, 재생 골 우측 앵커 L+1.85 — ALL PASS, 콘솔 클린. (goalcatch 시나리오는 CHG-100 부여 규칙과 충돌해 원거리로 재작성)
+
+### CHG-20260821-103 — UX — A/B/C 세그먼트 3상태 가독성 재설계
+
+Problem: 빈 안의 +가 호버에서만 나타나 "B 전환인지 + 복제인지" 인지 불가(사용자).
+Change: 상태별 시각 언어 분리 — 활성=흰 필(기존), 존재·비활성=회색 텍스트+호버 배경(전환 초대), 빈 슬롯=inset 링+상시 '+' 접미(만들기 정체성), 호버 시 accent-soft 배경·accent 링/텍스트로 데워짐. 호버 전용 ::after 트릭 제거.
+Validation: typecheck/lint/test 159/build/harness/format PASS. Playwright: A 존재·비활성 / B 활성 / C+ 빈(텍스트에 + 포함) 구조 검증 + 확대 스크린샷.

@@ -167,6 +167,9 @@ export function AppShell() {
                     title={t('variant.cloneInto', { v })}
                   >
                     {v}
+                    <span className={styles.variantPlus} aria-hidden="true">
+                      +
+                    </span>
                   </button>
                 ),
               )}

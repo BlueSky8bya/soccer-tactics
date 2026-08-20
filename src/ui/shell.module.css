@@ -1737,20 +1737,37 @@
   font-size: 13.5px;
 }
 
+/* EXISTING variants invite a switch on hover; EMPTY slots read as "make this plan" —
+   dashed outline + an always-visible +, warming to accent on hover (user 2026-08-21). */
+.modeSeg:hover:not(.modeSegOn) {
+  background: color-mix(in srgb, var(--st-surface) 70%, transparent);
+  color: var(--st-text);
+}
+
 .variantSegEmpty {
-  opacity: 0.38;
-  transition: opacity var(--st-motion-fast) var(--st-ease-out);
+  color: var(--st-text-3);
+  box-shadow: inset 0 0 0 1px var(--st-border-strong);
+  border-style: none;
+  opacity: 0.75;
+  gap: 1px;
+  transition:
+    opacity var(--st-motion-fast) var(--st-ease-out),
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    color var(--st-motion-fast) var(--st-ease-out);
 }
 
 .variantSegEmpty:hover {
-  opacity: 0.85;
+  opacity: 1;
+  background: var(--st-accent-soft);
+  color: var(--st-accent);
+  box-shadow: inset 0 0 0 1px var(--st-accent);
 }
 
-.variantSegEmpty:hover::after {
-  content: '+';
-  font-size: 10px;
-  margin-left: 2px;
-  opacity: 0.8;
+.variantPlus {
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.9;
 }
 
 /* team color dot in the 팀 구성 card */
