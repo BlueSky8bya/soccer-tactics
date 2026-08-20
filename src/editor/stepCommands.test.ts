@@ -303,7 +303,7 @@ describe('360-degree carry direction (user 2026-08-20)', () => {
 })
 
 describe('step stretch cap (user 2026-08-20: 짧은 움직임 밸런스)', () => {
-  it('a short member stretches to at most 2x natural and finishes early; the step still ends with the slowest', () => {
+  it('a short member stretches to at most 3x natural and finishes early; the step still ends with the slowest', () => {
     const core = filled()
     const d = core.getDocument()
     const [a, b, c] = d.players
@@ -331,12 +331,12 @@ describe('step stretch cap (user 2026-08-20: 짧은 움직임 밸런스)', () =>
     // same start
     expect(tShort.start).toBe(0)
     expect(tLong.start).toBe(0)
-    // short one: natural 2/7s, capped at 2x -> well before the long one's end
-    expect(tShort.end - tShort.start).toBeLessThanOrEqual((2 / 7) * 2 + 0.02)
+    // short one: natural 2/7s, capped at 3x -> well before the long one's end
+    expect(tShort.end - tShort.start).toBeLessThanOrEqual((2 / 7) * 3 + 0.02)
     expect(tShort.end).toBeLessThan(tLong.end)
     // the NEXT step still waits for the slowest member
     expect(cm.segmentTimes[next]!.start).toBeCloseTo(tLong.end, 1)
-    // comparable lengths (within 2x) still end together — the original rule survives
+    // comparable lengths (within 3x) still end together — the original rule survives
     const core2 = filled()
     const d2 = core2.getDocument()
     const [p, q] = d2.players

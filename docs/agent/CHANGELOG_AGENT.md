@@ -756,3 +756,8 @@ Problem: 같은 단계의 "같이 끝남" 규칙이 1m 움직임을 30m 스프�
 Change: relayout에서 멤버 duration = min(단계 길이, 자연 길이×2) — 같이 시작은 유지, 2배 이내 차이는 기존대로 같이 끝나고, 그 이상은 자연스러운 속도로 **먼저 도착**. 다음 단계 시작(가장 느린 멤버 끝)은 불변. ADR-0009 v3 규칙 보완 기록.
 Validation: typecheck/lint/test 135(+1)/build/harness/format PASS; Playwright: 2m+20m 동일 단계 → 창 [0,0.64] vs [0,3.25], 재생 중 짧은 쪽 조기 정지 확인, 콘솔 클린.
 
+### CHG-20260820-069 — TWEAK — stretch cap 2배 → 3배 (사용자 지시)
+
+Change: MAX_STRETCH 2→3 — 같은 단계에서 3배 길이 차이까지는 같이 끝나고, 그 이상만 조기 도착. 테스트·ADR 갱신.
+Validation: typecheck/test 135 PASS.
+

@@ -60,10 +60,10 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
   for (const step of steps) {
     const members = authored.filter((s) => stepOf(s) === step)
     // Same step = same START; the step lasts as long as its longest movement at natural speed.
-    // Balance guard (user 2026-08-20): a short movement stretches to AT MOST 2x its natural
+    // Balance guard (user 2026-08-20): a short movement stretches to AT MOST 3x its natural
     // duration — beyond that it keeps a believable speed and simply finishes early instead of
     // crawling (1m next to a 30m sprint must not take the same seconds).
-    const MAX_STRETCH = 2
+    const MAX_STRETCH = 3
     let stepDur = 0.1
     const durs = new Map<string, number>()
     for (const s of members) {
