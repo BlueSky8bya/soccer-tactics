@@ -64,6 +64,9 @@ type Gesture =
       /** Ctrl+press: a plain CLICK on an already-selected member removes it from the selection. */
       additive?: boolean
       wasSelected?: boolean
+      /** Set when the dragged group holds the ball's INITIAL HOLDER (ball itself not in the group):
+       *  the resting ball keeps its chosen side and travels with the player. */
+      ballOrigin?: Vec2
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2 }
   | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[] }
@@ -289,6 +292,16 @@ export function SimplePitch() {
       const dy = at.y - settled.y
       if (Math.hypot(dx, dy) > 0.05)
         setBallDrop((prev) => ({ from: { x: dx, y: dy }, key: (prev?.key ?? 0) + 1 }))
+      // Unmistakable ATTACH feedback (user 2026-08-20): pulse both tokens + say who holds it.
+      if (near) {
+        pulseKey.current++
+        setPulses((prev) => ({
+          ...prev,
+          [near.p.id]: pulseKey.current,
+          [doc.ball.id]: pulseKey.current,
+        }))
+        ui.flashToast(t('ball.attached', { n: near.p.number }))
+      }
     } else {
       core.commit()
     }
@@ -405,6 +418,7 @@ export function SimplePitch() {
           : (doc.players.find((p) => p.id === entityId)?.home ?? pt)
       const cur =
         entityId === doc.ball.id ? resolved.ball.pos : (resolved.players[entityId]?.pos ?? home)
+      const hid = doc.ball.initialHolderId
       gesture.current = {
         type: 'token',
         id: entityId,
@@ -417,6 +431,8 @@ export function SimplePitch() {
         lastPt: pt,
         additive,
         wasSelected,
+        ballOrigin:
+          hid && group.has(hid) && !group.has(doc.ball.id) ? { ...doc.ball.home } : undefined,
       }
       svg.setPointerCapture(e.pointerId)
     }
@@ -639,6 +655,9 @@ export function SimplePitch() {
           }
           shiftEntityPathsInDraft(doc2, id, inc)
         }
+        // The held ball follows its dragged holder, keeping its side (not in the group itself).
+        if (g.ballOrigin)
+          doc2.ball.home = { x: doc2.ball.home.x + inc.x, y: doc2.ball.home.y + inc.y }
       })
       st.setDrag({ id: g.id, grab: g.grab, raw, guides: [], snapped: false })
       return
@@ -648,6 +667,8 @@ export function SimplePitch() {
     core.update((d) => {
       for (const [id, h] of g.group)
         setEntityHome(d as TacticDocument, id, { x: h.x + delta.x, y: h.y + delta.y })
+      // The held ball keeps its chosen side of the holder (user 2026-08-20).
+      if (g.ballOrigin) d.ball.home = { x: g.ballOrigin.x + delta.x, y: g.ballOrigin.y + delta.y }
       if (g.group.has(d.ball.id) && g.id === d.ball.id) {
         const tr = findTrack(d as TacticDocument, d.ball.id)
         if (!tr || tr.segments.length === 0) delete d.ball.initialHolderId
@@ -868,6 +889,7 @@ export function SimplePitch() {
         height={resolved.ball.height}
         spin={resolved.ball.spin}
         ballStatus={resolved.ball.status}
+        holderColor={resolved.ball.holderId ? teamColorOf(doc, resolved.ball.holderId) : undefined}
         selected={selection.includes(doc.ball.id)}
         hovered={false}
         dragging={drag?.id === doc.ball.id}

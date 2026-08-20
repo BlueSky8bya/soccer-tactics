@@ -24,6 +24,8 @@ export interface TokenProps {
   height?: number
   spin?: number
   ballStatus?: 'possessed' | 'travel' | 'loose'
+  /** Team color of the holder while possessed — the "attached" ring (user 2026-08-20). */
+  holderColor?: string
   /**
    * Optional wrapper around the token body (e.g. the UI layer's interface-motion group).
    * The renderer itself never animates positions (ADR-0006 D1).
@@ -107,6 +109,9 @@ export const Token = memo(function Token(p: TokenProps) {
           <circle r={r + 0.8} className={styles.selectionRing} style={{ stroke: '#ffffff' }} />
         )}
         {!p.selected && p.hovered && <circle r={r + 0.6} className={styles.hoverRing} />}
+        {p.ballStatus === 'possessed' && p.holderColor && (
+          <circle r={r + 0.42} className={styles.holderRing} style={{ stroke: p.holderColor }} />
+        )}
         <g transform={`scale(${scale})`}>
           <circle r={r} className={styles.ball} />
           <g transform={`rotate(${spinDeg}) scale(${r})`}>

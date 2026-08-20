@@ -548,3 +548,11 @@
 .stepPickerItemActive text {
   fill: #fff;
 }
+
+/* Possessed ball: a snug team-color ring says "attached to this player", not loose on the grass. */
+.holderRing {
+  fill: none;
+  stroke-width: 0.28;
+  opacity: 0.95;
+  pointer-events: none;
+}
