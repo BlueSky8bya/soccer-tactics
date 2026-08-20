@@ -53,6 +53,7 @@ export const ANIM_BINDINGS: Binding[] = [
 export const DRAW_BINDINGS: Binding[] = [
   { label: 'D', hint: '그리기 모드 켜기/끄기 (하단 바가 그리기 바로 전환)' },
   { label: '드래그', hint: '펜: 자유 곡선 · 지우개: 스친 획 통째 삭제' },
+  { label: '선택 도구', hint: '그리기 모드 안에서 선수·공 옮기기 (보드 조작 그대로)' },
   { label: 'Esc', hint: '그리기 모드 종료' },
   { label: 'Ctrl+Z', hint: '획 하나 되돌리기' },
 ]

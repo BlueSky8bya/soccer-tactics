@@ -878,3 +878,13 @@ Validation: typecheck/test 152 PASS, Playwright 골대 요소 카운트 동일 +
 Problem: 선택 링(선수 팀색/공 흰색)·호버 예고 링·소유 링(공 주변 팀색)이 전부 토큰 테두리 밖 별도 원 — 공 잔상 몇 개만 있어도 화면이 어수선.
 Change: Token.tsx에서 selectionRing/hoverRing/holderRing 요소 제거(+CSS). 선택 피드백은 토큰 자체 테두리 두께 증가로 대체(선수 2→3.5px, 공 1.2→2.4px) — 바깥 기하 추가 0. 호버 예고는 경로·고스트 하이라이트로 유지(PLAN-007 A-02 토큰 링 부분만 폐기). CHG-055의 소유 링 명시 폐기(가까운 오프셋 배치가 부착감 전달).
 Validation: typecheck/lint/test 152/build/format PASS. Playwright: 선택 상태에서 링 요소 0, tokenBodySelected 적용 확인, 콘솔 클린.
+
+### CHG-20260821-086 — UX — 그리기 모드: 레이아웃 안정·모드 배지·선택 도구·단축키 표시
+
+Problem: (1) 바 전환 시 푸터 높이 차(62↔54px)로 경기장이 리플로우하며 깜빡임. (2) 지금 어떤 모드인지 불명확. (3) 그리다가 선수/공을 옮기려면 모드를 나가야 함. (4) 단축키가 툴팁에만 있음.
+Change:
+- simpleBar min-height 62px — 재생 바·그리기 바 동일 높이, 전환 시 경기장 픽셀 이동 0.
+- 하단 좌측 세그먼트 모드 배지 [애니메이션|그리기 D] — 양쪽 바 공통, 클릭 토글(기존 펜 진입 버튼 대체).
+- 그리기 도구에 '선택'(커서 아이콘) 추가 — annotate.tool 'select'는 보드 포인터 그대로(선수/공 드래그·호버 프리뷰 동작), 그리기 바는 유지.
+- 단축키 표시: 종료 버튼에 Esc 칩, 도구 옆 희미한 "D 전환 · Ctrl+Z 취소" 힌트, keymap 가이드에 선택 도구 행.
+Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright drawmode2.cjs: 전환 전후 svg 크기 픽셀 동일, 배지 활성='그리기', 선택 도구로 선수 이동 성공, 이후 펜 정상, 복귀 시 재생 바·크기 동일 — ALL PASS, 콘솔 클린. (교훈: python 다중 hunk 스크립트는 assert 실패 시 전체 미적용 — 재적용으로 해결)

@@ -591,7 +591,8 @@ export function SimplePitch() {
     }
 
     // Draw mode (PLAN-008 D-01): the pointer belongs to the pen/eraser — board gestures stop.
-    if (st.annotate.on) {
+    // The 'select' tool keeps the NORMAL board pointer (move players/ball) inside draw mode.
+    if (st.annotate.on && st.annotate.tool !== 'select') {
       if (e.button !== 0) return
       const p = clampToPitch(pt, doc.pitch)
       if (st.annotate.tool === 'pen') {
@@ -1156,7 +1157,8 @@ export function SimplePitch() {
     }
     updateHoverRef.current = (e) => {
       // mouse only, authoring frame only, never during a gesture or a press (CR-07 conditions)
-      if (e.pointerType !== 'mouse' || viewingFrame || pressedId || ui.annotate.on) return
+      if (e.pointerType !== 'mouse' || viewingFrame || pressedId) return
+      if (ui.annotate.on && ui.annotate.tool !== 'select') return
       const svgEl = svgRef.current
       if (!svgEl) return
       hoverPt.current = clientToPitch(svgEl, e.clientX, e.clientY)
@@ -1192,7 +1194,7 @@ export function SimplePitch() {
       onPointerCancel={() => endGestureRef.current(false)}
       onPointerLeave={() => setHoverKey(null)}
       onContextMenu={(e) => e.preventDefault()}
-      style={ui.annotate.on ? { cursor: 'crosshair' } : undefined}
+      style={ui.annotate.on && ui.annotate.tool !== 'select' ? { cursor: 'crosshair' } : undefined}
     >
       <PitchMarkings pitch={doc.pitch} />
       <DrawingLayer drawings={doc.drawings} selectedIds={ui.selectedDrawingIds} t={ui.playback.t} />

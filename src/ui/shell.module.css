@@ -1102,6 +1102,8 @@
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
+  /* both bars (playback ↔ draw) keep the SAME height so the pitch never reflows on toggle */
+  min-height: 62px;
   background: color-mix(in srgb, var(--st-surface) 90%, transparent);
   backdrop-filter: blur(14px) saturate(1.4);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
@@ -1174,6 +1176,73 @@
   border-radius: 50%;
   background: currentColor;
   display: inline-block;
+}
+
+/* Bottom mode badge: segmented 애니메이션/그리기 toggle — always says which mode you're in. */
+.modeToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--st-surface-2);
+  border-radius: var(--st-radius-pill);
+  flex: none;
+}
+
+.modeSeg {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--st-text-2);
+  background: transparent;
+  border-radius: var(--st-radius-pill);
+  height: 28px;
+  padding: 0 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition:
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    color var(--st-motion-fast) var(--st-ease-out);
+}
+
+.modeSegOn {
+  background: var(--st-surface);
+  color: var(--st-text);
+  box-shadow: var(--st-depth-rest);
+}
+
+.kbdMini {
+  font-size: 10px;
+  color: var(--st-text-3);
+  background: var(--st-surface-2);
+  border: 1px solid var(--st-border);
+  border-radius: 4px;
+  padding: 0 4px;
+  line-height: 14px;
+}
+
+/* faint shortcut chips inside the draw bar (user 2026-08-21: 단축키도 도구바에 표시) */
+.kbdOnPrimary {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
+  padding: 0 5px;
+  line-height: 17px;
+  white-space: nowrap;
+}
+
+.drawHint {
+  font-size: 11.5px;
+  color: var(--st-text-3);
+  white-space: nowrap;
+  margin-left: 4px;
 }
 
 .playBtn {

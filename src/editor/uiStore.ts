@@ -94,10 +94,11 @@ export interface UiState {
   selectedDrawingIds: Id[]
   drawDraft: { kind: 'rect' | 'ellipse' | 'arrow'; a: Vec2; b: Vec2 } | null
   textEdit: { at: Vec2; id?: Id; value: string } | null
-  /** Freehand annotation mode (PLAN-008): footer bar swaps to the draw bar, board gestures stop. */
+  /** Freehand annotation mode (PLAN-008): footer bar swaps to the draw bar, board gestures stop.
+   *  'select' keeps the NORMAL board pointer (move players/ball) while staying in the draw bar. */
   annotate: {
     on: boolean
-    tool: 'pen' | 'eraser'
+    tool: 'pen' | 'eraser' | 'select'
     color: string
     width: number
   }

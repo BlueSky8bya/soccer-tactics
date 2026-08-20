@@ -96,6 +96,32 @@ export function AppShell() {
 
   const errors = compiled.issues.filter((i) => i.level === 'error')
 
+  // Bottom mode badge (user 2026-08-21): always shows WHICH mode the board is in, and toggles it.
+  const modeToggle = (
+    <span className={styles.modeToggle} role="group" aria-label={t('mode.label')}>
+      <button
+        type="button"
+        className={`${styles.modeSeg} ${!ui.annotate.on ? styles.modeSegOn : ''}`}
+        onClick={() => ui.setAnnotateOn(false)}
+        aria-pressed={!ui.annotate.on}
+      >
+        {t('mode.anim')}
+      </button>
+      <button
+        type="button"
+        className={`${styles.modeSeg} ${ui.annotate.on ? styles.modeSegOn : ''}`}
+        onClick={() => {
+          ui.returnToAuthoringStart()
+          ui.setAnnotateOn(true)
+        }}
+        aria-pressed={ui.annotate.on}
+      >
+        {t('mode.draw')}
+        <span className={styles.kbdMini}>D</span>
+      </button>
+    </span>
+  )
+
   return (
     <div className={styles.shell} data-simple="true" data-playing={ui.playback.playing}>
       <header className={styles.top}>
@@ -194,7 +220,19 @@ export function AppShell() {
         {ui.annotate.on ? (
           /* Draw bar (PLAN-008 D-01): replaces the playback bar while the pen owns the pitch. */
           <div className={styles.simpleBar}>
+            {modeToggle}
+            <span className={styles.barDivider} aria-hidden="true" />
             <span className={styles.barGroup}>
+              <button
+                type="button"
+                className={`${styles.btn} ${ui.annotate.tool === 'select' ? styles.btnActive : ''}`}
+                onClick={() => ui.setAnnotate({ tool: 'select' })}
+                title={t('draw.select')}
+                aria-label={t('draw.select')}
+                aria-pressed={ui.annotate.tool === 'select'}
+              >
+                <UiIcon name="cursor" />
+              </button>
               <button
                 type="button"
                 className={`${styles.btn} ${ui.annotate.tool === 'pen' ? styles.btnActive : ''}`}
@@ -215,6 +253,9 @@ export function AppShell() {
               >
                 <UiIcon name="eraser" />
               </button>
+              <span className={styles.drawHint} aria-hidden="true">
+                D 전환 · Ctrl+Z 취소
+              </span>
             </span>
             <span className={styles.barDivider} aria-hidden="true" />
             {/* VIC 그림판식 2줄 색 트레이(17색) + 마지막 칸 '직접 고르기'(네이티브 색상판) */}
@@ -301,11 +342,14 @@ export function AppShell() {
                 aria-label={t('draw.exit')}
               >
                 <UiIcon name="close" />
+                <span className={styles.kbdOnPrimary}>Esc</span>
               </button>
             </span>
           </div>
         ) : (
           <div className={styles.simpleBar}>
+            {modeToggle}
+            <span className={styles.barDivider} aria-hidden="true" />
             <span className={styles.barGroup}>
               <button
                 type="button"
@@ -349,18 +393,6 @@ export function AppShell() {
                 aria-label={t('gif.button')}
               >
                 {gifBusy ? '…' : 'GIF'}
-              </button>
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={() => {
-                  ui.returnToAuthoringStart()
-                  ui.setAnnotateOn(true)
-                }}
-                title={t('draw.enter')}
-                aria-label={t('draw.enter')}
-              >
-                <UiIcon name="pen" />
               </button>
             </span>
             <span className={styles.barDivider} aria-hidden="true" />
