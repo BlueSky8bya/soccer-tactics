@@ -397,16 +397,21 @@ export function AppShell() {
                   <UiIcon name="loop" size={15} />
                 </button>
               </span>
-              <button
-                type="button"
-                className={styles.btn}
-                onClick={exportPlayGif}
-                disabled={gifBusy || playEnd < 0.3}
-                title={t('gif.button')}
-                aria-label={t('gif.button')}
-              >
-                {gifBusy ? '…' : 'GIF'}
-              </button>
+              <span className={styles.toolCol}>
+                <span className={styles.toolKey} aria-hidden="true">
+                  GIF
+                </span>
+                <button
+                  type="button"
+                  className={styles.btn}
+                  onClick={exportPlayGif}
+                  disabled={gifBusy || playEnd < 0.3}
+                  title={t('gif.button')}
+                  aria-label={t('gif.button')}
+                >
+                  {gifBusy ? '…' : '내보내기'}
+                </button>
+              </span>
             </span>
             <span className={styles.barDivider} aria-hidden="true" />
             <StepBar />

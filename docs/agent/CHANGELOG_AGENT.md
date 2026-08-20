@@ -1113,3 +1113,9 @@ Validation: typecheck/lint/test 165/build/harness/format PASS. 신규: relayout 
 Problem: validator가 optional 필드(carryEnd/offset/offsetLocked/pressures/waypoint handle·hold)와 holderId/receiverId 참조를 검사하지 않아 NaN/문자열 오염이 parse를 통과(R8). attach/carry 반경이 2.6(clamp)·2.7(drop)·리터럴 산재로 경계 약속 분산(R10).
 Change: validateDocument — waypoint handleIn/Out·hold(≥0), move.carryEnd, possessed.offset(Vec)/offsetLocked(boolean)/holderId 참조, travel.receiverId 참조, freehand pressures(숫자·points와 동일 길이) 검사. compile.ts에 `CARRY_RING_MIN_M`/`CARRY_RING_MAX_M`/`ATTACH_RADIUS_M`(=max+0.1 headroom) 단일 정의 — carryOffset clamp와 SimplePitch drop/attach/highlight 판정 전부 이 상수 파생(2.7 리터럴 3곳 제거).
 Validation: typecheck/lint/test 167/build/harness/format PASS. 신규: malformed 거부 표(7종 path별) + valid optional 필드 클린 통과, ring 경계 r−ε/r/r+5 clamp 표 + ATTACH>RING 불변식.
+
+### CHG-20260821-116 — UX — GIF 버튼을 도구 열 패턴으로 (흐릿한 GIF 라벨 + 내보내기)
+
+Problem: 하단 바에서 GIF 버튼만 라벨 패턴(단축키/이름 흐릿하게 위, 동작 아래) 미적용 — 이웃(Home·G 반복)과 불일치(사용자 요청).
+Change: toolCol/toolKey로 감싸 흐릿한 "GIF" 위 + 버튼 텍스트 "내보내기"(busy 시 … 유지). aria/title 불변.
+Validation: typecheck/lint/test 167/build/harness/format PASS. Playwright footer 스크린샷 검수, 콘솔 클린.
