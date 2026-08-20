@@ -186,13 +186,13 @@ export function drawFrame(
     if (p.teamId === awayTeamId) {
       // away inner keyline (A-02a) — same cue as on screen
       ctx.beginPath()
-      ctx.arc(pos.x * k, pos.y * k, (TOKEN_R - 0.42) * k, 0, Math.PI * 2)
+      ctx.arc(pos.x * k, pos.y * k, (TOKEN_R - 0.34) * k, 0, Math.PI * 2)
       ctx.lineWidth = Math.max(1, 0.14 * k)
       ctx.strokeStyle = 'rgba(255,255,255,0.5)'
       ctx.stroke()
     }
     ctx.fillStyle = '#fff'
-    ctx.font = `700 ${Math.round(1.6 * k)}px system-ui, sans-serif`
+    ctx.font = `700 ${Math.round(1.3 * k)}px system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(String(p.number), pos.x * k, pos.y * k + 0.1 * k)

@@ -12,6 +12,6 @@ export const VISUAL = {
   teamAway: '#e03e3e',
   ballFill: '#ffffff',
   ballDetail: 'rgba(20,24,32,0.6)',
-  tokenRadiusM: 1.7,
-  ballRadiusM: 0.75,
+  tokenRadiusM: 1.2,
+  ballRadiusM: 0.62,
 } as const

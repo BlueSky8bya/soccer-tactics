@@ -922,3 +922,13 @@ Change:
 - simple 그리드 212/244 → 260/304px. sideRight 12→13px, guideHint 12.5→13.5, guideTitle·sectionLabel 11→12, kbd 11.5→12.5, panelBtn 34px/12 → 37px/13, panelPrimary 38/13 → 42/14, panelCard 패딩 13→15, panelHintLine 11.5→12.5.
 - 지우개 도구 커서 = 지우개 판정 반경(10px)에 맞는 지름 21px 링(SVG data URI, 흰 링+어두운 외곽) — 펜은 십자 유지, 선택은 기본.
 Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright(1920×950): 사이드 260/304 실측, 오버플로 0, 도구별 커서 crosshair/url(ring)/auto 확인, 스크린샷 검수, 콘솔 클린.
+
+### CHG-20260821-091 — UX — 커스텀 컬러 피커·칩 힌트·헤더 대개편·토큰 축소
+
+Problem: (1) 네이티브 색상판(OS 크롬)이 디자인과 충돌. (2) 정리 카드 단축키·Ctrl 안내가 맨 텍스트. (3) 헤더 브랜드 글씨 작고 A/B/C 칩의 짜친 + 버튼(사용자). (4) 선수 토큰이 경기장 대비 과대(반지름 1.5m).
+Change:
+- 신규 ColorPicker: SV 사각형+휴 바+헥스 입력 팝오버. 하단 바의 overflow 클리핑·backdrop-filter의 fixed 탈취 때문에 **body 포털**로 렌더(교훈: filter/backdrop-filter 조상은 fixed의 containing block이 된다).
+- 좌측 패널 힌트 전부 키캡 칩 구조([Ctrl+좌클릭] 우리팀 선수 추가, [Ctrl+Z] 되돌리기), 버튼 단축키(X·⇧R)도 칩 스타일.
+- 헤더: 브랜드 17→20px. A/B/C를 하단 모드 배지와 같은 세그먼트 컨트롤로(반복·정렬·비례) — 빈 안은 0.38 투명, 호버 시 +가 나타남(상시 + 제거).
+- 토큰 축소: 선수 r 1.5→1.2m, 공 0.62m(고스트·GIF·폰트·어웨이 키라인 동반 조정). 히트 반경(2.2/1.76)·소유 비교·캐리 계약은 불변 — 골든 유지.
+Validation: typecheck/lint/test 152/build/harness/format PASS. Playwright round3: 토큰 r 1.2, 칩 렌더, 피커 열림·사각형→휴 드래그로 #24b3b3 반영, 스크린샷 3종 검수, 콘솔 클린.

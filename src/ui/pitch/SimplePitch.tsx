@@ -1351,13 +1351,13 @@ export function SimplePitch() {
               <g className={styles.ghostBall}>
                 {/* small invisible hit halo; visual matches the live ball size */}
                 <circle r={1.0} fill="transparent" stroke="none" />
-                <circle r={0.75} />
+                <circle r={0.62} />
                 <circle cx={0} cy={-0.3} r={0.15} className={styles.ghostBallDot} />
                 <circle cx={-0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
                 <circle cx={0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
               </g>
             ) : (
-              <circle r={1.7} style={{ fill: g.color }} />
+              <circle r={1.35} style={{ fill: g.color }} />
             )}
             {g.number !== undefined && (
               <text textAnchor="middle" dominantBaseline="central">

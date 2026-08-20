@@ -2,9 +2,9 @@ import { memo, type ReactNode } from 'react'
 import type { Id, Vec2 } from '@/domain/types'
 import styles from './pitch.module.css'
 
-export const TOKEN_R = 1.5 // metres (visual)
+export const TOKEN_R = 1.2 // metres (visual) — user 2026-08-21: 실제 비율 쪽으로 축소 (가독 절충)
 export const TOKEN_HIT_R = 2.2 // metres (hit area ≥ visual; ≥28px at typical sizes)
-export const BALL_R = 0.75
+export const BALL_R = 0.62
 
 export interface TokenProps {
   id: Id
@@ -84,7 +84,7 @@ export const Token = memo(function Token(p: TokenProps) {
           className={`${styles.tokenBody} ${p.selected ? styles.tokenBodySelected : ''}`}
           style={{ fill: p.color }}
         />
-        {p.awayKeyline && <circle r={r - 0.42} className={styles.awayKeyline} />}
+        {p.awayKeyline && <circle r={r - 0.34} className={styles.awayKeyline} />}
         <text className={styles.tokenNumber}>{p.number}</text>
         {p.label && (
           <text className={styles.tokenLabel} y={r + 1.6}>

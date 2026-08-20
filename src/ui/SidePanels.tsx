@@ -71,8 +71,14 @@ export function ActionsPanel() {
         >
           ● {t('panel.ball')}
         </button>
-        <div className={styles.panelHintLine}>{t('panel.hintHome')}</div>
-        <div className={styles.panelHintLine}>{t('panel.hintAway')}</div>
+        <div className={styles.panelHintLine}>
+          <span className={styles.kbd}>Ctrl+좌클릭</span>
+          <span>{t('panel.hintHomeDo')}</span>
+        </div>
+        <div className={styles.panelHintLine}>
+          <span className={styles.kbd}>Ctrl+우클릭</span>
+          <span>{t('panel.hintAwayDo')}</span>
+        </div>
       </div>
 
       <div className={styles.panelCard}>
@@ -106,7 +112,10 @@ export function ActionsPanel() {
           🗑 {t('panel.reset')}
           <span className={styles.btnKbd}>⇧R</span>
         </button>
-        <div className={styles.muted}>{t('panel.clearHint')}</div>
+        <div className={styles.panelHintLine}>
+          <span className={styles.kbd}>Ctrl+Z</span>
+          <span>{t('panel.undoDo')}</span>
+        </div>
       </div>
     </aside>
   )

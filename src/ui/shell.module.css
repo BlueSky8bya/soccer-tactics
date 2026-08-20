@@ -30,8 +30,8 @@
 
 .brand {
   font-weight: 800;
-  font-size: 17px;
-  letter-spacing: -0.01em;
+  font-size: 20px;
+  letter-spacing: -0.015em;
   white-space: nowrap;
 }
 
@@ -1165,13 +1165,107 @@
   display: inline-block;
 }
 
-.colorInput {
-  position: absolute;
-  inset: 0;
+.colorCustomWrap {
+  position: relative;
+  display: inline-block;
+}
+
+/* colour popover (ColorPicker) — opens upward from the bottom bar */
+.cpop {
+  position: fixed;
+  z-index: 50;
+  width: 196px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-m);
+  box-shadow: var(--st-depth-overlay);
+}
+
+.cpSquare {
+  position: relative;
   width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
+  height: 132px;
+  border-radius: 8px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.cpThumb {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cpHue {
+  position: relative;
+  height: 14px;
+  border-radius: var(--st-radius-pill);
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.cpHueThumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cpRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cpSwatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex: none;
+}
+
+.cpHex {
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--st-text);
+  background: var(--st-surface-2);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-s);
+  height: 26px;
+  padding: 0 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cpHex:focus {
+  outline: none;
+  border-color: var(--st-accent);
+  box-shadow: 0 0 0 3px var(--st-accent-soft);
 }
 
 .widthDot {
@@ -1631,53 +1725,42 @@
 /* faint shortcut hint on panel buttons */
 .btnKbd {
   margin-left: auto;
-  padding-left: 4px;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
   color: var(--st-text-3);
-  opacity: 0.8;
+  background: color-mix(in srgb, var(--st-surface-2) 70%, transparent);
+  border: 1px solid var(--st-border);
+  border-radius: 5px;
+  padding: 0 6px;
+  line-height: 17px;
   flex: none;
 }
 
 /* A/B/C variant segmented control */
-.variantBar {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
-  background: color-mix(in srgb, var(--st-surface-2) 80%, transparent);
-  border: 1px solid var(--st-border);
-  border-radius: 999px;
-}
-
-.variantLabel {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--st-text-3);
-  padding: 0 4px;
-}
-
-.variantChip {
-  width: 34px;
-  min-width: 34px;
-  height: 30px;
-  padding: 0;
-  border-radius: 999px;
-  font-weight: 800;
-  font-size: 14px;
-}
-
-.variantEmpty {
-  border: 1px dashed var(--st-border-strong);
-  color: var(--st-text-3);
-  background: transparent;
-}
-
-.variantPlus {
-  font-size: 10px;
+/* A/B/C variants share the segmented-control language of the bottom mode badge (harmony:
+   repetition · alignment · proportion — user 2026-08-21). Empty slots sit quiet until hover. */
+.variantSeg {
+  min-width: 36px;
+  justify-content: center;
+  padding: 0 10px;
   font-weight: 700;
-  margin-left: 1px;
-  opacity: 0.7;
+  font-size: 13.5px;
+}
+
+.variantSegEmpty {
+  opacity: 0.38;
+  transition: opacity var(--st-motion-fast) var(--st-ease-out);
+}
+
+.variantSegEmpty:hover {
+  opacity: 0.85;
+}
+
+.variantSegEmpty:hover::after {
+  content: '+';
+  font-size: 10px;
+  margin-left: 2px;
+  opacity: 0.8;
 }
 
 /* team color dot in the 팀 구성 card */
@@ -1696,10 +1779,18 @@
 }
 
 .panelHintLine {
-  padding-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 2px;
   font-size: 12.5px;
-  color: var(--st-text-3);
+  color: var(--st-text-2);
   white-space: nowrap;
+}
+
+.panelHintLine .kbd {
+  flex: none;
+  font-size: 11.5px;
 }
 
 /* M2: hierarchy — frequent action big and near (Fitts), destructive quiet until intent */
@@ -1752,7 +1843,7 @@
 
 /* M6: keyboard focus is visible on every control, not only .btn */
 .stepChip:focus-visible,
-.variantChip:focus-visible,
+.variantSeg:focus-visible,
 .versionBadge:focus-visible {
   outline: 2px solid var(--st-accent);
   outline-offset: 1px;

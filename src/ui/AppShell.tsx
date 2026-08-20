@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { removeDrawings } from '@/editor/moreCommands'
 import { PEN_COLORS, PEN_WIDTHS } from './pitch/inking'
+import { ColorPicker } from './ColorPicker'
 import { downloadBlob, exportGif } from './exportGif'
 import { UiIcon } from './UiIcon'
 import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
@@ -36,6 +37,8 @@ export function AppShell() {
   const startTour = useUiStore((s) => s.startTour)
   const variants = useVariantSession()
   const [gifBusy, setGifBusy] = useState(false)
+  const [colorPickerOpen, setColorPickerOpen] = useState(false)
+  const customCellRef = useRef<HTMLButtonElement>(null)
   useEditorKeyboard()
 
   const exportPlayGif = async () => {
@@ -140,13 +143,15 @@ export function AppShell() {
         <span className={styles.headerCenter}>
           <span className={styles.brand}>{t('app.brand')}</span>
           {variants && (
-            <span className={styles.variantBar} role="group" aria-label={t('variant.label')}>
+            <span className={styles.modeToggle} role="group" aria-label={t('variant.label')}>
               {(['A', 'B', 'C'] as const).map((v) =>
                 variants.has(v) ? (
                   <button
                     key={v}
                     type="button"
-                    className={`${styles.btn} ${styles.variantChip} ${variants.activeId === v ? styles.btnActive : ''}`}
+                    className={`${styles.modeSeg} ${styles.variantSeg} ${
+                      variants.activeId === v ? styles.modeSegOn : ''
+                    }`}
                     onClick={() => switchVariant(v)}
                     aria-pressed={variants.activeId === v}
                     title={t('variant.switchTo', { v })}
@@ -157,12 +162,11 @@ export function AppShell() {
                   <button
                     key={v}
                     type="button"
-                    className={`${styles.btn} ${styles.variantChip} ${styles.variantEmpty}`}
+                    className={`${styles.modeSeg} ${styles.variantSeg} ${styles.variantSegEmpty}`}
                     onClick={() => cloneInto(v)}
                     title={t('variant.cloneInto', { v })}
                   >
                     {v}
-                    <span className={styles.variantPlus}>+</span>
                   </button>
                 ),
               )}
@@ -271,25 +275,31 @@ export function AppShell() {
                   aria-pressed={ui.annotate.color === c}
                 />
               ))}
-              <label
-                className={`${styles.colorCell} ${styles.colorCustom} ${
-                  PEN_COLORS.includes(ui.annotate.color) ? '' : styles.colorCellOn
-                }`}
-                title={t('draw.customColor')}
-                style={
-                  PEN_COLORS.includes(ui.annotate.color)
-                    ? undefined
-                    : { background: ui.annotate.color }
-                }
-              >
-                <input
-                  type="color"
-                  className={styles.colorInput}
-                  value={ui.annotate.color}
-                  onChange={(e) => ui.setAnnotate({ color: e.target.value, tool: 'pen' })}
+              <span className={styles.colorCustomWrap}>
+                <button
+                  type="button"
+                  ref={customCellRef}
+                  className={`${styles.colorCell} ${styles.colorCustom} ${
+                    PEN_COLORS.includes(ui.annotate.color) ? '' : styles.colorCellOn
+                  }`}
+                  title={t('draw.customColor')}
                   aria-label={t('draw.customColor')}
+                  style={
+                    PEN_COLORS.includes(ui.annotate.color)
+                      ? undefined
+                      : { background: ui.annotate.color }
+                  }
+                  onClick={() => setColorPickerOpen((o) => !o)}
                 />
-              </label>
+                {colorPickerOpen && (
+                  <ColorPicker
+                    color={ui.annotate.color}
+                    onChange={(c) => ui.setAnnotate({ color: c, tool: 'pen' })}
+                    onClose={() => setColorPickerOpen(false)}
+                    anchor={customCellRef.current}
+                  />
+                )}
+              </span>
             </span>
             <span className={styles.barDivider} aria-hidden="true" />
             <span className={styles.barGroup}>
