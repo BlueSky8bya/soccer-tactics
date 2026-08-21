@@ -15,7 +15,15 @@
  * Pure: no timers, no DOM. The hook feeds it a clock and it decides.
  */
 
-export type Cue = 'ctrl' | 'alt' | 'shift' | 'space'
+/**
+ * A cue is a STATE THE USER IS IN, not only a key they are holding.
+ *
+ * The modifier families answer "what does this key do"; the selection families answer the question
+ * that actually comes first — "I clicked this thing, now what?" (user 2026-08-22: 공 클릭했을 때
+ * 하이라이팅 되는 설명도 있어야지). They ride the same gate because a selection changes as fast as
+ * a modifier does: clicking a crowded spot cycles player → ghost → path on each press.
+ */
+export type Cue = 'ctrl' | 'alt' | 'shift' | 'space' | 'ball' | 'player' | 'path'
 
 /**
  * A modifier must be held this long before its shortcuts light up. Comfortably past a tap
@@ -53,8 +61,16 @@ export function cuesSettling(gates: Readonly<Record<Cue, CueGateState>>): boolea
   return (Object.values(gates) as CueGateState[]).some((g) => g.since !== null)
 }
 
-export const CUES: readonly Cue[] = ['ctrl', 'alt', 'shift', 'space']
+export const CUES: readonly Cue[] = ['ctrl', 'alt', 'shift', 'space', 'ball', 'player', 'path']
 
 export function emptyGates(): Record<Cue, CueGateState> {
-  return { ctrl: idleCue, alt: idleCue, shift: idleCue, space: idleCue }
+  return {
+    ctrl: idleCue,
+    alt: idleCue,
+    shift: idleCue,
+    space: idleCue,
+    ball: idleCue,
+    player: idleCue,
+    path: idleCue,
+  }
 }

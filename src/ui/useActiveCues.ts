@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useEditor } from '@/editor/EditorContext'
 import { useUiStore } from '@/editor/uiStore'
 import {
   CUES,
@@ -10,21 +11,49 @@ import {
 } from './cueHighlight'
 
 /**
- * Which shortcut family the user is in the middle of, settled through the anti-flicker gate.
+ * Which states the user is currently in, settled through the anti-flicker gate.
  *
- * The raw signals are held modifiers and "the play is running". A held key emits nothing while it
- * is down, so a change that is still being decided keeps a light interval alive; once every gate
- * agrees with reality the interval stops and this costs nothing at rest.
+ * Two kinds of raw signal, one gate:
+ *
+ *  · HELD KEYS and "the play is running" — a held key emits nothing while it is down, so a change
+ *    that is still being decided keeps a light interval alive.
+ *  · WHAT IS SELECTED — the ball, a player, a movement being edited. These answer the question that
+ *    comes first ("I clicked this, now what?") and they change just as fast as a modifier does:
+ *    clicking a crowded spot cycles player → ghost → path on every press, so they need the same
+ *    dwell before they are allowed to claim the panel.
+ *
+ * Once every gate agrees with reality the interval stops and this costs nothing at rest.
  */
 export function useActiveCues(): ReadonlySet<Cue> {
+  const core = useEditor()
   const playing = useUiStore((s) => s.playback.playing)
+  // BOOLEANS, not the selection array: the array gets a fresh identity on every store write, so
+  // subscribing to it would re-render these panels constantly. The ball's id is a domain constant
+  // ('ball'), so deriving inside the selector is safe.
+  const ballId = core.getDocument().ball.id
+  const ballSelected = useUiStore((s) => s.selection.includes(ballId))
+  const playerSelected = useUiStore((s) => s.selection.some((id) => id !== ballId))
+  const segmentId = useUiStore((s) => s.selectedSegmentId)
+  const drafting = useUiStore((s) => s.pathDraft !== null)
   const [active, setActive] = useState<ReadonlySet<Cue>>(() => new Set<Cue>())
   const gates = useRef<Record<Cue, CueGateState>>(emptyGates())
-  const raw = useRef<Record<Cue, boolean>>({ ctrl: false, alt: false, shift: false, space: false })
+  const raw = useRef<Record<Cue, boolean>>({
+    ctrl: false,
+    alt: false,
+    shift: false,
+    space: false,
+    ball: false,
+    player: false,
+    path: false,
+  })
   const timer = useRef<number | null>(null)
 
   useEffect(() => {
     raw.current.space = playing
+    raw.current.ball = ballSelected
+    raw.current.player = playerSelected
+    // "Editing a movement" is either one selected or one being drawn right now.
+    raw.current.path = segmentId !== null || drafting
 
     const settle = () => {
       const now = performance.now()
@@ -71,7 +100,7 @@ export function useActiveCues(): ReadonlySet<Cue> {
         timer.current = null
       }
     }
-  }, [playing])
+  }, [playing, ballSelected, playerSelected, segmentId, drafting])
 
   return active
 }

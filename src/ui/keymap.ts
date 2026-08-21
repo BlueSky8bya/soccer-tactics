@@ -23,16 +23,24 @@ export interface Binding {
    */
   chip?: boolean
   /**
-   * Which shortcut family this belongs to. While the user is actually in that state — Ctrl held,
-   * the play running, Alt down for a path — its rows light up, so the panel answers what you are
-   * doing instead of listing everything at one volume (user 2026-08-22).
+   * Which states this row belongs to. While the user is in ANY of them — Ctrl held, the play
+   * running, the ball selected, a movement being edited — the row lights up, so the panel answers
+   * what you are doing instead of listing everything at one volume (user 2026-08-22).
+   *
+   * A list, because a row can belong to more than one: drawing from a faded token is both an Alt
+   * gesture and part of editing a movement, and it should light either way.
    */
-  cue?: Cue
+  cues?: readonly Cue[]
+}
+
+/** Does this row belong to any state the user is currently in? */
+export function isCued(b: Binding, active: ReadonlySet<Cue>): boolean {
+  return !!b.cues?.some((c) => active.has(c))
 }
 
 export const KEYMAP = {
   playback: {
-    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지', chip: true, cue: 'space' },
+    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지', chip: true, cues: ['space'] },
     // its own row, not a tail on the Space hint — the hold was undiscoverable buried there
     // (user 2026-08-21: space 꾹 누르는 키도 안내하게)
     boost: {
@@ -40,10 +48,10 @@ export const KEYMAP = {
       label: 'Space 꾹',
       hint: `누르는 동안 ${BOOST_FACTOR}배속`,
       chip: true,
-      cue: 'space',
+      cues: ['space'],
     },
-    restart: { key: 'Home', label: 'Home', hint: '처음으로', chip: true, cue: 'space' },
-    loop: { key: 'g', label: 'G', hint: '반복', chip: true, cue: 'space' },
+    restart: { key: 'Home', label: 'Home', hint: '처음으로', chip: true, cues: ['space'] },
+    loop: { key: 'g', label: 'G', hint: '반복', chip: true, cues: ['space'] },
     zen: { key: 'f', label: 'F', hint: '패널 숨기기 / 되돌리기', chip: true },
   },
   edit: {
@@ -63,45 +71,47 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
   { label: '드래그', hint: '옮기기 (여러 명이면 같이)' },
   { label: '빈 잔디 드래그', hint: '박스로 여러 명 선택' },
-  { label: 'Shift+잔디 드래그', hint: '기존 선택에 박스 추가', cue: 'shift' },
-  { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)', cue: 'ctrl' },
+  { label: 'Shift+잔디 드래그', hint: '기존 선택에 박스 추가', compact: true, cues: ['shift'] },
+  { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)', cues: ['ctrl'] },
   {
     label: '겹친 곳 다시 클릭',
     hint: '겹쳐 있는 다음 대상 선택 (선수→고스트→경로 순환)',
     compact: true,
   },
-  { label: '공 → 선수 드롭', hint: '그 선수가 공 보유' },
+  { label: '공 → 선수 드롭', hint: '그 선수가 공 보유', cues: ['ball'] },
   {
     label: '공 휙 던지기',
     hint: '빠르게 놓으면 관성으로 굴러감 (경계선 튕김, 선수 근처 정지 시 보유)',
     compact: true,
+    cues: ['ball'],
   },
   {
     label: '공 더블클릭+드래그',
     hint: '당긴 반대 방향으로 발사 — 점선 길이는 세기 (공은 그보다 더 나감)',
     compact: true,
+    cues: ['ball'],
   },
-  { label: '선수 클릭', hint: '등번호·이름·포지션 편집', compact: true },
+  { label: '선수 클릭', hint: '등번호·이름·포지션 편집', compact: true, cues: ['player'] },
 ]
 
 /** 경로 그리기·다듬기·재생. */
 export const ANIM_BINDINGS: Binding[] = [
-  { label: 'Alt+드래그', hint: '선수는 이동 경로, 공은 패스', compact: true, cue: 'alt' },
+  { label: 'Alt+드래그', hint: '선수는 이동 경로, 공은 패스', compact: true, cues: ['alt', 'ball', 'player'] },
   {
     label: 'Alt+클릭',
     hint: '고른 대상이 클릭한 곳까지 직선으로 — 잔디·선수·흐린 토큰 어디든 (휘는 건 나중에 선을 당겨서)',
     compact: true,
-    cue: 'alt',
+    cues: ['alt', 'ball', 'player'],
   },
   {
     label: '흐린 토큰 Alt+드래그·클릭',
     hint: '그 엔티티의 다음 움직임을 이어 그리기 (어느 시점 토큰을 눌러도 마지막에서 이어져요)',
     compact: true,
-    cue: 'alt',
+    cues: ['alt', 'path'],
   },
-  { label: '흐린 토큰 드래그', hint: '그 움직임의 끝 위치 미세조정', compact: true },
-  { label: '경로 클릭', hint: '선택 후 Delete 삭제, 숫자키로 단계 변경', compact: true },
-  { label: '경로 드래그', hint: '잡은 지점을 당겨 곡선으로 휘기', compact: true },
+  { label: '흐린 토큰 드래그', hint: '그 움직임의 끝 위치 미세조정', compact: true, cues: ['path'] },
+  { label: '경로 클릭', hint: '선택 후 Delete 삭제, 숫자키로 단계 변경', compact: true, cues: ['path'] },
+  { label: '경로 드래그', hint: '잡은 지점을 당겨 곡선으로 휘기', compact: true, cues: ['path'] },
   { label: '배지/경로 클릭', hint: '움직임 선택 — 단계·재생·삭제 카드 표시' },
   { label: '단계 1~9', hint: '같은 번호는 같이, 다음 번호는 이어서' },
 ]
@@ -126,9 +136,9 @@ export const DRAW_BINDINGS: Binding[] = [
  * they read as what they are — the modifier's own vocabulary.
  */
 export const CTRL_BINDINGS: Binding[] = [
-  { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가', chip: true, cue: 'ctrl' },
-  { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가', chip: true, cue: 'ctrl' },
-  { label: 'Ctrl+Z', hint: '되돌리기', chip: true, cue: 'ctrl' },
+  { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가', chip: true, cues: ['ctrl'] },
+  { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가', chip: true, cues: ['ctrl'] },
+  { label: 'Ctrl+Z', hint: '되돌리기', chip: true, cues: ['ctrl'] },
 ]
 
 export const GUIDE_PLACE_BINDINGS: Binding[] = PLACE_BINDINGS.filter((b) => b.compact)

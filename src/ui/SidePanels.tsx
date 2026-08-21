@@ -13,6 +13,7 @@ import {
   GUIDE_ANIM_BINDINGS,
   GUIDE_PLACE_BINDINGS,
   GUIDE_PLAY_BINDINGS,
+  isCued,
   type Binding,
 } from './keymap'
 import { useActiveCues } from './useActiveCues'
@@ -110,7 +111,7 @@ export function ActionsPanel() {
         <div className={styles.sectionLabel}>{t('panel.ctrl')}</div>
         <div className={styles.shortcutList}>
           {CTRL_BINDINGS.map((b) => (
-            <ShortcutRow key={b.label} b={b} active={!!b.cue && cues.has(b.cue)} />
+            <ShortcutRow key={b.label} b={b} active={isCued(b, cues)} />
           ))}
         </div>
       </div>
@@ -122,7 +123,7 @@ export function ActionsPanel() {
         <div className={styles.sectionLabel}>{t('tl.play')}</div>
         <div className={styles.shortcutList}>
           {GUIDE_PLAY_BINDINGS.map((b) => (
-            <ShortcutRow key={b.label} b={b} active={!!b.cue && cues.has(b.cue)} />
+            <ShortcutRow key={b.label} b={b} active={isCued(b, cues)} />
           ))}
         </div>
       </div>
@@ -171,7 +172,7 @@ export function GuidePanel() {
         <div className={styles.sectionLabel}>{t('panel.place')}</div>
         <div className={styles.shortcutList}>
           {GUIDE_PLACE_BINDINGS.map((b) => (
-            <ShortcutRow key={b.label} b={b} active={!!b.cue && cues.has(b.cue)} />
+            <ShortcutRow key={b.label} b={b} active={isCued(b, cues)} />
           ))}
         </div>
       </div>
@@ -179,7 +180,7 @@ export function GuidePanel() {
         <div className={styles.sectionLabel}>{t('panel.anim')}</div>
         <div className={styles.shortcutList}>
           {GUIDE_ANIM_BINDINGS.map((b) => (
-            <ShortcutRow key={b.label} b={b} active={!!b.cue && cues.has(b.cue)} />
+            <ShortcutRow key={b.label} b={b} active={isCued(b, cues)} />
           ))}
         </div>
       </div>
