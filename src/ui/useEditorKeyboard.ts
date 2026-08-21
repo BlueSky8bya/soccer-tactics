@@ -77,16 +77,38 @@ export function useEditorKeyboard(): void {
         }
       }
 
-      // Draw mode (PLAN-008): only undo/redo (above), D-toggle and Esc (pitch handles it) apply —
-      // playback/step/delete keys are the board's language, and the board is asleep.
+      // Draw mode (PLAN-008): the pen owns the pointer, so the board's playback keys stay out.
       if (ui.annotate.on) {
         if (key === 'd') {
           e.preventDefault()
           ui.setAnnotateOn(false)
-        } else if (key === 'v') ui.setAnnotate({ tool: 'select' })
-        else if (key === 'p') ui.setAnnotate({ tool: 'pen' })
-        else if (key === 'e') ui.setAnnotate({ tool: 'eraser' })
-        return
+          return
+        }
+        if (key === 'v') {
+          ui.setAnnotate({ tool: 'select' })
+          return
+        }
+        if (key === 'p') {
+          ui.setAnnotate({ tool: 'pen' })
+          return
+        }
+        if (key === 'e') {
+          ui.setAnnotate({ tool: 'eraser' })
+          return
+        }
+        // F is a VIEW command, not a board command — hiding the panels to draw on more grass is
+        // exactly when you want it.
+        const viewKey = key === 'f'
+        /**
+         * The select tool hands the board pointer back (uiStore), so the board's EDITING keys have
+         * to come back with it: selecting a player and pressing Delete did nothing at all
+         * (user 2026-08-22). Playback and the destructive whole-board keys stay out — draw mode
+         * parks the clock at the authoring frame and its own trash button clears the ink.
+         */
+        const editKey =
+          ui.annotate.tool === 'select' &&
+          (key === 'Delete' || key === 'Backspace' || key === 'Escape' || /^[1-9]$/.test(key))
+        if (!viewKey && !editKey) return
       }
       if (key === 'd') {
         e.preventDefault()

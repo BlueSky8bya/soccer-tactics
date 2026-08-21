@@ -10,10 +10,15 @@ import {
 } from './inking'
 
 describe('VIC pen grammar (reference-verbatim golden numbers)', () => {
-  it('palette and widths match the reference exactly', () => {
+  it('palette and widths match the reference, with the one authored deviation', () => {
+    // 17 slots and the widths are the reference's. The single departure is white in slot 1,
+    // trading one of three near-identical pinks for the most legible pen on a green pitch
+    // (user 2026-08-22). Pinned here so the deviation stays deliberate rather than drifting.
     expect(PEN_COLORS).toHaveLength(17)
     expect(PEN_COLORS[0]).toBe('#000000')
-    expect(PEN_COLORS[16]).toBe('#f472b6')
+    expect(PEN_COLORS[1]).toBe('#ffffff')
+    expect(PEN_COLORS).not.toContain('#f472b6')
+    expect(PEN_COLORS[16]).toBe('#e879f9')
     expect(PEN_WIDTHS).toEqual([2, 3, 5, 8, 12, 18])
   })
 

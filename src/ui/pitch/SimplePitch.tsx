@@ -59,6 +59,7 @@ import { PathLayer } from '@/renderer/PathLayer'
 import { PitchMarkings } from '@/renderer/PitchMarkings'
 import styles from '@/renderer/pitch.module.css'
 import { clientToPitch } from '@/renderer/pointer'
+import { clampToView, usePitchView } from './useSvgMetrics'
 import { t } from '../i18n'
 import { teamColorOf } from '../teamColor'
 import { AnimatedToken } from './AnimatedToken'
@@ -254,6 +255,8 @@ export function SimplePitch() {
    */
   const [detachPos, setDetachPos] = useState<Vec2 | null>(null)
   const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
+  /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
+  const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
   const flingDoneRef = useRef<(() => void) | null>(null)
   const flingKeyRef = useRef(0)
   /** Player under the DRAGGED ball (≤2.6m) — lights up so "give" vs "ground" is obvious. */
@@ -630,9 +633,7 @@ export function SimplePitch() {
       // The aim mutates nothing, so the transaction opens here (a drag-thrown ball already has
       // one open from its drag) — one undo step for the whole throw.
       core.begin('Sling ball')
-      launchBall(
-        simulateFling(g.ballAt, v, doc.pitch, goalGeomFor(doc.pitch), SLING_MAX_SPEED),
-      )
+      launchBall(simulateFling(g.ballAt, v, doc.pitch, goalGeomFor(doc.pitch), SLING_MAX_SPEED))
       return
     }
 
@@ -693,7 +694,9 @@ export function SimplePitch() {
       let at = drag?.raw ?? d.ball.home
       // FLING (user 2026-08-21): a fast release throws the ball — it rolls out with drag and
       // wall bounces (pure sim), and only the RESTING spot becomes the document position.
-      const vel = commit && g.samples ? flingVelocity(g.samples, performance.now()) : null
+      const grabbedAt = g.group.get(g.id) ?? g.home
+      const vel =
+        commit && g.samples ? flingVelocity(g.samples, performance.now(), grabbedAt) : null
       const speed = vel ? Math.hypot(vel.x, vel.y) : 0
       // Released ON a player (the drop-target highlight is showing) = GIVE, never a throw —
       // the promise the highlight makes wins over release velocity (user 2026-08-21).
@@ -750,6 +753,11 @@ export function SimplePitch() {
             }))
           : []
         flingDoneRef.current = settleAndAttach
+        // Pin the visual to the START of the roll in the SAME commit that starts it. The document
+        // already holds the resting spot, and the roll driver only writes flingPos on its first
+        // rAF — so for one frame the ball was drawn where it will END UP, which read as the ball
+        // blinking to the far side and exploding back (user 2026-08-22: 순간 깜빡거리면서).
+        setFlingPos({ pos: { x: fling.points[0]!.x, y: fling.points[0]!.y }, spin: 0 })
         setFlingAnim({ points: fling.points, key: (flingKeyRef.current += 1) })
       } else {
         settleAndAttach()
@@ -898,7 +906,7 @@ export function SimplePitch() {
     if (!g || g.type !== 'annot-erase') return
     const svg = svgRef.current
     const width = svg ? svg.getBoundingClientRect().width : 1
-    const tol = 10 * ((doc.pitch.length + 4) / Math.max(1, width))
+    const tol = 10 * (view.w / Math.max(1, width))
     const hit = core.getDocument().drawings.find((dr) => {
       if (dr.kind === 'freehand' || dr.kind === 'line') return distToPolyline(pt, dr.points) <= tol
       if (dr.kind === 'arrow') return distToPolyline(pt, [dr.from, dr.to]) <= tol
@@ -936,7 +944,9 @@ export function SimplePitch() {
     // The 'select' tool keeps the NORMAL board pointer (move players/ball) inside draw mode.
     if (st.annotate.on && st.annotate.tool !== 'select') {
       if (e.button !== 0) return
-      const p = clampToPitch(pt, doc.pitch)
+      // The pen may use every millimetre the board SHOWS, surround included — clamping it to the
+      // pitch rectangle collapsed strokes onto the touchline the moment the panels were hidden.
+      const p = clampToView(pt, view)
       if (st.annotate.tool === 'pen') {
         // VIC pen grammar: stylus starts at its mapped pressure, mouse/touch at 0.8.
         const f0 = e.pointerType === 'pen' ? mapPenPressure(e.pressure) : 0.8
@@ -1239,7 +1249,7 @@ export function SimplePitch() {
       g.dyn = { t: e.timeStamp, x: e.clientX, y: e.clientY, f }
       const keptDist = Math.hypot(e.clientX - g.lastKept.x, e.clientY - g.lastKept.y)
       if (keptDist >= MIN_POINT_DIST_PX) {
-        g.points.push(clampToPitch(pt, doc.pitch))
+        g.points.push(clampToView(pt, view))
         g.pressures.push(f)
         g.lastKept = { x: e.clientX, y: e.clientY }
         setAnnotDraft({ points: [...g.points], pressures: [...g.pressures] })
@@ -1316,7 +1326,10 @@ export function SimplePitch() {
 
     if (g.type === 'sling') {
       g.pointer = pt
-      if (!g.started && Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y) > DRAG_THRESHOLD_PX)
+      if (
+        !g.started &&
+        Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y) > DRAG_THRESHOLD_PX
+      )
         g.started = true
       if (!g.started) return
       // The line is a POWER meter: it mirrors the pull, and the ball carries past its tip
@@ -1437,8 +1450,7 @@ export function SimplePitch() {
     // eslint-disable-next-line no-underscore-dangle
     ;(window as unknown as Record<string, unknown>).__stCompiled = compiled
     // eslint-disable-next-line no-underscore-dangle
-    ;(window as unknown as Record<string, unknown>).__stClock = () =>
-      useUiStore.getState().playback
+    ;(window as unknown as Record<string, unknown>).__stClock = () => useUiStore.getState().playback
   }, [doc, compiled])
 
   // Geometric pick inputs (PLAN-007 M1): sampled FULL paths, cached by segment identity.
@@ -1787,7 +1799,7 @@ export function SimplePitch() {
             })),
         segments: pickSegments,
         pt,
-        metresPerPixel: (doc.pitch.length + 4) / Math.max(1, width),
+        metresPerPixel: view.w / Math.max(1, width),
         currentStep: ui.currentStep,
         selection: ui.selection,
         selectedSegmentId: ui.selectedSegmentId,
@@ -1822,7 +1834,7 @@ export function SimplePitch() {
     <svg
       ref={svgRef}
       className={styles.stage}
-      viewBox={`-2 -2 ${L + 4} ${W + 4}`}
+      viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
       role="application"
       aria-label="Tactical pitch"
       tabIndex={0}

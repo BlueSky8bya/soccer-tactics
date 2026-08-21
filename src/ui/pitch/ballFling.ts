@@ -39,6 +39,13 @@ export const FLING_WINDOW_MS = 110
  * as 15 m/s and launched it across the pitch (user 2026-08-21: 조금 움직였는데도 공이 급발진).
  */
 export const FLING_MIN_TRAVEL_M = 2.5
+/**
+ * …and the DRAG AS A WHOLE has to have been a sweep, not a nudge. The window test above only sees
+ * the last ~110 ms, so picking a ball up and flicking it two metres still read as a throw and sent
+ * it across the pitch (user 2026-08-22: 공 조금만 잡고 옮겨도 지 혼자 슉 지나가고). Distance from
+ * where the ball was grabbed is the honest measure of "did the hand actually throw this".
+ */
+export const FLING_MIN_SWEEP_M = 5
 
 /**
  * Release velocity from the drag's recent samples. Direction comes from the window's net
@@ -46,7 +53,12 @@ export const FLING_MIN_TRAVEL_M = 2.5
  * pointer briefly reporting far from where the hand is — cannot decide the throw. Returns null
  * when the gesture was a placement rather than a throw.
  */
-export function flingVelocity(samples: readonly FlingSample[], releaseT: number): Vec2 | null {
+export function flingVelocity(
+  samples: readonly FlingSample[],
+  releaseT: number,
+  /** Where the ball was when the drag began — the sweep gate measures against this. */
+  grabbedAt?: Vec2,
+): Vec2 | null {
   if (samples.length < 3) return null
   const last = samples[samples.length - 1]!
   // held still before letting go → deliberate placement, never a throw
@@ -60,6 +72,8 @@ export function flingVelocity(samples: readonly FlingSample[], releaseT: number)
   const dy = last.y - first.y
   const travel = Math.hypot(dx, dy)
   if (travel < FLING_MIN_TRAVEL_M) return null
+  if (grabbedAt && Math.hypot(last.x - grabbedAt.x, last.y - grabbedAt.y) < FLING_MIN_SWEEP_M)
+    return null
   const speeds: number[] = []
   for (let i = 1; i < win.length; i++) {
     const step = (win[i]!.t - win[i - 1]!.t) / 1000

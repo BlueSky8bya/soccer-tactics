@@ -241,6 +241,43 @@
   background: var(--st-pitch-surround);
 }
 
+/* Zen's way back. Sits in the board's top-left, where the panel it replaced used to be, quiet
+   until you look for it. */
+.zenExit {
+  position: absolute;
+  top: calc(var(--st-space-3) + 10px);
+  left: calc(var(--st-space-3) + 12px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px 0 7px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--st-text-2);
+  background: color-mix(in srgb, var(--st-surface) 84%, transparent);
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-pill);
+  box-shadow: var(--st-shadow-2);
+  cursor: pointer;
+  opacity: 0.5;
+  transition:
+    opacity var(--st-motion-fast) var(--st-ease-out),
+    transform var(--st-spring-press-ms) var(--st-spring-press);
+}
+
+.zenExit:hover,
+.zenExit:focus-visible {
+  opacity: 1;
+}
+
+.zenExit:active {
+  transform: scale(0.96);
+  transition: transform var(--st-motion-instant) var(--st-ease-out);
+}
+
 .emptyHint {
   position: absolute;
   left: 50%;
@@ -1010,6 +1047,64 @@
   box-shadow: var(--st-depth-rest);
 }
 
+/*
+ * Shortcut rows — ONE layout for both columns (see ShortcutRow).
+ *
+ * Label and hint both start at the card's left edge, so the whole list has a single straight
+ * edge; rhythm separates the rows, not a hairline under each one. Gestalt proximity does the
+ * grouping: 3px inside a row against 11px between rows is a ratio of 3.7, far past the 1.5 where
+ * grouping goes multistable (Kubovy's pure distance law), so a label and its hint read as one
+ * unit at a glance.
+ */
+.shortcutList {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.shortcutRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* Keycap rows: cap and hint on one line, both flush to the same left edge as the stacked rows.
+   A wrapped hint hangs under itself, which is how every shortcut list sets this. */
+.shortcutRowInline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.shortcutRowInline .shortcutHint {
+  /* level with the cap's text on the first line */
+  padding-top: 1px;
+}
+
+.shortcutLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--st-text);
+  line-height: 1.35;
+}
+
+.shortcutHint {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--st-text-2);
+  min-width: 0;
+}
+
+.shortcutRow .kbd {
+  font-size: 11.5px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--st-text);
+}
+
 .panelBtn {
   justify-content: flex-start;
   border: 1px solid var(--st-border);
@@ -1055,54 +1150,6 @@
   background: rgba(255, 59, 48, 0.14);
 }
 
-.guideGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 13px;
-  background: var(--st-surface);
-  border-radius: var(--st-radius-card);
-  box-shadow: var(--st-depth-rest);
-}
-
-.guideTitle {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--st-text-3);
-}
-
-.guideRow {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--st-border);
-}
-
-.guideRow:last-child {
-  border-bottom: 0;
-  padding-bottom: 2px;
-}
-
-.guideRow .kbd {
-  font-size: 12.5px;
-  padding: 1px 7px;
-  line-height: 19px;
-}
-
-.guideHint {
-  color: var(--st-text-2);
-  font-size: 13.5px;
-  line-height: 1.45;
-}
-
-.guideDim {
-  opacity: 0.55;
-}
-
 .pitchAreaSimple {
   grid-area: pitch;
   position: relative;
@@ -1125,11 +1172,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  /* Tallest column is the play button under its key label (11 + 44). The bar has to clear that
-     with real breathing room, or everything reads squashed (user 2026-08-21: 위/아래로 찌부). */
+  /* Tallest column is the shared transport grid (13 + 44 = 57). The bar has to clear that with
+     real breathing room, or everything reads squashed (user 2026-08-21: 위/아래로 찌부). */
   padding: 11px 14px;
   /* both bars (playback ↔ draw) keep the SAME height so the pitch never reflows on toggle */
-  min-height: 78px;
+  min-height: 79px;
   background: color-mix(in srgb, var(--st-surface) 90%, transparent);
   backdrop-filter: blur(14px) saturate(1.4);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
@@ -1188,12 +1235,18 @@
 
 .colorCustom {
   background: conic-gradient(#f43f5e, #fbbf24, #a3e635, #22d3ee, #818cf8, #e879f9, #f43f5e);
-  display: inline-block;
+  display: block;
 }
 
+/* `inline-block` put this button on a text baseline, so the half-leading under it pushed the cell
+   a couple of pixels below every other swatch in its row (user 2026-08-22: 색 직접 고르기 버튼만
+   같은 행 다른 색상 버튼보다 살짝 아래). A zero line-height block sits exactly in its grid cell. */
 .colorCustomWrap {
   position: relative;
-  display: inline-block;
+  display: block;
+  width: 16px;
+  height: 16px;
+  line-height: 0;
 }
 
 /* colour popover (ColorPicker) — opens upward from the bottom bar */
@@ -1348,28 +1401,39 @@
   line-height: 14px;
 }
 
-/* draw tools: faint shortcut key ABOVE each icon (user 2026-08-21) */
+/*
+ * Transport / draw-tool column: a faint shortcut key ABOVE each control (user 2026-08-21).
+ *
+ * These were flex COLUMNS, so each one was as tall as its own contents — 11+44 under the play
+ * button, 11+30 under the rest — and the bar centred each of them separately. Result: four key
+ * labels at three different heights and buttons on no shared line at all (user 2026-08-22:
+ * 재생 버튼의 단축키 안내와 다른 단축키 안내가 높이가 달라서). A two-row GRID with fixed track
+ * heights gives every column the same two lines: keys share a baseline, buttons share a centre,
+ * whatever each control's own size is.
+ */
 .toolCol {
-  display: inline-flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: var(--st-toolkey-row) var(--st-toolbtn-row);
+  justify-items: center;
   align-items: center;
   gap: 0;
 }
 
 .toolKey {
   font-size: 9.5px;
-  line-height: 11px;
+  line-height: var(--st-toolkey-row);
   color: var(--st-text-3);
   opacity: 0.8;
   user-select: none;
+  align-self: end;
+  white-space: nowrap;
 }
 
 .toolCol .btn {
-  height: 30px;
+  height: 32px;
 }
 
-/* The primary transport keeps its circle inside a key column — the 30px rule above is more
-   specific than .playBtn and was flattening it into an oval. */
+/* The primary transport keeps its circle — the rule above is more specific than .playBtn. */
 .toolCol .playBtn {
   height: 44px;
 }
@@ -1641,6 +1705,36 @@
   scrollbar-color: var(--st-border-strong) transparent;
 }
 
+/* Opens upward when the trigger sits low (the player card lives at the top of the board, the
+   formation menus at the left — both can run out of room below). */
+.selectPopUp {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.selectGroup {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--st-text-3);
+  padding: 7px 8px 3px 26px;
+}
+
+.selectGroup:first-child {
+  padding-top: 3px;
+}
+
+.selectPlaceholder {
+  color: var(--st-text-3);
+}
+
+/* Keyboard/pointer focus inside the list — one highlight, driven by `active`, so arrowing and
+   hovering cannot disagree about which row is next. */
+.selectItemActive {
+  background: var(--st-surface-2);
+}
+
 .selectItem {
   appearance: none;
   border: 0;
@@ -1708,8 +1802,18 @@
   white-space: nowrap;
 }
 
-.playerCard input,
-.playerCard select {
+.playerRoleField {
+  /* the role menu needs a stable width or the pill card resizes as roles change length */
+  width: 104px;
+}
+
+.playerRoleField .selectBtn {
+  height: 26px;
+  font-size: 12.5px;
+  padding: 0 8px;
+}
+
+.playerCard input {
   font: inherit;
   font-size: 12.5px;
   border: 1px solid var(--st-border);
@@ -1821,29 +1925,6 @@
   border-radius: 50%;
   flex: none;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12) inset;
-}
-
-.panelHintLine {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding-left: 2px;
-  font-size: 12.5px;
-  /* same as the .kbd chip, so the first text line sits level with the key and wrapped lines
-     stack evenly underneath it */
-  line-height: 17px;
-  color: var(--st-text-2);
-}
-
-.panelHintLine .kbd {
-  flex: none;
-  font-size: 11.5px;
-}
-
-/* Long guidance (Space 꾹) has to wrap inside the card. The row used to be nowrap, which was
-   invisible while every hint was three words and ran off the panel the moment one was not. */
-.panelHintLine > :last-child {
-  min-width: 0;
 }
 
 /* M2: hierarchy — frequent action big and near (Fitts), destructive quiet until intent */

@@ -15,21 +15,28 @@ export interface Binding {
    * which keeps the FULL reference.
    */
   compact?: boolean
+  /**
+   * The label is a literal KEY, so it is drawn as a keycap. Gestures ("경로 드래그") are drawn as
+   * plain text: capping them made the panel a wall of mismatched pills with no straight edge
+   * anywhere (user 2026-08-22: 정렬 없이 너무 들쭉날쭉). One rule — keycaps are for keys.
+   */
+  chip?: boolean
 }
 
 export const KEYMAP = {
   playback: {
-    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지' },
+    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지', chip: true },
     // its own row, not a tail on the Space hint — the hold was undiscoverable buried there
     // (user 2026-08-21: space 꾹 누르는 키도 안내하게)
     boost: {
       key: ' ',
       label: 'Space 꾹',
-      hint: `누르는 동안 ${BOOST_FACTOR}배속 — 놓으면 원래 속도`,
+      hint: `누르는 동안 ${BOOST_FACTOR}배속`,
+      chip: true,
     },
-    restart: { key: 'Home', label: 'Home', hint: '처음으로' },
-    loop: { key: 'g', label: 'G', hint: '반복' },
-    zen: { key: 'f', label: 'F', hint: '패널 숨기고 보드만 (다시 F)' },
+    restart: { key: 'Home', label: 'Home', hint: '처음으로', chip: true },
+    loop: { key: 'g', label: 'G', hint: '반복', chip: true },
+    zen: { key: 'f', label: 'F', hint: '패널 숨기기 / 되돌리기', chip: true },
   },
   edit: {
     undo: { label: 'Ctrl+Z', hint: '실행 취소' },
@@ -82,10 +89,11 @@ export const ANIM_BINDINGS: Binding[] = [
 
 /** 자유 그리기(주석) — PLAN-008. */
 export const DRAW_BINDINGS: Binding[] = [
-  { label: 'D', hint: '그리기 모드 켜기/끄기 (하단 바가 그리기 바로 전환)' },
-  { label: 'V / P / E', hint: '선택(선수·공 이동) / 펜 / 지우개' },
+  { label: 'D', hint: '그리기 모드 켜기/끄기 (하단 바가 그리기 바로 전환)', chip: true },
+  { label: 'V / P / E', hint: '선택(선수·공 이동) / 펜 / 지우개', chip: true },
   { label: '드래그', hint: '펜: 자유 곡선 · 지우개: 스친 획 통째 삭제' },
-  { label: 'Ctrl+Z', hint: '획 하나 되돌리기' },
+  { label: 'Ctrl+Z', hint: '획 하나 되돌리기', chip: true },
+  { label: 'Delete', hint: '선택 도구로 고른 선수 삭제 (V로 선택 도구)', chip: true },
 ]
 
 /**
@@ -99,9 +107,9 @@ export const DRAW_BINDINGS: Binding[] = [
  * they read as what they are — the modifier's own vocabulary.
  */
 export const CTRL_BINDINGS: Binding[] = [
-  { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가' },
-  { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
-  { label: 'Ctrl+Z', hint: '되돌리기' },
+  { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가', chip: true },
+  { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가', chip: true },
+  { label: 'Ctrl+Z', hint: '되돌리기', chip: true },
 ]
 
 export const GUIDE_PLACE_BINDINGS: Binding[] = PLACE_BINDINGS.filter((b) => b.compact)

@@ -1,6 +1,7 @@
 import { setPlayerLabel, setPlayerNumber, setPlayerRole } from '@/editor/commands'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { useUiStore } from '@/editor/uiStore'
+import { SelectMenu } from './SelectMenu'
 import { t } from './i18n'
 import styles from './shell.module.css'
 
@@ -51,26 +52,24 @@ export function PlayerCard() {
           }}
         />
       </label>
-      <label>
+      <label className={styles.playerRoleField}>
         {t('player.role')}
-        <select
+        {/* Was a native <select>, whose popup the OS draws and no stylesheet can reach — a grey
+            system list dropping out of a frosted card (user 2026-08-22). SelectMenu renders the
+            list itself, so it matches the panels around it and flips up when the card is low. */}
+        <SelectMenu
           value={player.role ?? ''}
-          onChange={(e) => setPlayerRole(core, player.id, e.target.value)}
-        >
-          <option value="">—</option>
-          {player.role && !ALL_ROLES.includes(player.role) && (
-            <option value={player.role}>{player.role}</option>
-          )}
-          {ROLE_GROUPS.map((g) => (
-            <optgroup key={g.group} label={g.group}>
-              {g.roles.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+          ariaLabel={t('player.role')}
+          placeholder="—"
+          options={[
+            { id: '', label: '—' },
+            ...(player.role && !ALL_ROLES.includes(player.role)
+              ? [{ id: player.role, group: t('player.role') }]
+              : []),
+            ...ROLE_GROUPS.flatMap((g) => g.roles.map((r) => ({ id: r, group: g.group }))),
+          ]}
+          onChange={(v) => setPlayerRole(core, player.id, v)}
+        />
       </label>
       <button
         type="button"

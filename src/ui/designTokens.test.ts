@@ -47,12 +47,23 @@ describe('semantic design tokens', () => {
     expect(pitch).not.toMatch(/cubic-bezier/)
   })
 
-  it('keeps translucency to the footer bar and overlays only (A-04a: panels are solid)', () => {
-    // panel cards and the header must not blur; count blur usages and assert the ceiling
-    const blurs = shell.match(/backdrop-filter:/g) ?? []
-    expect(blurs.length).toBeLessThanOrEqual(3) // footer (std+webkit) + one overlay card
-    expect(shell).not.toMatch(/\.panelCard[^}]*backdrop-filter/s)
-    expect(shell).not.toMatch(/\.guideGroup[^}]*backdrop-filter/s)
-    expect(shell).not.toMatch(/\.top \{[^}]*backdrop-filter/s)
+  it('keeps translucency to floating surfaces only (A-04a: docked panels are solid)', () => {
+    /*
+     * This counted blur declarations and capped the number, so every new floating surface broke it
+     * and the fix was to raise the number — which is not the rule. The rule is WHICH surfaces may
+     * blur: things that float OVER the board (the footer bar, the zen escape, a scrim) can, and
+     * anything docked in the layout cannot, because a translucent panel over a moving pitch is
+     * exactly the motion-behind-text case A-04a rules out. Naming the surfaces makes the next
+     * addition a decision instead of an increment.
+     */
+    const ALLOWED = new Set(['.simpleBar', '.zenExit', '.emptyState'])
+    const offenders = shell
+      .split('}')
+      .filter((block) => /backdrop-filter:/.test(block))
+      .map((block) => (block.split('{')[0] ?? '').trim().split(/\r?\n/).pop()!.trim())
+      .filter((selector) => !selector.split(',').every((s) => ALLOWED.has(s.trim())))
+    expect(offenders).toEqual([])
+    for (const docked of ['.panelCard', '.shortcutList', '.sideLeft', '.sideRight', '.top'])
+      expect(shell, docked).not.toMatch(new RegExp(`\\${docked}\\s*\\{[^}]*backdrop-filter`, 's'))
   })
 })

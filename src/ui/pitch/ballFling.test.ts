@@ -7,6 +7,7 @@ import {
   SLING_REACH,
   flingReach,
   flingSpeedForReach,
+  FLING_MIN_SWEEP_M,
   flingVelocity,
   simulateFling,
   slingAimEnd,
@@ -42,6 +43,41 @@ describe('ball fling physics (pure, deterministic)', () => {
     // just past the floor it becomes a throw again
     const sweep = twitch.map((s) => ({ ...s, x: s.x * ((FLING_MIN_TRAVEL_M + 0.5) / 1.5) }))
     expect(flingVelocity(sweep, 105)).not.toBeNull()
+  })
+
+  it('a fast flick that never left the ball’s neighbourhood is a PLACEMENT', () => {
+    /*
+     * The window test only sees the last ~110 ms, so picking the ball up and snapping it a few
+     * metres cleared every existing gate and threw it across the pitch (user 2026-08-22: 공 조금만
+     * 잡고 옮겨도 지 혼자 슉 지나가고). Whether the hand THREW this is a property of the whole
+     * drag, not of its last frame — so the gate measures against where the ball was grabbed.
+     */
+    const flick = [
+      { t: 0, x: 0, y: 0 },
+      { t: 25, x: 1.6, y: 0 },
+      { t: 50, x: 3.2, y: 0 },
+    ]
+    const grab = { x: 0, y: 0 }
+    // 3.2m of travel at 64 m/s — fast enough for every other gate, and still a nudge
+    expect(flingVelocity(flick, 55)).not.toBeNull() // no grab point → old behaviour
+    expect(flingVelocity(flick, 55, grab)).toBeNull()
+
+    // the same pace carried across a real distance stays a throw
+    const sweep = [
+      { t: 0, x: 12, y: 0 },
+      { t: 25, x: 14, y: 0 },
+      { t: 50, x: 16, y: 0 },
+    ]
+    expect(Math.hypot(16 - grab.x, 0 - grab.y)).toBeGreaterThan(FLING_MIN_SWEEP_M)
+    expect(flingVelocity(sweep, 55, grab)).not.toBeNull()
+
+    // and the boundary is the sweep distance, not the speed
+    const atFloor = [
+      { t: 0, x: FLING_MIN_SWEEP_M - 3, y: 0 },
+      { t: 25, x: FLING_MIN_SWEEP_M - 1.5, y: 0 },
+      { t: 50, x: FLING_MIN_SWEEP_M - 0.1, y: 0 },
+    ]
+    expect(flingVelocity(atFloor, 55, grab)).toBeNull()
   })
 
   it('one glitched frame cannot decide the throw', () => {
@@ -274,4 +310,3 @@ describe('sling reach model — the ball must never land short of its own aim li
     expect(reach(slung)).toBeGreaterThan(reach(wild))
   })
 })
-

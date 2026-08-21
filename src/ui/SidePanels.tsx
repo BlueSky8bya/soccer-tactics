@@ -106,12 +106,11 @@ export function ActionsPanel() {
           keyboard's own vocabulary. */}
       <div className={styles.panelCard}>
         <div className={styles.sectionLabel}>{t('panel.ctrl')}</div>
-        {CTRL_BINDINGS.map((b) => (
-          <div key={b.label} className={styles.panelHintLine}>
-            <span className={styles.kbd}>{b.label}</span>
-            <span>{b.hint}</span>
-          </div>
-        ))}
+        <div className={styles.shortcutList}>
+          {CTRL_BINDINGS.map((b) => (
+            <ShortcutRow key={b.label} b={b} />
+          ))}
+        </div>
       </div>
 
       {/* Playback keys live here, not in the right-hand 조작법 panel: this column had the room
@@ -119,22 +118,40 @@ export function ActionsPanel() {
           (user 2026-08-21: 빈 공간인 왼쪽 사이드바에 넣어줘). */}
       <div className={styles.panelCard}>
         <div className={styles.sectionLabel}>{t('tl.play')}</div>
-        {GUIDE_PLAY_BINDINGS.map((b) => (
-          <div key={b.label} className={styles.panelHintLine}>
-            <span className={styles.kbd}>{b.label}</span>
-            <span>{b.hint}</span>
-          </div>
-        ))}
+        <div className={styles.shortcutList}>
+          {GUIDE_PLAY_BINDINGS.map((b) => (
+            <ShortcutRow key={b.label} b={b} />
+          ))}
+        </div>
       </div>
     </aside>
   )
 }
 
-function Row({ b }: { b: Binding }) {
+/**
+ * ONE shortcut row for every panel.
+ *
+ * The two columns used to disagree: the left one laid the keycap inline with its hint, the right
+ * one stacked a keycap over its hint and hairlined every row. Both capped GESTURES ("경로 드래그")
+ * as if they were keys, so no two rows started at the same x and the panel read as a heap of
+ * pills (user 2026-08-22: 정렬 없이 너무 들쭉날쭉 · 조잡함).
+ *
+ * The rule now: a keycap is for a KEY. Gestures are plain text. Label and hint both start at the
+ * card's left edge, so every row shares one straight edge, and rhythm does the separating instead
+ * of a hairline under each line.
+ */
+export function ShortcutRow({ b }: { b: Binding }) {
+  // A keycap is a compact token and reads inline; a gesture is a phrase and needs its own line.
+  // One rule, and it also buys back the height the stacked-everything version cost — the left
+  // column ran off the bottom of a 900px window with its last hint cut in half.
   return (
-    <div className={styles.guideRow}>
-      <span className={styles.kbd}>{b.label}</span>
-      <span className={styles.guideHint}>{b.hint}</span>
+    <div className={b.chip ? styles.shortcutRowInline : styles.shortcutRow}>
+      {b.chip ? (
+        <span className={styles.kbd}>{b.label}</span>
+      ) : (
+        <span className={styles.shortcutLabel}>{b.label}</span>
+      )}
+      <span className={styles.shortcutHint}>{b.hint}</span>
     </div>
   )
 }
@@ -143,18 +160,21 @@ function Row({ b }: { b: Binding }) {
 export function GuidePanel() {
   return (
     <aside className={styles.sideRight} aria-label={t('panel.guide')}>
-      <div className={styles.sectionLabel}>{t('panel.guide')}</div>
-      <div className={styles.guideGroup}>
-        <div className={styles.guideTitle}>{t('panel.place')}</div>
-        {GUIDE_PLACE_BINDINGS.map((b) => (
-          <Row key={b.label} b={b} />
-        ))}
+      <div className={styles.panelCard}>
+        <div className={styles.sectionLabel}>{t('panel.place')}</div>
+        <div className={styles.shortcutList}>
+          {GUIDE_PLACE_BINDINGS.map((b) => (
+            <ShortcutRow key={b.label} b={b} />
+          ))}
+        </div>
       </div>
-      <div className={styles.guideGroup}>
-        <div className={styles.guideTitle}>{t('panel.anim')}</div>
-        {GUIDE_ANIM_BINDINGS.map((b) => (
-          <Row key={b.label} b={b} />
-        ))}
+      <div className={styles.panelCard}>
+        <div className={styles.sectionLabel}>{t('panel.anim')}</div>
+        <div className={styles.shortcutList}>
+          {GUIDE_ANIM_BINDINGS.map((b) => (
+            <ShortcutRow key={b.label} b={b} />
+          ))}
+        </div>
       </div>
     </aside>
   )

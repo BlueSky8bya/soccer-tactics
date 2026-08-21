@@ -43,6 +43,12 @@
   --st-space-10: 40px;
   --st-space-12: 48px;
 
+  /* Bottom-bar transport grid: one key row and one control row shared by EVERY tool column, so
+     the shortcut labels share a baseline and the controls share a centre line no matter how tall
+     each control is (the play button is 44px, the rest 32px). */
+  --st-toolkey-row: 13px;
+  --st-toolbtn-row: 44px;
+
   /* Radius */
   --st-radius-s: 7px;
   --st-radius-m: 10px;

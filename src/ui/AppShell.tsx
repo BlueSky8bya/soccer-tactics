@@ -226,6 +226,20 @@ export function AppShell() {
         <div className={styles.pitchFrame} data-boost={boosted}>
           <SimplePitch />
         </div>
+        {/* Zen hid every surface that named the key that undoes it, so the only way back was
+            knowing F already (user 2026-08-22: 다시 펼치는 F 단축키 안내가 어디에도 없어서).
+            A button, not a caption — a pointer user must not need the keyboard to get out. */}
+        {ui.zen && (
+          <button
+            type="button"
+            className={styles.zenExit}
+            onClick={() => ui.setZen(false)}
+            title={KEYMAP.playback.zen.hint}
+          >
+            <span className={styles.kbd}>{KEYMAP.playback.zen.label}</span>
+            {t('zen.exit')}
+          </button>
+        )}
         {boosted ? (
           <div className={styles.speedPill} role="status" aria-live="polite">
             <UiIcon name="fastForward" size={14} filled />
@@ -386,9 +400,7 @@ export function AppShell() {
                 {/* Names its own key like Home and G. Once the play is RUNNING it names the hold
                     instead — that is the only moment the boost is discoverable. */}
                 <span className={styles.toolKey} aria-hidden="true">
-                  {ui.playback.playing
-                    ? KEYMAP.playback.boost.label
-                    : KEYMAP.playback.toggle.label}
+                  {ui.playback.playing ? KEYMAP.playback.boost.label : KEYMAP.playback.toggle.label}
                 </span>
                 <button
                   type="button"

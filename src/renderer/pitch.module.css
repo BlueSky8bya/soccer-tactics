@@ -469,17 +469,21 @@
 
 /* Slingshot aim (user 2026-08-21): pull back from a loose ball, launch the other way. Warmer and
    heavier than the drag ghost — this line promises a FLIGHT, not a placement. */
+/* The aim guide belongs to the BALL, and the ball is neutral — the accent blue read as a team
+   colour on a pitch where blue is a team (user 2026-08-22). White with a dark rim carries on both
+   the grass stripes and the surround. */
 .slingAimLine {
-  stroke: var(--st-accent);
+  stroke: rgba(255, 255, 255, 0.92);
   stroke-width: 0.28;
   stroke-dasharray: 0.9 0.55;
   stroke-linecap: round;
+  paint-order: stroke;
 }
 
 .slingAimDot {
-  fill: var(--st-accent);
-  stroke: rgba(255, 255, 255, 0.9);
-  stroke-width: 0.18;
+  fill: #fff;
+  stroke: rgba(15, 23, 42, 0.55);
+  stroke-width: 0.16;
 }
 
 /* Carry-vs-detach boundary while dragging a held ball (user 2026-08-21). Inside it the ball

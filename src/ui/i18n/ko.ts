@@ -236,6 +236,7 @@ export const ko = {
   'panel.team': '팀 구성',
   'panel.cleanup': '정리',
   'panel.ctrl': 'Ctrl 단축키',
+  'zen.exit': '패널 보이기',
   'panel.actions': '기능',
   'panel.fill': '양 팀 채우기',
   'panel.reset': '새로 시작',

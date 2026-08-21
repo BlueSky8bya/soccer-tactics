@@ -30,7 +30,10 @@ export const PitchMarkings = memo(function PitchMarkings({ pitch }: { pitch: Pit
           <path d="M 0 0 L 0.4 0.4 M 0.4 0 L 0 0.4" className={styles.netMesh} />
         </pattern>
       </defs>
-      <rect x={-6} y={-6} width={L + 12} height={W + 12} className={styles.surround} />
+      {/* The surround has to outrun the viewBox, which now grows to the element's aspect so the
+          board fills its box instead of letterboxing (usePitchView). Oversizing is free — the SVG
+          clips it — and a short rect would leave bare page showing beside a wide board. */}
+      <rect x={-L} y={-W} width={L * 3} height={W * 3} className={styles.surround} />
       <g clipPath="url(#pitch-clip)">
         {Array.from({ length: stripes }, (_, i) => (
           <rect

@@ -15,6 +15,10 @@ export const MIN_POINT_DIST_PX = 2
 /** VIC 판서 팔레트 17색 + 마지막 칸 '직접 고르기'(네이티브 색상판). */
 export const PEN_COLORS = [
   '#000000',
+  // White earns its slot: on a green pitch it is the most legible pen there is, and the tray had
+  // three pinks doing one job (user 2026-08-22: 핑크색 계열 하나 없애고 흰색 하나 추가). Deviates
+  // from the VIC palette this file otherwise ports verbatim — deliberate, and only here.
+  '#ffffff',
   '#94a3b8',
   '#c26a2d',
   '#f43f5e',
@@ -30,7 +34,6 @@ export const PEN_COLORS = [
   '#a78bfa',
   '#c084fc',
   '#e879f9',
-  '#f472b6',
 ]
 /** 굵기 6단(펜 기준 px) — VIC PEN_WIDTHS 그대로. */
 export const PEN_WIDTHS = [2, 3, 5, 8, 12, 18]
