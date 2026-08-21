@@ -92,9 +92,25 @@ width-constrained**이고 세로 여유 120~220px를 쓰지 못한다. 즉 사�
 
 ## 4. 몰입 — 적용함
 
-**Pylyshyn & Storm(1988): 동시에 추적 가능한 물체는 ~5개.** 22명이 동시에 움직이는 보드는 추적
-용량을 한참 넘는다. focus 모드는 취향이 아니라 근거 있는 기능이다.
-※ 단, 사용자 지시로 **재생 중에는 감쇠하지 않는다**(ADR-0009 v9). 문헌과 사용자 선호가 갈리는
+**Pylyshyn & Storm(1988)**: 10개 중 **최대 5개**를 85.6~97.9% 정확도로 추적. 직렬 스캔 모델은
+같은 조건에서 ~40%를 예측하므로 병렬 추적의 증거다. 22명이 동시에 움직이는 보드는 이 범위를
+한참 넘는다 — focus 모드는 취향이 아니라 근거 있는 기능이다.
+
+두 가지는 정확히 해 둔다:
+- **"용량 4"는 이 논문에 없다.** 정수 용량을 제시한 적이 없고, 후대 문헌이 붙인 숫자다.
+- **고정 용량설 자체가 논쟁 중이다.** Alvarez & Franconeri(2007)는 느리면 8개, 빠르면 1개로
+  속도에 따라 변한다고 봤고, Franconeri et al.(2010)은 **간격(spacing)만이 제약**이라고 주장한다.
+  그러나 Feria(2013)가 "근접 조우 수를 통제해도 속도가 추적을 저해한다"로 정면 반박했다.
+  → 우리가 쓰기에 안전한 형태는 **"동시에 움직이는 것이 많고 서로 붙어 있을수록 추적이 무너진다"**
+  이지, 특정 정수가 아니다.
+
+**Scholl & Pylyshyn(1999) — 사라지는 방식이 중요하다.** 물체가 다른 것 **뒤로 가려지는 것은
+추적을 해치지 않는다**(유의차 없음). 그러나 같은 픽셀이 같은 시각에 사라져도 **가장자리를 따라
+지워지지 않고 중심에서 축소되거나(implosion) 즉시 사라지면 정확도가 크게 떨어진다**
+(F(1,14)=51.02 / 34.62, p<.001). → 토큰을 페이드아웃·축소로 없애면 물체 지속성이 깨진다.
+현재 페이드는 경로·배지 등 **장식에만** 걸려 있고 토큰에는 없다 — 그대로 두어야 한다.
+
+※ 사용자 지시로 **재생 중에는 감쇠하지 않는다**(ADR-0009 v9). 문헌과 사용자 선호가 갈리는
 지점이라 명시해 둔다.
 
 **Robertson et al.(2008)**: 애니메이션은 **발표에는 가장 빠르고 즐겁지만 분석에는 가장 나쁘다**
@@ -110,6 +126,45 @@ width-constrained**이고 세로 여유 120~220px를 쓰지 못한다. 즉 사�
 
 **Budiu(NN/g 2014)**: *"크롬을 줄여서 콘텐츠 비율이 실질적으로 개선되지 않으면 크롬을 보여라."*
 1920에서 300px 사이드바는 16% — 그 기준을 넘지 못한다. → 기본은 보이게, 숨김은 옵션.
+
+## 4b. 애니메이션 실증 — 마지막 조사에서 추가된 것
+
+**정적 표현이 애니메이션을 이길 수 있다 (Baudisch et al., UIST 2006 "Phosphor").** 이것이 Tversky가
+요구한 대조군이다 — 움직임을 **정적 잔상(afterglow)으로 그린** 조건 vs 애니메이션.
+정적 표현이 **125ms 애니메이션을 제외한 모든 조건보다 유의하게 빨랐고** 정확도는 동등했다.
+게다가 2000ms 애니메이션은 **정확도가 가장 좋았는데 만족도는 가장 낮았다**.
+→ 우리가 경로 트레이스를 정적으로 유지하는 것은 타협이 아니라 근거 있는 선택이다.
+
+**제어 피드백은 0.1초 (Miller 1968, 원문 확인 — 단, 측정치가 아니다).**
+Miller 본인이 *"저자의 최선의 추정치이며 …검증되어야 한다"*고 명시한 **전문가 판단**이다.
+또한 그는 0.1/1/10초 삼분법을 제시한 적이 없다 — 17개 과업별 한계를 줬고 대표 규칙은
+*"2초 넘는 지연은 과업 종결 뒤에만"*이다. 0.1/1/10은 Card et al.(1991) Table 3이 출처이며,
+그들 역시 Miller가 아니라 Model Human Processor(1983)와 Newell(1990)을 근거로 든다. *"이 반응은 즉각적이어야 하며 조작자가 유발한
+기계적 동작의 일부로 지각되어야 한다. 지연: 0.1초 이하."* 우리 버튼의 누름 상태는
+`--st-motion-instant: 80ms` — 규칙 안이다. 스프링(262ms)은 **뗀 뒤의 복귀**에만 걸리고 시각 변화
+자체는 즉시 시작하므로 이 규칙과 충돌하지 않는다.
+
+**선호 ≠ 성능** — 독립 연구 3건이 해리를 보인다. Chevalier(2014): 성능이 가장 좋았던 조건이 가장
+어렵다고 평가됐고, **아무 이득 없는 staggering이 더 쉽다고 느껴졌다**("촉진의 착각").
+Robertson(2008): 애니메이션이 가장 즐겁고 신났는데 분석에선 가장 느리고 부정확했다.
+Baudisch(2006): 가장 정확한 조건이 가장 미움받았다.
+→ **"더 좋아 보인다"를 근거로 모션을 추가하지 않는다.** 이 문서가 그 방어선이다.
+
+**주의 — 교육용 애니메이션 메타분석을 UI에 끌어오지 말 것.** Höffler & Leutner(2007) d=0.37,
+Berney & Bétrancourt(2016) g=0.226은 **학습 내용에서 애니메이션 vs 정적 그림**을 비교한 것이지
+**도구 안의 전환 애니메이션 vs 즉시 전환**이 아니다. 외삽 근거 없음.
+(두 메타분석의 크기 차이 자체도 초기 소규모 연구 편향의 전형적 신호다.)
+
+## 4c. 패널 폭 — 8개 코드베이스 수렴
+
+리서치가 소스 코드에서 직접 확인한 값들: Adobe UXP **230** · Spectrum **260** · Krita **262** ·
+Blender 사이드바 **280** · Godot **280** · VS Code **300** · Penpot **318** · Blender 패널 **340**.
+서로 무관한 코드베이스에서 **230~340px**로 좁게 수렴한다.
+
+우리 clamp는 **222~244 / 238~268** — 하단이 이 밴드보다 살짝 아래다. 의도된 이탈이며 근거는
+§3의 실측이다: 이 앱의 보드는 폭 제약이라 사이드 1px이 곧 보드 1px이고, 1280에서 그 차이가
+면적 47%였다. 다만 **222px 아래로는 더 내리지 않는다** — 한국어 힌트가 단어 중간에서 끊기고
+세로로 넘쳐 실제로 잘렸다(실측 후 196→222 상향).
 
 ## 5. 미해결 — 사용자 결정 필요
 
@@ -137,7 +192,9 @@ width-constrained**이고 세로 여유 120~220px를 쓰지 못한다. 즉 사�
 - Deber et al. CHI 2015 https://dl.acm.org/doi/10.1145/2702123.2702300
 - Forch et al. EPCE 2017 https://link.springer.com/chapter/10.1007/978-3-319-58475-1_4
 - MacKenzie & Ware INTERCHI 1993 https://www.yorku.ca/mack/CHI93b.html
-- Pylyshyn & Storm (1988) https://doi.org/10.1163/156856888X00122
+- Pylyshyn & Storm (1988) https://doi.org/10.1163/156856888X00122 · Alvarez & Franconeri (2007) https://doi.org/10.1167/7.13.14 · Feria (2013) https://doi.org/10.3758/s13414-012-0369-x
+- Scholl & Pylyshyn (1999) http://perception.yale.edu/papers/99-Scholl-Pylyshyn-CogPsych.pdf
+- Card, Robertson & Mackinlay (1991) CHI '91 Table 3 https://dl.acm.org/doi/10.1145/108844.108874
 - Robertson et al. IEEE TVCG 2008 https://doi.org/10.1109/TVCG.2008.125
 - Chevalier et al. IEEE TVCG 2014 https://doi.org/10.1109/TVCG.2014.2346424
 - Heer & Robertson InfoVis 2007 https://idl.cs.washington.edu/files/2007-AnimatedTransitions-InfoVis.pdf
@@ -146,5 +203,10 @@ width-constrained**이고 세로 여유 120~220px를 쓰지 못한다. 즉 사�
 - Farris, Jones & Anders HFES 2001 https://doi.org/10.1177/154193120104501511
 - Brown & Cairns CHI 2004 · Jennett et al. IJHCS 2008 https://doi.org/10.1016/j.ijhcs.2008.04.004
 - Shneiderman IEEE Computer 1983 · Hutchins, Hollan & Norman HCI 1985
+- Baudisch et al. UIST 2006 (Phosphor) https://patrickbaudisch.com/publications/2006-Baudisch-UIST06-Phosphor.pdf
+- Miller (1968) AFIPS FJCC 33 https://dl.acm.org/doi/10.1145/1476589.1476628
+- Höffler & Leutner (2007) https://doi.org/10.1016/j.learninstruc.2007.09.013 · Berney & Bétrancourt (2016) https://doi.org/10.1016/j.compedu.2016.06.005
+- Tversky, Morrison & Bétrancourt (2002) https://doi.org/10.1006/ijhc.2002.1017
 - WCAG 2.2 SC 2.5.7 https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html
+- WCAG 2.2 SC 2.5.8 https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
 - VS Code / Blender / Godot / Penpot 소스, Adobe Spectrum tokens, NN/g (Budiu 2014)
