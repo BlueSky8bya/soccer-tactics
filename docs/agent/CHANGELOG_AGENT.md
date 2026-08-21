@@ -1724,3 +1724,24 @@ Validation: typecheck/lint/build/harness PASS, 235 tests PASS.
   무장**한다.
 - 무회귀: aimclick 9/9, passland 5/5, orbit 2/2, identity 10/10, colors 8/8, homeanchor 4/4,
   overhaul 15/15, fling 3/3, cues 9/9, panelbtns 5/5.
+
+### CHG-20260822-149 — FIX — 중간 고스트에서 경로가 갈라져 순간이동하던 문제 (분기 금지)
+
+Problem (사용자 2026-08-22): 중간 흐린 토큰에서 Alt로 경로를 그으면 단계가 3·4로 붙어, 선수가
+마지막 위치에 있다가 분기점으로 순간이동한다. 이어서 사용자 확정: **"당연히 분기는 안되지."**
+
+Root cause: CHG-148의 `step = max(칩, 마지막 단계 + 1)`이 고스트의 `minStep = 그 고스트 단계 + 1`을
+덮었다. 다만 그 값을 살렸어도 이미 있는 같은 단계와 충돌한다 — 한 엔티티는 한 단계에 하나이므로,
+분기 자체가 타임라인으로 표현 불가능하다.
+
+Change: ADR-0009 Amendment v23. **한 엔티티의 움직임은 하나의 사슬**이고 새 움직임은 그 엔티티의
+**마지막 위치**에서만 시작한다. 중간 고스트는 시작점이 될 수 없고(조용히 뒤에 붙이는 대신 토스트로
+이유를 말한다), **도착점으로는 여전히 유효**하며(스루패스), 끝 위치 미세조정(그냥 드래그)도 그대로다.
+
+Validation: typecheck/lint/build/harness PASS, 235 tests PASS.
+
+- Playwright `midghost.cjs` 8/8 — 중간 고스트 Alt+드래그가 **아무것도 만들지 않고**(2→2) 토스트로
+  이유를 말하고, Alt+클릭도 무장하지 않으며, **마지막 고스트는 그대로** 무장→착지로 이어지고
+  단계가 곧게 **[1,2,3]**을 유지한다.
+- 무회귀: throughball 8/8, steps 1/1, aimclick 9/9, passland 5/5, orbit 2/2, identity 10/10,
+  colors 8/8, homeanchor 4/4, overhaul 15/15, fling 3/3, cues 9/9, panelbtns 5/5.

@@ -304,6 +304,13 @@ export function SimplePitch() {
    * because endGesture runs outside the render that computed it.
    */
   const quickAimSubjectRef = useRef<{ entityId: Id; from: Vec2; minStep?: number } | null>(null)
+  /**
+   * The FURTHEST-ALONG faded token per entity, by segment id. A movement can only ever continue
+   * from an entity's last position: branching off a middle ghost would give one player two futures
+   * (user 2026-08-22: 당연히 분기는 안되지), and the timeline has no way to say that — the new leg
+   * would just be appended after everything, so the player teleports back to the fork.
+   */
+  const terminalGhostRef = useRef<Map<Id, Id>>(new Map())
   /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
   const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
   const flingDoneRef = useRef<(() => void) | null>(null)
@@ -1241,15 +1248,21 @@ export function SimplePitch() {
         // start attaches to the holder's PAST position (user bug 2026-08-20). Force step >=
         // (source movement's step + 1); the chip only raises it further.
         const minStep = Math.min(MAX_STEP, ghostTop!.step + 1)
-        // A ghost is a fine DESTINATION too — passing to where a player WILL be is a through ball,
-        // not an edge case (user 2026-08-22). So it carries the standing subject like any other
-        // press; the ghost only NAMES a subject when there is no other one to land for.
+        const standing = subjectAtPress()
+        const landsHere = !!standing && standing.entityId !== ghostTop!.entityId
+        // A middle ghost is a fine DESTINATION (a through ball aims at where a player WILL be),
+        // but it can never be a START: that would fork the entity's timeline, which cannot be
+        // expressed — the new leg lands after everything and the player teleports back.
+        if (!landsHere && terminalGhostRef.current.get(ghostTop!.entityId) !== ghostTop!.segId) {
+          ui.flashToast(t('simple.noBranch'))
+          return
+        }
         startDraw(
           ghostTop!.entityId,
           e.pointerId,
           { x: ghostTop!.pos.x, y: ghostTop!.pos.y },
           minStep,
-          subjectAtPress() ?? undefined,
+          standing ?? undefined,
           true,
         )
         return
@@ -1991,6 +2004,14 @@ export function SimplePitch() {
             )
         })
     : []
+  {
+    const term = new Map<Id, { segId: Id; step: number }>()
+    for (const g of ghosts) {
+      const prev = term.get(g.entityId)
+      if (!prev || g.step >= prev.step) term.set(g.entityId, { segId: g.segId, step: g.step })
+    }
+    terminalGhostRef.current = new Map([...term].map(([k, v]) => [k, v.segId]))
+  }
 
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
   // placeStepBadges nudges overlapping badges apart deterministically (B-03).
