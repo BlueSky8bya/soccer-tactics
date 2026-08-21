@@ -1248,3 +1248,33 @@ Playwright `ballux.cjs` 9/9 PASS — 선택 stroke `rgb(255,255,255)`, 릴리스
 Note: 최초 구현에서 `launchBall`이 열린 트랜잭션 없이 `core.update`를 호출해 'update() without
 begin()'으로 발사가 무시됐다 — 프로브가 잡았고 슬링 릴리스에 `core.begin('Sling ball')` 추가로 해결.
 
+### CHG-20260821-128 — FIX/UX — 하단 바 비례 복구 + 배속 안내를 '재생 중'으로 이동
+
+Problem (사용자 2026-08-21): (1) 하단 바가 위/아래로 찌부됨. (2) 'Space 꾹' 안내가 홀드 중에만
+떠서 **존재 자체를 알 수 없음**.
+Change: (1) 근본 원인은 CHG-126에서 재생 버튼을 `toolCol`로 감싼 것 —
+`.toolCol .btn { height: 30px }`이 특이도로 `.playBtn`(44px)을 이겨 **원이 타원으로 눌렸고**,
+`min-height: 62px` 바에 55px(11 라벨 + 44 버튼) 콘텐츠가 끼었다. `.toolCol .playBtn`으로 원 복구,
+바를 78px·패딩 11px로 상향(두 바 공용 클래스라 높이 동기 유지), `.playCol` 최소 폭으로 라벨 폭
+변화가 Home·G를 밀지 않게 고정. (2) 재생 중·비부스트에 무채색 초대 pill
+`⏩ Space 꾹 누르고 있으면 3배속`을 부스트 pill과 같은 자리에 띄운다(레이아웃 이동 0). 푸터 키
+라벨도 정지 `Space` → 재생 중 `Space 꾹`.
+Validation: typecheck/lint/build/harness PASS, 197 tests PASS. Playwright `bar2.cjs` — 재생 버튼
+44×44 정원, 바 높이 79px, 정지 시 'Space', 재생 중 'Space 꾹' + 초대 pill 노출, 홀드 시 초대→부스트
+pill 교체, 콘솔 에러 0.
+
+### CHG-20260821-129 — UX — 슬링 조준선은 '이동거리'가 아니라 '힘의 세기'
+
+Problem (사용자 2026-08-21): 더블클릭 드래그로 던질 때 공이 **점선 길이만큼만** 가서 조준선이
+이동거리처럼 읽힘. "저걸 이동거리라고 하지 말고 힘의 세기라고 생각해줘. 그니까 저것보다 더
+나가는거지."
+Change: CHG-127/ADR-0009 v7의 "조준선 끝 = 실제 착지점"을 **명시적으로 정정**(ADR-0009 v8).
+`slingAimEnd`(순수) 신설 — 당김 벡터를 그대로 미러링한 길이만 그리고, 경기장을 벗어나면
+**자기 광선 방향으로만 축소**해 방향을 왜곡하지 않는다. 발사 속도(`slingVelocity`)는 그대로라
+`FLING_MIN_SPEED` 하한 덕분에 **모든 합법 당김에서 이동거리 > 선 길이**가 성립한다. 골문 발사 시
+골망 FX는 종전과 동일(`goalGeomFor` 경유, 변경 없음). 안내 문구도 '점선 길이는 세기 (공은 그보다
+더 나감)'으로 교체.
+Validation: typecheck/lint/build/harness PASS, 197 tests PASS(유닛 +5: 미러 길이·모든 당김에서
+초과 비행·당길수록 긴 선·광선 방향 클램프·골문 명중 시 net impact). Playwright `bar2.cjs` —
+6m 당김에 선 6.00m, 실제 비행 15.9m, 당긴 반대(왼쪽)로 발사. 콘솔 에러 0.
+

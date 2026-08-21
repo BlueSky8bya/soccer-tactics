@@ -8,6 +8,7 @@ import {
   ballTravelPoints,
   flingVelocity,
   simulateFling,
+  slingAimEnd,
   slingVelocity,
 } from './ballFling'
 
@@ -181,6 +182,57 @@ describe('slingVelocity — pull back, launch the other way', () => {
     expect(r.final.x).toBeLessThanOrEqual(PITCH.length)
     expect(r.final.y).toBeGreaterThanOrEqual(0)
     expect(r.final.y).toBeLessThanOrEqual(PITCH.width)
+  })
+})
+
+describe('slingAimEnd — the line is POWER, not the landing spot', () => {
+  const ball = { x: 50, y: 34 }
+
+  it('mirrors the pull: same length, opposite side of the ball', () => {
+    const end = slingAimEnd(ball, { x: 44, y: 34 }, PITCH) // pulled 6m left
+    expect(end.x).toBeCloseTo(56, 6) // points 6m right
+    expect(end.y).toBeCloseTo(34, 6)
+  })
+
+  it('the ball always carries PAST the line tip, at every legal pull', () => {
+    for (const pull of [SLING_MIN_PULL_M + 0.05, 2, 5, 9, 20]) {
+      const pointer = { x: ball.x + pull, y: ball.y }
+      const tip = slingAimEnd(ball, pointer, PITCH)
+      const lineLen = Math.hypot(tip.x - ball.x, tip.y - ball.y)
+      const v = slingVelocity(ball, pointer)!
+      const flown = simulateFling(ball, v, PITCH)
+      const travelled = Math.hypot(flown.final.x - ball.x, flown.final.y - ball.y)
+      expect(travelled).toBeGreaterThan(lineLen)
+    }
+  })
+
+  it('a longer pull draws a longer line (it reads as force)', () => {
+    const short = slingAimEnd(ball, { x: 48, y: 34 }, PITCH)
+    const long = slingAimEnd(ball, { x: 42, y: 34 }, PITCH)
+    expect(long.x - ball.x).toBeGreaterThan(short.x - ball.x)
+  })
+
+  it('clamps along its OWN ray at the pitch edge — never bends the aim', () => {
+    const pointer = { x: ball.x + 400, y: ball.y + 200 } // absurd pull, way off pitch
+    const end = slingAimEnd(ball, pointer, PITCH)
+    expect(end.x).toBeGreaterThanOrEqual(0)
+    expect(end.x).toBeLessThanOrEqual(PITCH.length)
+    expect(end.y).toBeGreaterThanOrEqual(0)
+    expect(end.y).toBeLessThanOrEqual(PITCH.width)
+    // direction preserved: the clamped tip is still colinear with the mirrored pull
+    const cross = (end.x - ball.x) * -200 - (end.y - ball.y) * -400
+    expect(Math.abs(cross)).toBeLessThan(1e-6)
+  })
+
+  it('a throw aimed into the mouth still reaches the net', () => {
+    const gw = 7.32 / 2
+    const goal = { top: PITCH.width / 2 - gw, bot: PITCH.width / 2 + gw, depth: 2 }
+    const at = { x: 90, y: PITCH.width / 2 }
+    const v = slingVelocity(at, { x: at.x - 10, y: at.y })! // pulled left => flies right, at goal
+    const r = simulateFling(at, v, PITCH, goal)
+    expect(r.goal).toBeDefined()
+    expect(r.goal!.side).toBe('right')
+    expect(r.goal!.impacts.length).toBeGreaterThan(0)
   })
 })
 

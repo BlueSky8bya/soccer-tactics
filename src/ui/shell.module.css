@@ -1101,9 +1101,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
+  /* Tallest column is the play button under its key label (11 + 44). The bar has to clear that
+     with real breathing room, or everything reads squashed (user 2026-08-21: 위/아래로 찌부). */
+  padding: 11px 14px;
   /* both bars (playback ↔ draw) keep the SAME height so the pitch never reflows on toggle */
-  min-height: 62px;
+  min-height: 78px;
   background: color-mix(in srgb, var(--st-surface) 90%, transparent);
   backdrop-filter: blur(14px) saturate(1.4);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
@@ -1340,6 +1342,18 @@
 
 .toolCol .btn {
   height: 30px;
+}
+
+/* The primary transport keeps its circle inside a key column — the 30px rule above is more
+   specific than .playBtn and was flattening it into an oval. */
+.toolCol .playBtn {
+  height: 44px;
+}
+
+/* Reserve the play column's width so naming the hold key (Space → Space 꾹) never shoves the
+   rest of the transport sideways mid-playback. */
+.playCol {
+  min-width: 62px;
 }
 
 .playBtn {
@@ -1900,6 +1914,42 @@
 .speedPillRate {
   font-variant-numeric: tabular-nums;
   font-size: 14px;
+}
+
+/*
+ * The INVITATION, shown while the play runs at normal pace — the only moment the hold can be
+ * discovered (user 2026-08-21: 일반 속도로 진행중일 때 안내해줘야 존재를 알지). Same slot as the
+ * boost pill so one replaces the other with no layout shift, but muted: it is an offer, not a
+ * state, and must never compete with the play itself.
+ */
+.speedHintPill {
+  position: absolute;
+  left: 50%;
+  top: var(--st-space-4);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--st-radius-pill);
+  background: color-mix(in srgb, var(--st-text) 62%, transparent);
+  color: var(--st-surface);
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  box-shadow: var(--st-depth-overlay);
+  pointer-events: none;
+  z-index: 40;
+  animation: speedPillIn var(--st-motion-transition) var(--st-ease-standard);
+}
+
+.speedHintKbd {
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speedHintPill {
+    animation: none;
+  }
 }
 
 @keyframes speedPillIn {

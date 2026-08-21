@@ -74,6 +74,7 @@ export const ko = {
   'tl.play': '재생',
   'tl.pause': '일시정지',
   'tl.boost': '빠르게 (Space 누르는 중)',
+  'tl.boostInvite': ' 누르고 있으면 {n}배속',
   'tl.boostTitle': 'Space를 놓으면 {n}배속 해제',
   'tl.restart': '처음으로',
   'tl.loop': '반복',

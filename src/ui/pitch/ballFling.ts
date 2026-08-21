@@ -124,6 +124,32 @@ export function ballTravelPoints(
 export const SLING_GAIN = 4.5
 export const SLING_MIN_PULL_M = 0.8
 
+/**
+ * Where the aim line ENDS. It mirrors the pull, so its length is the POWER behind the throw, not
+ * the distance the ball will cover (user 2026-08-21: 이동거리라고 하지 말고 힘의 세기라고 …
+ * 저것보다 더 나가는거지) — the ball always carries past this tip, and a throw aimed at the goal
+ * still reaches the net. Scaled down along its own ray when it would leave the pitch, so the line
+ * stays on the board without ever bending the direction it promises.
+ */
+export function slingAimEnd(
+  ballAt: Vec2,
+  pointerAt: Vec2,
+  pitch: { length: number; width: number },
+): Vec2 {
+  const dx = ballAt.x - pointerAt.x
+  const dy = ballAt.y - pointerAt.y
+  const limit = (from: number, d: number, max: number): number => {
+    if (d > 0) return (max - from) / d
+    if (d < 0) return -from / d
+    return Infinity
+  }
+  const s = Math.max(
+    0,
+    Math.min(1, limit(ballAt.x, dx, pitch.length), limit(ballAt.y, dy, pitch.width)),
+  )
+  return { x: ballAt.x + dx * s, y: ballAt.y + dy * s }
+}
+
 /** Launch velocity for a pull of `pullFrom` → `pullTo`; null when the pull is too short to aim. */
 export function slingVelocity(ballAt: Vec2, pointerAt: Vec2): Vec2 | null {
   const bx = ballAt.x - pointerAt.x

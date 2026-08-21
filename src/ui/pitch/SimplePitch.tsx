@@ -35,6 +35,7 @@ import {
   ballTravelPoints,
   flingVelocity,
   simulateFling,
+  slingAimEnd,
   slingVelocity,
 } from './ballFling'
 
@@ -1298,14 +1299,10 @@ export function SimplePitch() {
       if (!g.started && Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y) > DRAG_THRESHOLD_PX)
         g.started = true
       if (!g.started) return
-      // The guide ends where the ball will actually STOP: same sim as the release, so the dashed
-      // line is a promise rather than a direction hint.
+      // The line is a POWER meter: it mirrors the pull, and the ball carries past its tip
+      // (user 2026-08-21: 이동거리라고 하지 말고 힘의 세기라고 … 저것보다 더 나가는거지).
       const v = slingVelocity(g.ballAt, pt)
-      setSlingAim(
-        v
-          ? { from: g.ballAt, to: simulateFling(g.ballAt, v, doc.pitch, goalGeomFor(doc.pitch)).final }
-          : null,
-      )
+      setSlingAim(v ? { from: g.ballAt, to: slingAimEnd(g.ballAt, pt, doc.pitch) } : null)
       return
     }
 

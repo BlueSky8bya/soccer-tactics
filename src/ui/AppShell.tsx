@@ -6,7 +6,7 @@ import { PEN_COLORS, PEN_WIDTHS } from './pitch/inking'
 import { ColorPicker } from './ColorPicker'
 import { downloadBlob, exportGif } from './exportGif'
 import { UiIcon } from './UiIcon'
-import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
+import { BOOST_SPEED, playableEnd, usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
 import { SelectionActionBar } from './SelectionActionBar'
@@ -220,12 +220,22 @@ export function AppShell() {
         <div className={styles.pitchFrame} data-boost={boosted}>
           <SimplePitch />
         </div>
-        {boosted && (
+        {boosted ? (
           <div className={styles.speedPill} role="status" aria-live="polite">
             <UiIcon name="fastForward" size={14} filled />
             <span className={styles.speedPillRate}>{ui.playback.speed}×</span>
             <span>{t('tl.boost')}</span>
           </div>
+        ) : (
+          ui.playback.playing && (
+            <div className={styles.speedHintPill} aria-hidden="true">
+              <UiIcon name="fastForward" size={12} filled />
+              <span>
+                <span className={styles.speedHintKbd}>{KEYMAP.playback.boost.label}</span>
+                {t('tl.boostInvite', { n: BOOST_SPEED })}
+              </span>
+            </div>
+          )
         )}
         {ui.selectedSegmentId ? <SelectionActionBar /> : <PlayerCard />}
         {errors.length > 0 && (
@@ -366,10 +376,13 @@ export function AppShell() {
             {modeToggle}
             <span className={styles.barDivider} aria-hidden="true" />
             <span className={styles.barGroup}>
-              <span className={styles.toolCol}>
-                {/* the transport names its own key, like Home and G — and says the hold is there */}
+              <span className={`${styles.toolCol} ${styles.playCol}`}>
+                {/* Names its own key like Home and G. Once the play is RUNNING it names the hold
+                    instead — that is the only moment the boost is discoverable. */}
                 <span className={styles.toolKey} aria-hidden="true">
-                  {boosted ? KEYMAP.playback.boost.label : KEYMAP.playback.toggle.label}
+                  {ui.playback.playing
+                    ? KEYMAP.playback.boost.label
+                    : KEYMAP.playback.toggle.label}
                 </span>
                 <button
                   type="button"
