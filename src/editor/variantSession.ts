@@ -1,7 +1,11 @@
 /**
- * Session-only A/B/C tactic variants (PLAN-005 M5 + user 2026-08-20). Independent EditorCores — separate
- * documents AND separate undo histories — living purely in memory: nothing is written to schema,
- * JSON or localStorage (RULE-05), so a refresh still means a clean pitch.
+ * Session-only A/B/C tactic variants (PLAN-005 M5 + user 2026-08-20). Independent EditorCores —
+ * separate documents AND separate undo histories — living purely in memory.
+ *
+ * The VARIANTS are still session-only: this class writes nothing anywhere, and B/C are gone on a
+ * refresh. What survives is the board that was ACTIVE, saved to one slot by `autosave.ts` and
+ * restored here as A (user 2026-08-22). Undo history is not saved either — you come back to the
+ * board, not to the session.
  */
 import { createEmptyDocument } from '@/domain'
 import { seedDefaultTeams } from './commands'
@@ -10,7 +14,8 @@ import { EditorCore } from './editorCore'
 export type VariantId = 'A' | 'B' | 'C'
 
 export class VariantSession {
-  private cores: Partial<Record<VariantId, EditorCore>> = {}
+  /** Readable so the shell can key on the ACTIVE core's identity (autosave follows the board). */
+  readonly cores: Partial<Record<VariantId, EditorCore>> = {}
   private active: VariantId = 'A'
   private listeners = new Set<() => void>()
 

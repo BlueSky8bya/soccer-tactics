@@ -156,6 +156,8 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 ## Open Decisions
 
 - 커밋 시점(C-01). 리뷰 후 우선순위.
+- **여러 전술 보관·기기 간 이동** — 자동 저장은 1칸(눈앞의 판)만 한다(ADR-0009 v26). 보관함이나
+  JSON 저장/열기 UI 복구는 아직 결정 안 됨(사용자가 "기본"을 선택하며 보류).
 
 ## Next Exact Steps
 
@@ -188,7 +190,7 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 
 - `npm run typecheck` → PASS — 2026-08-22 (세션 19)
 - `npm run lint` → PASS — 2026-08-22
-- `npm test` → PASS (38 files / 252 tests) — 2026-08-22
+- `npm test` → PASS (39 files / 261 tests) — 2026-08-22
 - `npm run build` → PASS — 2026-08-22
 - `npm run harness:verify` → PASS (0 warnings) — 2026-08-22
 - **전술 퍼즈 7200세션** (짧은 6000 × 12조작 + 긴 1200 × 40조작, 세션 1/3은 내장 예시에서 시작,
@@ -197,9 +199,9 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 - **브라우저 마라톤** 실제 포인터 제스처 19종 무작위, 매 제스처 후 페이지 안에서 같은 불변식 →
   최종 빌드에서 **1800 제스처/30세션 + 600 제스처/12세션 위반 0** — 2026-08-22 (`pw/marathon.cjs`)
 - 내장 예시 8종 B1 연속 (`scenarioContinuity.test.ts`) → PASS — 2026-08-22
-- 브라우저 프로브 21종(ballmoment/ballrest/midghost/throughball/steps/aimclick/passland/orbit/
+- 브라우저 프로브 22종(ballmoment/ballrest/midghost/throughball/steps/aimclick/passland/orbit/
   identity/colors/homeanchor/overhaul/fling/cues/panelbtns/launchorigin/throughplayer/gif/
-  render/carrylook/receiveside) → 전부 PASS(최종 빌드 전수 재실행) — 2026-08-22
+  render/carrylook/receiveside/autosave) → 전부 PASS(최종 빌드 전수 재실행) — 2026-08-22
 - 렌더 대조(`render.cjs`) — 재생 중 토큰의 실제 SVG transform vs 시계: 최대 0.22m(스프링 정착),
   m↔px 왕복 1.4e-14m → PASS — 2026-08-22
 
