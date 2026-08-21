@@ -184,8 +184,13 @@ export function deriveFocusIds(
   selectedSegmentId: Id | null,
   segmentOwnerId: Id | null,
   ballId: Id,
+  playing = false,
 ): Set<Id> {
   const set = new Set<Id>()
+  // Focus is an AUTHORING state. Leaving a movement selected and pressing play used to dim the
+  // whole board for the entire animation (user 2026-08-21: 재생할 때는 왜 다 흐릿하게 보여) — while
+  // the play runs, every entity is part of it.
+  if (playing) return set
   if (!selectedSegmentId || !segmentOwnerId) return set
   set.add(segmentOwnerId)
   if (segmentOwnerId !== ballId) set.add(ballId)

@@ -125,6 +125,12 @@ describe('deriveFocusIds — focus is movement-editing, not token selection', ()
   it('a dangling segment reference yields no focus', () => {
     expect(deriveFocusIds('seg-gone', null, 'ball')).toEqual(new Set())
   })
+  it('playback clears focus — the whole board belongs to the play', () => {
+    // the regression: a movement left selected dimmed everything for the entire animation
+    expect(deriveFocusIds('seg-1', 'b1', 'ball', true)).toEqual(new Set())
+    // and it comes back when the play stops
+    expect(deriveFocusIds('seg-1', 'b1', 'ball', false)).toEqual(new Set(['b1', 'ball']))
+  })
 })
 
 describe('rest step hierarchy (PLAN-006 M3b, A-05a)', () => {

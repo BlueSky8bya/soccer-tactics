@@ -1278,3 +1278,22 @@ Validation: typecheck/lint/build/harness PASS, 197 tests PASS(유닛 +5: 미러 
 초과 비행·당길수록 긴 선·광선 방향 클램프·골문 명중 시 net impact). Playwright `bar2.cjs` —
 6m 당김에 선 6.00m, 실제 비행 15.9m, 당긴 반대(왼쪽)로 발사. 콘솔 에러 0.
 
+### CHG-20260821-130 — UX/FIX — 예시 전술 폐기 · 조작법 큐레이션 · 재생 중 감쇠 버그
+
+Problem (사용자 2026-08-21): (1) 예시 전술 폐기 요청. (2) 조작법 패널을 지정한 11개 항목만 남기기.
+(3) **버그** — 애니메이션 재생 시 보드가 다 흐릿하게 보임.
+Change: (1) `ActionsPanel`의 예시 카드와 `panel.examples/exampleLoaded/exampleUndoHint` 키 제거,
+`SCENARIOS`/`compile`/`playWindow` import 정리. `scenarios.ts`는 테스트 픽스처 전용으로 강등(문서화)
+— 앱이 import하지 않아 번들 385.60 → 370.89 kB(-14.7 kB). (2) `Binding.compact` 플래그 신설 +
+`GUIDE_PLACE/ANIM/PLAY_BINDINGS`로 상시 패널을 큐레이션. `?` 오버레이(`KEYMAP_GROUPS`)는 전체
+유지 — 문구 단일 소스 보존. 재생 섹션은 Space/Space 꾹만(Ctrl+Z·Delete는 왼쪽 패널에 이미 있음).
+(3) 원인은 CHG-124에서 좁힌 focus가 **재생까지 유지**된 것 — 움직임을 선택한 채 재생하면 그
+엔티티 외 전부가 `tokenFocusDim`으로 감쇠했다. `deriveFocusIds(..., playing)`이 재생 중 빈 집합을
+반환하도록 수정.
+Validation: typecheck/lint/build/harness PASS, 198 tests PASS(재생 중 focus 해제 유닛 1종 추가).
+Playwright `guide.cjs` 26/26 PASS — 예시 카드 부재, 조작법 11행이 지정 순서·문구와 정확히 일치,
+제외 5항목 부재, `?` 오버레이는 전체 유지, 저작 중 감쇠 1 → 재생 중 0. 구/신 대조로 수정 전
+'재생 중 1 dimmed' 재현 확인. 콘솔 에러 0.
+Note: 사용자가 붙여넣은 목록의 '공 더블클릭+드래그' 문구는 CHG-129 이전(구) 버전이었다. 세기
+의미로 바꾼 것이 사용자 본인의 직전 지시이므로 최신 문구를 유지했다.
+

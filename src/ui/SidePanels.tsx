@@ -1,17 +1,19 @@
 import { createEmptyDocument } from '@/domain'
-import { compile } from '@/engine/compile'
 import { applyFormations, seedDefaultTeams } from '@/editor/commands'
 import { replaceDocument } from '@/editor/moreCommands'
 import { clearAllMovements } from '@/editor/stepCommands'
-import { playableEnd, playWindow } from '@/editor/usePlayback'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { FORMATIONS } from '@/presets/formations'
-import { SCENARIOS } from '@/presets/scenarios'
 import { SelectMenu } from './SelectMenu'
 import { useState } from 'react'
 import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
-import { ANIM_BINDINGS, KEYMAP, PLACE_BINDINGS, type Binding } from './keymap'
+import {
+  GUIDE_ANIM_BINDINGS,
+  GUIDE_PLACE_BINDINGS,
+  GUIDE_PLAY_BINDINGS,
+  type Binding,
+} from './keymap'
 import styles from './shell.module.css'
 
 /** Left panel: the feature buttons (always visible). */
@@ -109,32 +111,6 @@ export function ActionsPanel() {
           <span>{t('panel.undoDo')}</span>
         </div>
       </div>
-
-      <div className={styles.panelCard}>
-        <div className={styles.sectionLabel}>{t('panel.examples')}</div>
-        {SCENARIOS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`${styles.btn} ${styles.panelBtn}`}
-            title={s.description}
-            onClick={() => {
-              const next = s.build()
-              replaceDocument(core, next)
-              useUiStore.getState().clearSelection()
-              // Load-and-play: the preset's point IS the animation, so it starts right away.
-              playWindow('all', 0, playableEnd(compile(next)))
-              flashToast(t('panel.exampleLoaded', { name: s.name }))
-            }}
-          >
-            ▶ {s.name}
-          </button>
-        ))}
-        <div className={styles.panelHintLine}>
-          <span className={styles.kbd}>Ctrl+Z</span>
-          <span>{t('panel.exampleUndoHint')}</span>
-        </div>
-      </div>
     </aside>
   )
 }
@@ -155,22 +131,21 @@ export function GuidePanel() {
       <div className={styles.sectionLabel}>{t('panel.guide')}</div>
       <div className={styles.guideGroup}>
         <div className={styles.guideTitle}>{t('panel.place')}</div>
-        {PLACE_BINDINGS.map((b) => (
+        {GUIDE_PLACE_BINDINGS.map((b) => (
           <Row key={b.label} b={b} />
         ))}
       </div>
       <div className={styles.guideGroup}>
         <div className={styles.guideTitle}>{t('panel.anim')}</div>
-        {ANIM_BINDINGS.map((b) => (
+        {GUIDE_ANIM_BINDINGS.map((b) => (
           <Row key={b.label} b={b} />
         ))}
       </div>
       <div className={styles.guideGroup}>
         <div className={styles.guideTitle}>{t('tl.play')}</div>
-        <Row b={KEYMAP.playback.toggle} />
-        <Row b={KEYMAP.playback.boost} />
-        <Row b={KEYMAP.edit.undo} />
-        <Row b={KEYMAP.edit.del} />
+        {GUIDE_PLAY_BINDINGS.map((b) => (
+          <Row key={b.label} b={b} />
+        ))}
       </div>
     </aside>
   )

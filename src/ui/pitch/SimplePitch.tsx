@@ -1696,6 +1696,7 @@ export function SimplePitch() {
     ui.selectedSegmentId,
     ui.selectedSegmentId ? (findSegment(doc, ui.selectedSegmentId)?.track.entityId ?? null) : null,
     doc.ball.id,
+    isPlaying,
   )
 
   const badgeAnchors = doc.scenes[0]

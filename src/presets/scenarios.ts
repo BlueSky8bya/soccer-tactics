@@ -1,5 +1,10 @@
 /**
- * Scenario presets — complete, editable example documents.
+ * Scenario documents — TEST FIXTURES and a worked reference for the domain model.
+ *
+ * These no longer ship: the "예시 전술" panel was retired (user 2026-08-21: 예시 전술 그냥 폐기),
+ * so nothing in the app imports them and they are tree-shaken out of the bundle. They stay because
+ * the test suite needs realistic multi-track documents (compile, validate, path presentation) that
+ * would otherwise be hand-rolled per test.
  *
  * Every authored path has an explicit simple-mode step and every builder finishes through the
  * same relayout pipeline as user edits. That is deliberate: an example must not look correct only
