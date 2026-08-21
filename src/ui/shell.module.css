@@ -951,8 +951,15 @@
 
 /* ---------- simple mode (ADR-0009) ---------- */
 
+/*
+ * The pitch has a fixed 105:68 aspect and, at every laptop width, it is WIDTH-constrained inside
+ * this grid — there is vertical slack it cannot use. So every pixel of side chrome comes straight
+ * out of the board: fixed 260/304 columns cost 21% of the drawn pitch at 1280 and 17% at 1440.
+ * Clamped columns give those pixels back where they are scarce and cap where they are not (by
+ * 2560 the pitch is height-constrained, so widening the panels there costs nothing).
+ */
 .shell[data-simple='true'] {
-  grid-template-columns: 260px 1fr 304px;
+  grid-template-columns: clamp(196px, 14vw, 244px) 1fr clamp(220px, 15vw, 268px);
   grid-template-areas:
     'top top top'
     'left pitch right'
