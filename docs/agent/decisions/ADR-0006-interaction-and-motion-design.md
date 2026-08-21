@@ -124,3 +124,26 @@ Space 재생/정지 · ←/→ 0.1s step(Shift 1s) · Home/End · V 선택 · P 
 
 - DIRECT: verify-harness — `src/engine`, `src/renderer`에 spring/motion import 없음. spring 헬퍼 단위테스트(정착 시간, bounce 0 비오버슈트).
 - DELEGATED(사용자): M1/M4 체크리스트 — 스냅 "달라붙음" 체감, 드래그 지연 0, reduce-motion 시 UI만 정지, Pitch 비율 유지.
+
+## Amendment 2026-08-22 (D9 — 드래그 지연 예산, 문헌 근거)
+
+레이아웃 대개편(PLAN-20260822-012) 리서치에서 나온 가장 강한 일반화를 계약으로 고정한다.
+
+**지연 민감도는 "포인터와, 거기 붙어 있어야 할 물체 사이의 시각적 간극"이 생기는지가 지배한다.**
+드래그는 그 간극을 만들고 탭은 만들지 않는다 — 그래서 드래그가 약 6배 민감하다.
+
+- 마우스(indirect) 드래그 지연 인지 임계: **평균 65ms / 중앙값 54ms**
+  (Forch, Franke, Rauh & Krems, EPCE 2017) — Deber et al.(CHI 2015)의 indirect dragging **55ms**와
+  독립 연구가 수렴한다. 탭은 96ms로 훨씬 관대하다.
+- 지연은 Fitts 난이도에 **곱셈으로** 작용한다: `MT = 230 + (169 + LAG)·IDe` (R² 93.5%,
+  MacKenzie & Ware, INTERCHI 1993). **안전한 하한선은 없고** 비용은 연속적이다.
+  흔히 인용되는 "75ms 임계"는 오독 — 그 논문은 75ms를 "측정이 쉬워지는 지점"이라 했을 뿐이다.
+
+**계약(D9)**: 포인터를 따라가는 요소의 **위치는 매 프레임 직접 렌더**한다. 위치 속성
+(`transform`/`x`/`y`/`cx`/`cy`/`left`/`top`/`d`/`all`)에 transition이나 스프링을 걸지 않는다 —
+그것이 곧 가장 민감한 구간에 지연을 얹는 행위다. 스프링은 **놓은 뒤의 안착·스케일**에만 쓴다.
+
+현재 구현은 이미 이 계약을 지키고 있었다(피치 전환은 전부 opacity, `AnimatedToken`의 스프링은
+scale과 drop 오프셋에만 작용). `dragLatency.test.ts`가 이를 강제한다 — 위치 속성 transition이나
+토큰을 움직이는 @keyframes가 생기면 실패한다(위반을 심어 실제로 실패하는 것까지 확인).
+
