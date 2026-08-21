@@ -728,6 +728,20 @@
   fill: var(--st-entity-ink, #fff);
 }
 
+/* A step this movement cannot take: its chain neighbours are already there, and reordering a chain
+   would tear it open at the joint. Shown, not hidden — the row still reads 1…9. */
+.stepPickerItemOut {
+  cursor: not-allowed;
+}
+
+.stepPickerItemOut text {
+  opacity: 0.28;
+}
+
+.stepPickerItemOut:hover circle {
+  fill: transparent;
+}
+
 .tokenShadow {
   fill: rgba(10, 30, 16, 0.22);
   pointer-events: none;

@@ -30,6 +30,7 @@ import {
   resolvePassReceiverInDraft,
   shiftJunctionAnchorsInDraft,
   stepOf,
+  stepRangeFor,
   lastBallMovedStep,
   ballMovesFromStep,
 } from '@/editor/stepCommands'
@@ -2627,15 +2628,26 @@ export function SimplePitch() {
                 .flatMap((tr) => tr.segments)
                 .find((sg) => sg.id === stepPicker.segId) ?? {}) as { step?: number },
             )
+            // Steps this movement cannot take are dimmed rather than silently clamped: an entity's
+            // movements are a chain whose order is baked into their geometry, so it can only be
+            // retimed between its neighbours.
+            const range = stepRangeFor(doc, stepPicker.segId)
+            // No range at all means the neighbours leave no room anywhere — every step is out.
+            const allowed = !!range && n >= range.lo && n <= range.hi
             return (
               <g
                 key={n}
                 transform={`translate(${(i - 4) * 2.25}, 0)`}
-                className={`${styles.stepPickerItem} ${cur === n ? styles.stepPickerItemActive : ''}`}
+                className={`${styles.stepPickerItem} ${cur === n ? styles.stepPickerItemActive : ''} ${allowed ? '' : styles.stepPickerItemOut}`}
                 role="button"
                 aria-label={t('simple.stepAssign', { n })}
+                aria-disabled={allowed ? undefined : true}
                 onPointerDown={(e) => {
                   e.stopPropagation()
+                  if (!allowed) {
+                    if (range) ui.flashToast(t('simple.stepRange', { a: range.lo, b: range.hi }))
+                    return
+                  }
                   setSegmentStep(core, stepPicker.segId, n)
                   setStepPicker(null)
                 }}
