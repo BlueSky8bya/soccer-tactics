@@ -6,7 +6,8 @@ import { PEN_COLORS, PEN_WIDTHS } from './pitch/inking'
 import { ColorPicker } from './ColorPicker'
 import { downloadBlob, exportGif } from './exportGif'
 import { UiIcon } from './UiIcon'
-import { BOOST_SPEED, playableEnd, usePlaybackController } from '@/editor/usePlayback'
+import { BOOST_FACTOR, NORMAL_SPEED, speedFactor } from '@/editor/playbackRates'
+import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
 import { SelectionActionBar } from './SelectionActionBar'
@@ -102,7 +103,7 @@ export function AppShell() {
 
   // Space-HOLD raises the clock rate (useEditorKeyboard). Nothing said so out loud, so the board
   // just looked jumpy — these cues name it (user 2026-08-21: 눈으로 보이게).
-  const boosted = ui.playback.playing && ui.playback.speed > 1
+  const boosted = ui.playback.playing && ui.playback.speed > NORMAL_SPEED
 
   // Bottom mode badge (user 2026-08-21): always shows WHICH mode the board is in, and toggles it.
   const modeToggle = (
@@ -223,7 +224,7 @@ export function AppShell() {
         {boosted ? (
           <div className={styles.speedPill} role="status" aria-live="polite">
             <UiIcon name="fastForward" size={14} filled />
-            <span className={styles.speedPillRate}>{ui.playback.speed}×</span>
+            <span className={styles.speedPillRate}>{speedFactor(ui.playback.speed)}×</span>
             <span>{t('tl.boost')}</span>
           </div>
         ) : (
@@ -232,7 +233,7 @@ export function AppShell() {
               <UiIcon name="fastForward" size={12} filled />
               <span>
                 <span className={styles.speedHintKbd}>{KEYMAP.playback.boost.label}</span>
-                {t('tl.boostInvite', { n: BOOST_SPEED })}
+                {t('tl.boostInvite', { n: BOOST_FACTOR })}
               </span>
             </div>
           )
@@ -392,7 +393,7 @@ export function AppShell() {
                   data-boost={boosted}
                   title={
                     boosted
-                      ? t('tl.boostTitle', { n: ui.playback.speed })
+                      ? t('tl.boostTitle', { n: speedFactor(ui.playback.speed) })
                       : `${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space) · ${KEYMAP.playback.boost.label} = ${KEYMAP.playback.boost.hint}`
                   }
                   aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}

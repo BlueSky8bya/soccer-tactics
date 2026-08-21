@@ -1425,6 +1425,9 @@ export function SimplePitch() {
     ;(window as unknown as Record<string, unknown>).__stDoc = doc
     // eslint-disable-next-line no-underscore-dangle
     ;(window as unknown as Record<string, unknown>).__stCompiled = compiled
+    // eslint-disable-next-line no-underscore-dangle
+    ;(window as unknown as Record<string, unknown>).__stClock = () =>
+      useUiStore.getState().playback
   }, [doc, compiled])
 
   // Geometric pick inputs (PLAN-007 M1): sampled FULL paths, cached by segment identity.

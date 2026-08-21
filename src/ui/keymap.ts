@@ -2,7 +2,7 @@
  * Simple-mode bindings (ADR-0009 v2) — shown in the right side panel and the ? overlay.
  * The mouse does the authoring; the keyboard only plays, deletes and undoes.
  */
-import { BOOST_SPEED } from '@/editor/usePlayback'
+import { BOOST_FACTOR } from '@/editor/playbackRates'
 
 export interface Binding {
   key?: string
@@ -25,7 +25,7 @@ export const KEYMAP = {
     boost: {
       key: ' ',
       label: 'Space 꾹',
-      hint: `누르는 동안 ${BOOST_SPEED}배속 — 놓으면 원래 속도`,
+      hint: `누르는 동안 ${BOOST_FACTOR}배속 — 놓으면 원래 속도`,
     },
     restart: { key: 'Home', label: 'Home', hint: '처음으로' },
     loop: { key: 'g', label: 'G', hint: '반복' },

@@ -4,6 +4,7 @@
  */
 import { create } from 'zustand'
 import type { Id, Vec2 } from '@/domain/types'
+import { NORMAL_SPEED } from './playbackRates'
 import { MAX_STEP } from './stepCommands'
 
 export type Tool = 'select' | 'add-player' | 'add-ball' | 'path' | 'zone' | 'text' | 'arrow'
@@ -137,7 +138,7 @@ export const useUiStore = create<UiState>((set) => ({
   activeTeamId: null,
   snapEnabled: true,
   reducedMotion: false,
-  playback: { t: 0, playing: false, speed: 1, loop: false },
+  playback: { t: 0, playing: false, speed: NORMAL_SPEED, loop: false },
   hasPlayed: false,
   playScope: 'all',
   rangeStart: 0,

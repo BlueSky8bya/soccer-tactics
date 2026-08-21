@@ -7,6 +7,7 @@ import { EditorProvider } from '@/editor/EditorContext'
 import { seedDefaultTeams } from '@/editor/commands'
 import { addStepPass, addStepRun } from '@/editor/stepCommands'
 import { makePath } from '@/editor/segmentCommands'
+import { BOOST_FACTOR, BOOST_SPEED, NORMAL_SPEED } from '@/editor/playbackRates'
 import { useUiStore } from '@/editor/uiStore'
 import { AppShell } from './AppShell'
 import { KEYMAP } from './keymap'
@@ -41,7 +42,7 @@ afterEach(() => {
     hover: null,
     currentStep: 1,
     tour: { active: false, step: 0, set: 'main' as const },
-    playback: { t: 0, playing: false, speed: 1, loop: false },
+    playback: { t: 0, playing: false, speed: NORMAL_SPEED, loop: false },
     hasPlayed: false,
   })
 })
@@ -296,7 +297,7 @@ describe('playback staging (PLAN-006 M5)', () => {
     const { container } = setup()
     const rows = [...container.querySelectorAll('aside')].map((a) => a.textContent ?? '').join(' ')
     expect(rows).toContain('Space 꾹')
-    expect(rows).toMatch(/3배속/)
+    expect(rows).toMatch(new RegExp(`${BOOST_FACTOR}배속`))
     // the plain Space row stays about play/pause only
     expect(KEYMAP.playback.toggle.hint).not.toMatch(/배속/)
   })
@@ -310,16 +311,18 @@ describe('playback staging (PLAN-006 M5)', () => {
 
     // playing at normal pace is NOT a boost
     await act(async () => {
-      useUiStore.setState((s) => ({ playback: { ...s.playback, playing: true, speed: 1 } }))
+      useUiStore.setState((s) => ({
+        playback: { ...s.playback, playing: true, speed: NORMAL_SPEED },
+      }))
     })
     expect(pill()).toBeNull()
     expect(boosted()).toBe(0)
 
     // the hold raises the rate — both the stage and the play button say so
     await act(async () => {
-      useUiStore.getState().setSpeed(3)
+      useUiStore.getState().setSpeed(BOOST_SPEED)
     })
-    expect(pill()?.textContent).toContain('3×')
+    expect(pill()?.textContent).toContain(`${BOOST_FACTOR}×`)
     expect(boosted()).toBe(2)
 
     // a raised rate while STOPPED is not announced (nothing is moving)

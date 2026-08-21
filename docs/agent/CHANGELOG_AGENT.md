@@ -1378,3 +1378,19 @@ Validation: typecheck/lint/build/harness PASS, 200 tests PASS. Playwright `carry
 링 안에서는 발밑 2.00m 유지, 링 통과 후 **렌더 좌표 (56.0,30.0) = 커서**·홀더로부터 16.5m,
 드롭 후 loose, 링 소거. 스크린샷으로 잔디 위 렌더 육안 확인. 콘솔 에러 0.
 
+### CHG-20260822-136 — UX — 기본 재생 속도 1.5배
+
+Problem (사용자 2026-08-22): 애니메이션 기본 재생 속도를 1.5배 빠르게.
+Change: 재생 배속 상수를 `src/editor/playbackRates.ts` 한 곳으로 모음 — `uiStore`가 모듈 초기화
+시점에 기본값이 필요한데 `usePlayback`은 이미 `uiStore`를 import하므로, 되import하면 순환이 된다.
+`NORMAL_SPEED 1 → 1.5`. 홀드는 **정상 속도의 배수**로 재정의(`BOOST_FACTOR 3`,
+`BOOST_SPEED = 4.5`) — 사용자가 체감하는 "3배속"은 정상 대비 비율이므로, UI는 절대 속도가 아니라
+`speedFactor(speed)`(= speed / NORMAL)를 표시한다. 따라서 pill·툴팁·조작법은 그대로 "3배속"이고
+클럭만 빨라진다. `boosted` 판정도 `> 1` → `> NORMAL_SPEED`.
+GIF 내보내기는 자체 `speed = 2`를 쓰므로 영향 없음(확인함).
+Validation: typecheck/lint/build/harness PASS, 200 tests PASS(AppShell 부스트 테스트가 상수를
+쓰도록 갱신 — 배속을 하드코딩하지 않는다). Playwright `rate.cjs` 4/4 PASS — **벽시계 대비 실측**
+정상 1.50x, 홀드 4.52x(정상의 3배), pill은 "3×" 표기, 콘솔 에러 0.
+Note: 계측을 위해 DEV 전용 QA 훅에 `__stClock`(재생 상태 반환)을 추가했다 — 기존 `__stDoc`/
+`__stCompiled`와 같은 자리·같은 DEV 가드.
+
