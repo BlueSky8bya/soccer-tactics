@@ -1934,3 +1934,17 @@ Validation: typecheck/lint/build/harness PASS, 252 tests PASS.
 - `tacticFuzz` **7200세션 위반 0** (짧은 6000 + 긴 1200, 예시 시작 1/3 포함, 조작 19종 + undo/redo 되감기).
 - 슬라이스 검증(seed 301~1000 / 100301~100440)도 0.
 - `carrylook.cjs` — 직선 드리블 **1.90m 그대로**, 헤어핀 최대 0.59m/프레임으로 연속.
+
+## CHG-20260822-157 — 퍼즈에 "구부리기는 국소적이다" 성질 추가
+
+사용자가 검증 대상으로 명시한 **곡률 변화**를 조작 조합 아래에서 고정한다. `bendMoveWaypointInDraft`는
+잡은 점과 그 양옆만 새 핸들을 받고, 나머지 waypoint는 위치·핸들·hold가 **바이트 그대로**여야 한다
+(ADR-0010 R12-B). 양 끝은 파이프라인 소유이므로 제외한다(런 시작=토큰, 패스 양끝=공이 떠나고 멎는 곳).
+
+퍼즈의 구부리기 지점이 현(chord) 위를 **랜덤하게** 이동하도록 바꿨다 — 항상 중점을 잡으면 waypoint가
+3개를 넘지 않아 이 성질이 검사할 대상이 없다. 이제 반복 구부리기가 실제 다점 경로를 만든다.
+
+비공허 확인: `bendMoveWaypointInDraft`가 멀리 있는 waypoint를 0.4m 밀도록 임시 개조 → 퍼즈가 3건 검출
+(`bending moved a far waypoint …`). 원복 후 위반 0.
+
+Validation: typecheck/lint/build/harness PASS, 252 tests PASS, 퍼즈 1500세션(짧은 1200 + 긴 300) 위반 0.

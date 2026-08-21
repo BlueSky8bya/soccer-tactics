@@ -107,6 +107,13 @@ export function authored(doc: TacticDocument): PathSeg[] {
   return out
 }
 
+/** A segment's waypoints, deep-copied so a later mutation cannot rewrite the record of them. */
+function waypointsOf(doc: TacticDocument, segId: Id): { id: Id }[] {
+  const f = findSegment(doc, segId)
+  if (!f || !('path' in f.segment)) return []
+  return JSON.parse(JSON.stringify(f.segment.path.waypoints)) as { id: Id }[]
+}
+
 const playableEnd = (doc: TacticDocument): number => {
   const cm = compile(doc)
   let end = 0
@@ -384,13 +391,22 @@ export function session(seed: number, steps: number, out?: { core?: EditorCore }
       case 'bend': {
         if (!segs.length) continue
         const s = pick(segs)
-        // grab somewhere along the stroke and pull it sideways — a curvature change
-        const mid = { x: (s.first.x + s.last.x) / 2, y: (s.first.y + s.last.y) / 2 }
+        // Grab somewhere along the stroke and pull it sideways — a curvature change. The grab point
+        // wanders so repeated bends build a genuinely multi-waypoint path, which is the only shape
+        // where "bending is local" has anything to say.
+        const f0 = 0.15 + rand() * 0.7
+        const mid = {
+          x: s.first.x + (s.last.x - s.first.x) * f0,
+          y: s.first.y + (s.last.y - s.first.y) * f0,
+        }
         const to = clampToPitch({ x: mid.x + (rand() - 0.5) * 22, y: mid.y + (rand() - 0.5) * 22 })
+        const before = waypointsOf(doc, s.id)
+        let grabbed: Id | null = null
         core.transaction('bend', (dd) => {
           const d = dd as TacticDocument
           const wpId = bendGrabWaypointInDraft(d, s.id, mid)
           if (!wpId) return
+          grabbed = wpId
           bendMoveWaypointInDraft(d, s.id, wpId, to)
           relayoutStepsInDraft(d)
           const f = findSegment(d, s.id)
@@ -402,6 +418,26 @@ export function session(seed: number, steps: number, out?: { core?: EditorCore }
             }
           }
         })
+        /*
+         * BENDING IS LOCAL (ADR-0010 R12-B). Only the grabbed point and its two neighbours may get
+         * fresh curvature; every other waypoint keeps its position, handles and hold byte-for-byte.
+         * The ends are exempt because the pipeline owns them — a run's start is pinned to the token,
+         * a pass's ends to where the ball leaves and lands.
+         */
+        const after = waypointsOf(core.getDocument(), s.id)
+        if (grabbed && before.length && after.length) {
+          const gi = after.findIndex((w) => w.id === grabbed)
+          const bad = after.find((w, k) => {
+            if (k === 0 || k === after.length - 1) return false
+            if (gi >= 0 && Math.abs(k - gi) <= 1) return false
+            const was = before.find((x) => x.id === w.id)
+            return was !== undefined && JSON.stringify(was) !== JSON.stringify(w)
+          })
+          if (bad) {
+            log.push(`${i}: bend ${s.kind} step ${s.step}`)
+            return fail(`bending moved a far waypoint (${bad.id}) on ${s.id}`)
+          }
+        }
         did = `bend ${s.kind} step ${s.step} → (${to.x.toFixed(1)}, ${to.y.toFixed(1)})`
         break
       }
