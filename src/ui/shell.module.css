@@ -1869,3 +1869,70 @@
     outline: 2px solid Highlight;
   }
 }
+
+/*
+ * Space-HOLD fast-forward (user 2026-08-21: 속도 빨라지는 걸 눈으로 보이게).
+ * The boost was invisible before — tokens simply moved faster with nothing saying why.
+ * Two cues share one trigger: a pill naming the multiplier, and a glow on the stage edge so
+ * the whole board reads as "running fast" without covering the play.
+ */
+.speedPill {
+  position: absolute;
+  left: 50%;
+  top: var(--st-space-4);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: var(--st-radius-pill);
+  background: color-mix(in srgb, var(--st-accent) 92%, transparent);
+  color: var(--st-surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: var(--st-depth-overlay);
+  pointer-events: none;
+  z-index: 40;
+  animation: speedPillIn var(--st-motion-transition) var(--st-ease-standard);
+}
+
+.speedPillRate {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+@keyframes speedPillIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* the stage itself picks up the accent while boosted */
+.pitchFrame[data-boost='true'] {
+  box-shadow:
+    var(--st-depth-raised),
+    0 0 0 3px color-mix(in srgb, var(--st-accent) 55%, transparent);
+  transition: box-shadow var(--st-motion-transition) var(--st-ease-standard);
+}
+
+.pitchFrame {
+  transition: box-shadow var(--st-motion-transition) var(--st-ease-standard);
+}
+
+/* the transport tells the same truth: play glyph becomes fast-forward */
+.playBtn[data-boost='true'] {
+  box-shadow: 0 0 0 3px var(--st-accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speedPill {
+    animation: none;
+  }
+}
+

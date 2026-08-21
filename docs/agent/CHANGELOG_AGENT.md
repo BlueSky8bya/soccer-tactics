@@ -1197,3 +1197,19 @@ click DID add it", 토큰 선택 시 5개 중 4개 감쇠), 수정 후 11/11 PAS
 Note: 같은 시각 Codex 세션이 `scenarios.ts`를 재작성해 scenario A의 `ball-pass` 세그먼트 id가
 사라졌고, 이를 하드코딩한 기존 `pathPresentation.test.ts > deriveAttachedPathStart` 2건이 FAIL
 상태다. 본 변경과 무관하며(순수 HEAD에서는 9/9 PASS) 해당 파일 소유 세션이 정리해야 한다.
+
+### CHG-20260821-125 — UX — 공 투입 버튼 제거 + Space 홀드 배속을 눈에 보이게
+
+Problem (사용자 2026-08-21): (1) '● 공 투입 (중앙)' 버튼이 불필요. (2) Space를 꾹 누르면 3배속이
+되지만 **화면에 아무 표시가 없어** 빨라진 건지 재생이 튄 건지 구분되지 않았다.
+Change: (1) 버튼·`panel.ball` 키·`placeBallCenter` import 제거. `createEmptyDocument`가 이미 공을
+센터서클에 놓으므로 보드에 공이 없는 상태는 존재하지 않았고, 버튼은 재배치 전용이었다. 투어는 이
+버튼을 참조하지 않아 영향 없음(`data-tour="ball-btn"`는 미사용이었다). (2) `playing && speed > 1`
+하나로 세 가지 단서를 동시에 켠다 — 보드 상단 pill(`⏩ 3× 빠르게 (Space 누르는 중)`),
+`pitchFrame[data-boost]` 강조 링, 푸터 재생 버튼의 ⏩ 아이콘 교체. 정지 중 speed가 남아 있어도
+표시하지 않는다(움직이는 게 없으므로). `fastForward` 아이콘을 UiIcon에 추가.
+reduced-motion에서는 pill 등장 애니메이션만 끈다.
+Validation: typecheck/lint/build/harness PASS, 181 tests PASS(AppShell 부스트 단서 유닛 1종 추가,
+shell-hierarchy 테스트를 '공 투입 버튼 부재 + 공 존재' 계약으로 갱신). Playwright `boost.cjs`
+8/8 PASS(버튼 부재·공 존재·정지 시 무표시·홀드 시 pill/글로우/버튼 전환·릴리스 시 해제), 콘솔 에러 0.
+

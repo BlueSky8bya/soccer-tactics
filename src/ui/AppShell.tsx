@@ -99,6 +99,10 @@ export function AppShell() {
 
   const errors = compiled.issues.filter((i) => i.level === 'error')
 
+  // Space-HOLD raises the clock rate (useEditorKeyboard). Nothing said so out loud, so the board
+  // just looked jumpy — these cues name it (user 2026-08-21: 눈으로 보이게).
+  const boosted = ui.playback.playing && ui.playback.speed > 1
+
   // Bottom mode badge (user 2026-08-21): always shows WHICH mode the board is in, and toggles it.
   const modeToggle = (
     <span className={styles.modeToggle} role="group" aria-label={t('mode.label')}>
@@ -212,9 +216,16 @@ export function AppShell() {
 
       <ActionsPanel />
       <main className={styles.pitchAreaSimple}>
-        <div className={styles.pitchFrame}>
+        <div className={styles.pitchFrame} data-boost={boosted}>
           <SimplePitch />
         </div>
+        {boosted && (
+          <div className={styles.speedPill} role="status" aria-live="polite">
+            <UiIcon name="fastForward" size={14} filled />
+            <span className={styles.speedPillRate}>{ui.playback.speed}×</span>
+            <span>{t('tl.boost')}</span>
+          </div>
+        )}
         {ui.selectedSegmentId ? <SelectionActionBar /> : <PlayerCard />}
         {errors.length > 0 && (
           <div className={styles.emptyHint} role="alert">
@@ -359,10 +370,17 @@ export function AppShell() {
                 className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
                 onClick={pb.toggle}
                 data-tour="play"
-                title={`${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`}
+                data-boost={boosted}
+                title={
+                  boosted
+                    ? t('tl.boostTitle', { n: ui.playback.speed })
+                    : `${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`
+                }
                 aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
               >
-                {ui.playback.playing ? (
+                {boosted ? (
+                  <UiIcon name="fastForward" size={18} filled />
+                ) : ui.playback.playing ? (
                   <UiIcon name="pause" size={18} />
                 ) : (
                   <UiIcon name="play" size={18} filled />

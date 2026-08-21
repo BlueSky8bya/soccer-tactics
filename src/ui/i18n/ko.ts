@@ -73,6 +73,8 @@ export const ko = {
 
   'tl.play': '재생',
   'tl.pause': '일시정지',
+  'tl.boost': '빠르게 (Space 누르는 중)',
+  'tl.boostTitle': 'Space를 놓으면 {n}배속 해제',
   'tl.restart': '처음으로',
   'tl.loop': '반복',
   'tl.speed': '재생 속도',
@@ -234,7 +236,6 @@ export const ko = {
   'panel.cleanup': '정리',
   'panel.actions': '기능',
   'panel.fill': '양 팀 채우기',
-  'panel.ball': '공 투입 (중앙)',
   'panel.reset': '새로 시작',
   'panel.clearHint': '되돌리기는 Ctrl+Z',
   'panel.examples': '예시 전술',

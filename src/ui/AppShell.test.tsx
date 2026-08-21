@@ -257,7 +257,6 @@ describe('shell hierarchy (PLAN-006 M2)', () => {
     // primary actions all reachable by name
     for (const name of [
       /양 팀 채우기/,
-      /공 투입/,
       /움직임 전체 지우기/,
       /새로 시작/,
       /재생/,
@@ -265,6 +264,10 @@ describe('shell hierarchy (PLAN-006 M2)', () => {
       /반복/,
     ])
       expect(screen.getByRole('button', { name })).toBeTruthy()
+    // 공 투입 was dropped (user 2026-08-21): every document already starts with the ball on the
+    // centre spot, so the button only re-centred it — the board never lacks a ball.
+    expect(screen.queryByRole('button', { name: /공 투입/ })).toBeNull()
+    expect(container.querySelector('[data-entity="ball"]')).toBeTruthy()
     expect(screen.getByRole('button', { name: /실행 취소/ })).toBeTruthy()
     expect(screen.getByRole('button', { name: /다시 실행/ })).toBeTruthy()
     // no timeline / scrubber / mode toggle / doc menu resurrection
@@ -286,5 +289,34 @@ describe('playback staging (PLAN-006 M5)', () => {
       useUiStore.getState().returnToAuthoringStart()
     })
     expect(container.querySelector('[data-playing="true"]')).toBeNull()
+  })
+
+  it('space-hold fast-forward is visible: pill, stage glow and transport all agree', async () => {
+    const { container } = setup()
+    const pill = () => container.querySelector('[class*="speedPill"]')
+    const boosted = () => container.querySelectorAll('[data-boost="true"]').length
+    expect(pill()).toBeNull()
+    expect(boosted()).toBe(0)
+
+    // playing at normal pace is NOT a boost
+    await act(async () => {
+      useUiStore.setState((s) => ({ playback: { ...s.playback, playing: true, speed: 1 } }))
+    })
+    expect(pill()).toBeNull()
+    expect(boosted()).toBe(0)
+
+    // the hold raises the rate — both the stage and the play button say so
+    await act(async () => {
+      useUiStore.getState().setSpeed(3)
+    })
+    expect(pill()?.textContent).toContain('3×')
+    expect(boosted()).toBe(2)
+
+    // a raised rate while STOPPED is not announced (nothing is moving)
+    await act(async () => {
+      useUiStore.getState().setPlaying(false)
+    })
+    expect(pill()).toBeNull()
+    expect(boosted()).toBe(0)
   })
 })

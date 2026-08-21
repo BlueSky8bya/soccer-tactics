@@ -1,6 +1,6 @@
 import { createEmptyDocument } from '@/domain'
 import { compile } from '@/engine/compile'
-import { applyFormations, placeBallCenter, seedDefaultTeams } from '@/editor/commands'
+import { applyFormations, seedDefaultTeams } from '@/editor/commands'
 import { replaceDocument } from '@/editor/moreCommands'
 import { clearAllMovements } from '@/editor/stepCommands'
 import { playableEnd, playWindow } from '@/editor/usePlayback'
@@ -62,17 +62,6 @@ export function ActionsPanel() {
           data-tour="fill"
         >
           ⚽ {t('panel.fill')}
-        </button>
-        <button
-          type="button"
-          className={`${styles.btn} ${styles.panelBtn} ${styles.btnTintGreen}`}
-          onClick={() => {
-            placeBallCenter(core)
-            flashToast(t('panel.ball'))
-          }}
-          data-tour="ball-btn"
-        >
-          ● {t('panel.ball')}
         </button>
         <div className={styles.panelHintLine}>
           <span className={styles.kbd}>Ctrl+좌클릭</span>
