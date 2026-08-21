@@ -18,7 +18,6 @@ import {
   newIdFor,
   sceneOf,
   moveTravelEndInDraft,
-  findTrack,
 } from '@/editor/segmentCommands'
 import {
   MAX_STEP,
@@ -31,7 +30,7 @@ import {
   resolvePassReceiverInDraft,
   shiftJunctionAnchorsInDraft,
   stepOf,
-  lastBallStep,
+  lastBallMovedStep,
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
@@ -65,6 +64,7 @@ import { DrawingLayer, PenStroke } from '@/renderer/DrawingLayer'
 import { PathLayer } from '@/renderer/PathLayer'
 import { PitchMarkings } from '@/renderer/PitchMarkings'
 import styles from '@/renderer/pitch.module.css'
+import { playableEnd } from '@/editor/usePlayback'
 import { clientToPitch } from '@/renderer/pointer'
 import { clampToView, usePitchView } from './useSvgMetrics'
 import { t } from '../i18n'
@@ -304,13 +304,6 @@ export function SimplePitch() {
    * because endGesture runs outside the render that computed it.
    */
   const quickAimSubjectRef = useRef<{ entityId: Id; from: Vec2; minStep?: number } | null>(null)
-  /**
-   * The FURTHEST-ALONG faded token per entity, by segment id. A movement can only ever continue
-   * from an entity's last position: branching off a middle ghost would give one player two futures
-   * (user 2026-08-22: 당연히 분기는 안되지), and the timeline has no way to say that — the new leg
-   * would just be appended after everything, so the player teleports back to the fork.
-   */
-  const terminalGhostRef = useRef<Map<Id, Id>>(new Map())
   /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
   const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
   const flingDoneRef = useRef<(() => void) | null>(null)
@@ -457,8 +450,7 @@ export function SimplePitch() {
     )
     // The ball's passes are strictly sequential — continuing after the last pass always lands
     // on the NEXT step, whatever the chip says (user 2026-08-21: 0단계 발사 버그).
-    if (entityId === doc.ball.id)
-      step = Math.max(step, lastBallStep(findTrack(core.getDocument(), doc.ball.id)) + 1)
+    if (entityId === doc.ball.id) step = Math.max(step, lastBallMovedStep(core.getDocument()) + 1)
     // Chain past the last step: block BEFORE creating anything and say why (A-05).
     if (step > MAX_STEP) {
       ui.flashToast(t('simple.stepLimit'))
@@ -995,6 +987,22 @@ export function SimplePitch() {
   }
 
   /**
+   * Where an entity ENDS UP once everything authored has played.
+   *
+   * Not the last waypoint on its own track: the ball can be CARRIED after its last pass, so a ball
+   * whose final travel was step 2 really finishes wherever its holder's step-3 run left it (user
+   * 2026-08-22). Asking the resolver at the end of the play answers that for every entity with one
+   * rule — a player's own last end for players, possession included for the ball.
+   */
+  const entityRestPos = (entityId: Id): Vec2 => {
+    const d = core.getDocument()
+    const rs = stateAt(compiled, d, playableEnd(compiled))
+    return entityId === d.ball.id
+      ? rs.ball.pos
+      : (rs.players[entityId]?.pos ?? lastKnownPosition(d, entityId))
+  }
+
+  /**
    * Who a CLICK here would draw for, read BEFORE the press changes anything. `startDraw` selects
    * the pressed entity on pointerdown, so by release the previous subject is gone — it has to be
    * captured now or not at all.
@@ -1004,7 +1012,7 @@ export function SimplePitch() {
     if (armed) return armed
     const sel = useUiStore.getState().selection
     if (sel.length !== 1) return null
-    return { entityId: sel[0]!, from: lastKnownPosition(core.getDocument(), sel[0]!) }
+    return { entityId: sel[0]!, from: entityRestPos(sel[0]!) }
   }
 
   const startDraw = (
@@ -1247,22 +1255,20 @@ export function SimplePitch() {
         // Next movement starts at that future spot — and must PLAY after it too, or the compiled
         // start attaches to the holder's PAST position (user bug 2026-08-20). Force step >=
         // (source movement's step + 1); the chip only raises it further.
-        const minStep = Math.min(MAX_STEP, ghostTop!.step + 1)
-        const standing = subjectAtPress()
-        const landsHere = !!standing && standing.entityId !== ghostTop!.entityId
-        // A middle ghost is a fine DESTINATION (a through ball aims at where a player WILL be),
-        // but it can never be a START: that would fork the entity's timeline, which cannot be
-        // expressed — the new leg lands after everything and the player teleports back.
-        if (!landsHere && terminalGhostRef.current.get(ghostTop!.entityId) !== ghostTop!.segId) {
-          ui.flashToast(t('simple.noBranch'))
-          return
-        }
+        /*
+         * A ghost of ANOTHER entity is a destination — a through ball aims at where a player WILL
+         * be. A ghost of the entity being drawn carries no extra information at all: with forking
+         * ruled out (v23) the chain can only continue from that entity's END, so WHICH of its
+         * faded tokens was clicked is irrelevant and only its identity matters (user 2026-08-22:
+         * 어차피 분기도 없는데 왜 처음 토큰만 눌러야 해). Refusing the middle ones was a distinction
+         * with nothing behind it.
+         */
         startDraw(
           ghostTop!.entityId,
           e.pointerId,
-          { x: ghostTop!.pos.x, y: ghostTop!.pos.y },
-          minStep,
-          standing ?? undefined,
+          entityRestPos(ghostTop!.entityId),
+          undefined,
+          subjectAtPress() ?? undefined,
           true,
         )
         return
@@ -1276,7 +1282,7 @@ export function SimplePitch() {
           type: 'aim',
           pointerId: e.pointerId,
           entityId: subject,
-          from: lastKnownPosition(core.getDocument(), subject),
+          from: entityRestPos(subject),
           to: pt,
         }
         setAimTo(pt)
@@ -1870,7 +1876,7 @@ export function SimplePitch() {
   )
   const quickAim =
     drawKeyHeld && !aim && ui.selection.length === 1 && !gesture.current
-      ? { entityId: ui.selection[0]!, from: lastKnownPosition(doc, ui.selection[0]!) }
+      ? { entityId: ui.selection[0]!, from: entityRestPos(ui.selection[0]!) }
       : null
   quickAimRef.current = !!quickAim
   quickAimSubjectRef.current = quickAim
@@ -2004,14 +2010,6 @@ export function SimplePitch() {
             )
         })
     : []
-  {
-    const term = new Map<Id, { segId: Id; step: number }>()
-    for (const g of ghosts) {
-      const prev = term.get(g.entityId)
-      if (!prev || g.step >= prev.step) term.set(g.entityId, { segId: g.segId, step: g.step })
-    }
-    terminalGhostRef.current = new Map([...term].map(([k, v]) => [k, v.segId]))
-  }
 
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
   // placeStepBadges nudges overlapping badges apart deterministically (B-03).

@@ -263,7 +263,6 @@ export const ko = {
   'panel.resetDone': '새 전술판 — Ctrl+Z로 되돌리기',
   'ball.attached': '#{n} 공 보유 — 선수를 옮기면 공도 같이 갑니다',
   'variant.cloned': '{v}안으로 복제됨 — 상단 전술안에서 전환',
-  'simple.noBranch': '경로는 갈라질 수 없어요 — 가장 마지막 흐린 토큰에서 이어 그리세요',
   'simple.aimArmed': '도착점을 Alt+클릭 (Esc 취소)',
   'simple.tooShort': '너무 짧아요 — 조금 더 길게 드래그하면 경로가 만들어져요',
   'sab.label': '선택한 움직임',

@@ -94,8 +94,8 @@ export const ANIM_BINDINGS: Binding[] = [
     cue: 'alt',
   },
   {
-    label: '마지막 흐린 토큰 Alt+드래그·클릭',
-    hint: '그 위치에서 이어서 그리기 (경로는 갈라지지 않아요)',
+    label: '흐린 토큰 Alt+드래그·클릭',
+    hint: '그 엔티티의 다음 움직임을 이어 그리기 (어느 시점 토큰을 눌러도 마지막에서 이어져요)',
     compact: true,
     cue: 'alt',
   },

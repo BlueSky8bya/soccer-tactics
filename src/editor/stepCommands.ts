@@ -288,6 +288,27 @@ export function lastAuthoredStep(track: Track | undefined): number {
 /** @deprecated name — `lastAuthoredStep` says what it actually does. */
 export const lastBallStep = lastAuthoredStep
 
+/**
+ * The last step in which the BALL actually moved — which is NOT the same as the last step it was
+ * PASSED on.
+ *
+ * A ball is moved by its own travels and by being carried: if it arrives on step 1 and its holder
+ * then runs through step 2, the ball was still moving through step 2, so the next pass cannot fire
+ * before step 3 (user 2026-08-22: 공을 소유한 선수가 3단계까지 진행했다면 공의 마지막 단계는
+ * 2단계가 아니라 3단계로 봐야지). Reading only the ball's own track put the next pass on the same
+ * step as the carry, so it left the holder's foot at the START of their run instead of the end.
+ */
+export function lastBallMovedStep(doc: TacticDocument): number {
+  let last = lastAuthoredStep(findTrack(doc, doc.ball.id))
+  const cm = compile(doc)
+  let end = 0
+  for (const t of Object.values(cm.segmentTimes))
+    if (Number.isFinite(t.end) && t.end > end) end = t.end
+  const holder = stateAt(cm, doc, end).ball.holderId
+  if (holder) last = Math.max(last, lastAuthoredStep(findTrack(doc, holder)))
+  return last
+}
+
 /** Ball pass drawn in simple mode: create + step + relayout + receiver at arrival — one undo step. */
 export function addStepPass(
   core: EditorCore,
@@ -302,7 +323,8 @@ export function addStepPass(
     // ONE ball: its passes are inherently sequential. A new pass can never fire at/before an
     // existing one (user 2026-08-21: 마지막 단계 이후 이어 그렸는데 0단계에서 발사) — drawing
     // from the live ball at a result frame used to inherit the step CHIP (1) and launch at t0.
-    step = Math.max(step, lastBallStep(track) + 1)
+    // Carrying counts as moving, so the bar is the last step the ball MOVED, pass or carry.
+    step = Math.max(step, lastBallMovedStep(doc) + 1)
     const last = track.segments[track.segments.length - 1]
     const holder = passerFor(doc, track, holderHint)
     if (holder && !(last && last.kind === 'possessed' && last.holderId === holder)) {

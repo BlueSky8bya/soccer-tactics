@@ -1745,3 +1745,31 @@ Validation: typecheck/lint/build/harness PASS, 235 tests PASS.
   단계가 곧게 **[1,2,3]**을 유지한다.
 - 무회귀: throughball 8/8, steps 1/1, aimclick 9/9, passland 5/5, orbit 2/2, identity 10/10,
   colors 8/8, homeanchor 4/4, overhaul 15/15, fling 3/3, cues 9/9, panelbtns 5/5.
+
+### CHG-20260822-150 — FIX/UX — 어느 시점 토큰을 눌러도 이어 그리기 · 공은 '실려 간' 것까지 마지막으로 센다
+
+Problem (사용자 2026-08-22): (1) 분기가 없는데 왜 처음 엔티티만 눌러야 Alt+클릭이 되냐 (2) 공이
+2단계 패스까지만 갔어도 소유한 선수가 3단계까지 갔으면 공의 마지막은 3단계로 봐야 하고, 그 선수의
+미래 시점 공 고스트를 눌러도 작동해야 하지 않나.
+
+Root cause (2), 재현 완료: `lastKnownPosition(ball)`과 `lastBallStep`이 **공 트랙만** 본다. 소유
+세그먼트에는 path가 없어 실려 간 거리·단계가 보이지 않는다. 결과: 1단계 도착 + 2단계 런 상황에서
+다음 패스가 **2단계**로 잡혀 런 시작 순간 발에서 떠났고, 출발점도 옛 패스 끝 (41.4, 46.1)에 고정됐다
+— 공이 실제로 있는 (75.4, 18.8)이 아니라.
+
+Change: ADR-0009 Amendment v24.
+
+- (a) v23의 중간 고스트 **거절을 철회**한다. 분기가 불가능하면 고스트의 위치는 정보를 담지 않고 정체만
+  담으므로, 어느 시점 토큰을 눌러도 그 엔티티의 끝에서 이어진다. 거절 토스트·전용 상태 삭제.
+- (b) `entityRestPos` — 위치는 `stateAt(끝)`으로 묻는다(선수·공 한 규칙, 소유 포함).
+- (c) `lastBallMovedStep` — 공 자신의 마지막 travel 단계와 **끝에서 공을 든 선수의 마지막 런 단계**
+  중 큰 값. 실려 가는 것도 움직임이다.
+
+Validation: typecheck/lint/build/harness PASS, 235 tests PASS.
+
+- Playwright `ballrest.cjs` 6/6 — 1단계 패스 + 2단계 캐리 런 뒤, 실려 간 공 고스트를 Alt+클릭하면
+  새 패스가 **3단계**로 생성되고 출발점이 **(75.4, 18.8)** = 실제 정지 위치, 옛 패스 끝에서 **43.7m**.
+- Playwright `midghost.cjs` 7/7 — 중간 고스트 Alt+드래그가 새 다리를 만들고 **엔티티의 끝**에서 시작,
+  체인이 **[1,2,3,4]**로 곧고 이음매 간격 **0**.
+- 무회귀: throughball 8/8, steps 1/1, aimclick 9/9, passland 5/5, orbit 2/2, identity 10/10,
+  colors 8/8, homeanchor 4/4, overhaul 15/15, fling 3/3, cues 9/9, panelbtns 5/5.
