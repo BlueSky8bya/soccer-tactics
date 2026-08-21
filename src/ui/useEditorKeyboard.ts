@@ -201,7 +201,12 @@ export function useEditorKeyboard(): void {
           if (/^[1-9]$/.test(key)) {
             const n = Number(key)
             ui.setCurrentStep(n)
-            if (ui.selectedSegmentId) setSegmentStep(core, ui.selectedSegmentId, n)
+            if (ui.selectedSegmentId) {
+              // The chain's neighbours may leave no room for the step that was asked for — say
+              // where it actually landed rather than looking like a dead key.
+              const landed = setSegmentStep(core, ui.selectedSegmentId, n)
+              if (landed !== null && landed !== n) ui.flashToast(t('simple.stepClamped', { n: landed }))
+            }
           }
           return
         }

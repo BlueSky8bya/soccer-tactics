@@ -21,6 +21,8 @@ import { stateAt } from '@/engine/stateAt'
 import { addPlayer, applyFormations, removeEntities, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
 import { SCENARIOS } from '@/presets/scenarios'
+import { parseDocument, serialize } from './persistence'
+import { validateDocument } from './validateDocument'
 import { carryOffset } from '@/engine/compile'
 import {
   findSegment,
@@ -203,6 +205,19 @@ export function violation(doc: TacticDocument): string | null {
   relayoutStepsInDraft(clone)
   if (JSON.stringify(clone) !== JSON.stringify(doc))
     return `relayout is not idempotent — ${firstDiff(doc, clone) ?? '(no scalar diff)'}`
+
+  // I10 — the document is EXPORTABLE. Every edit has to leave something the importer accepts, or
+  //       the user finds out at the moment they try to save the work they just did.
+  const problems = validateDocument(doc)
+  if (problems.length) return `invalid document: ${problems.slice(0, 3).join('; ')}`
+  let round: TacticDocument
+  try {
+    round = parseDocument(serialize(doc))
+  } catch (e) {
+    return `save → load rejected the document: ${(e as Error).message}`
+  }
+  if (JSON.stringify(round) !== JSON.stringify(doc))
+    return `save → load changed the document — ${firstDiff(doc, round) ?? '(no scalar diff)'}`
 
   return null
 }

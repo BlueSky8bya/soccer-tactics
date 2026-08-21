@@ -276,6 +276,7 @@ export const ko = {
   'panel.clearAll': '움직임 전체 지우기',
   'panel.clearAllDone': '움직임 {n}개 삭제됨 — Ctrl+Z로 복구',
   'simple.added': '{n}단계에 추가됨',
+  'simple.stepClamped': '{n}단계로 옮겼어요 — 같은 엔티티의 앞뒤 움직임 사이가 여기까지예요',
   'simple.ballRerouted': '여기서 공이 나갑니다 — 이후 패스 {n}개는 지워졌어요 (Ctrl+Z로 복구)',
   'simple.badge': '단계 {n} — 클릭하면 이 움직임 선택',
   'simple.topHint': 'Ctrl+좌클릭 = 우리팀 · Ctrl+우클릭 = 상대팀',

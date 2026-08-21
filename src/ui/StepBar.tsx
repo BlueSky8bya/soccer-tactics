@@ -21,6 +21,7 @@ export function StepBar() {
   const setPlayhead = useUiStore((s) => s.setPlayhead)
   const setPlaying = useUiStore((s) => s.setPlaying)
   const selectedSegmentId = useUiStore((s) => s.selectedSegmentId)
+  const flashToast = useUiStore((s) => s.flashToast)
   const counts = stepCounts(doc)
   const currentUsed = counts[currentStep - 1]! > 0
   const compiled = useCompiled()
@@ -48,7 +49,10 @@ export function StepBar() {
     // not — one control, two behaviours. Now that the bar visibly wears the selected movement's
     // colour, the click has to mean what the colour says (and it is what makes the action bar's
     // own step dropdown redundant).
-    if (selectedSegmentId) setSegmentStep(core, selectedSegmentId, n)
+    if (selectedSegmentId) {
+      const landed = setSegmentStep(core, selectedSegmentId, n)
+      if (landed !== null && landed !== n) flashToast(t('simple.stepClamped', { n: landed }))
+    }
     if ((counts[n - 1] ?? 0) === 0) return
     const w = stepWindow(doc, n)
     if (!w) return

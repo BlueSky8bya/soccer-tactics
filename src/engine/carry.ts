@@ -38,11 +38,6 @@ export interface CarryAhead {
   prevEnd?: number
 }
 
-/** Ahead-of-the-feet carry vector for a heading. */
-export function aheadVec(heading: number): Vec2 {
-  return { x: Math.cos(heading) * DRIBBLE_AHEAD_M, y: Math.sin(heading) * DRIBBLE_AHEAD_M }
-}
-
 /**
  * Where the ball rides during a run: out front along the ground the player has ACTUALLY covered
  * over the last DRIBBLE_RAMP_S, not along the instantaneous tangent.
