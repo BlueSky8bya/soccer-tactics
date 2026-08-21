@@ -1,10 +1,19 @@
 # Current State
 
-Last Updated: 2026-08-21 (세션 14, PLAN-009 완료 — 공 정션 구조 봉합(감사 1안 M1~M5). 게이트 167 tests PASS) (직전: 2026-08-20 세션 12, PLAN-005 M1~M7 완료 — 단계 미리보기·구간 재생·결과 유지·선택 액션 바·부분 삭제·intent resolver·active 강조·세션 A/B·미니 투어·dead state 정리. 게이트 116 tests PASS, 사용자 브라우저 체감 확인 대기)
+Last Updated: 2026-08-21 (세션 15, PLAN-010 기능 로드맵 Proposed — 외부 벤치마크 13종·연구 근거 기반. 구현 없음) (직전: 세션 14, PLAN-009 완료 — 공 정션 구조 봉합. 게이트 167 tests PASS)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 
 ## Current Objective
+
+**PLAN-010(설명 가능한 전술 시퀀서 로드맵, 2026-08-21) Proposed** — 저장소 현황과 전술 보드·코칭·
+비디오 분석 제품 13종, 축구 동적 시각화·video-based decision training·multimedia learning 연구를 조사했다.
+권장 순서: `Phase/설명 모드 → timed coaching layer → Trigger Link → 전술 오버레이 → Playbook/Variant → 선수 학습 → 공유`.
+3D/VR, 실경기 tracking, 생성형 AI, 실시간 협업은 보류. 상세 근거는
+`docs/product/BENCHMARK_RESEARCH_2026-08-21.md`, 실행안은 `docs/agent/plans/ACTIVE_PLAN.md`.
+**구현 전 Decision Gates G1~G5 사용자 확정 필요.** 현재 코드 동작 변경 없음.
+
+### 이전 목표(완료): PLAN-009
 
 **PLAN-009(공 정션 구조 봉합, 2026-08-21) 완료** — Codex 구조 감사(handoffs/REVIEW-ball-carry-structural.md)
 채택(ADR-0010). M1 공용 carry resolver(`src/engine/carry.ts`, compile release=stateAt, 경계 연속·핀 통과),

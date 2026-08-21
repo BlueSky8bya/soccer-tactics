@@ -1149,3 +1149,16 @@ Validation: typecheck/lint/test 169/build/harness/format PASS. focus probe 시�
 Problem: clampToPitch 2m 마진 탓에 슛 경로가 골을 '통과'해 바깥까지 그어짐 — 재생 시 공이 골을 관통하고, 끝점이 골망 판정 창(goalArrivals) 밖이라 캐치 FX 미발화(사용자 스크린샷).
 Change: `truncateBallPathAtGoal`(engine/geometry, pure) — 폴리라인이 골라인을 마우스 안(y ∈ 중앙±3.66)에서 넘는 첫 교차점에서 절단, 교차점(골라인 위) + 진입 방향 1.4m 침투점(골망 박스 내부·마우스 내부 clamp)으로 종료. finishDraw에서 공 경로에 적용, beautify 후 끝점 재고정. 마우스 밖(빗나간 슛)·필드 내 패스는 불변(null).
 Validation: typecheck/lint/test 172/build/harness/format PASS. geometry 유닛 3(우측 관통 절단·좌측 대칭·와이드/필드 무변경) + goalcut probe: 관통 드로우 → authored 끝 (106.35, 33.04) 골망 내부, 스크린샷 검수, 콘솔 클린 — ALL PASS.
+
+### CHG-20260821-122 — RESEARCH/PLAN — 전술 시퀀서 벤치마크·연구 기반 기능 로드맵
+
+Problem: 현재 제품은 결정론적 timeline·trigger·path 편집이 강하지만, 다음 기능을 경쟁 제품 목록만으로
+추가하면 3D/AI/팀 관리로 범위가 분산되고 선수 이해·전달 가치가 검증되지 않을 위험이 있음.
+Change: 저장소 기능 기준선과 공식 제품 자료 13종(TacticalPad, TacticBoard, tactical-board.com,
+Teloframe, planet.training, Once, Sport Session Planner, Drillboard, Coach Board, KlipDraw/Nacsport,
+Coach Paint, Hudl, GoArmy Edge), 축구 시각화·video feedback·decision training·multimedia learning 연구를
+교차 조사해 `docs/product/BENCHMARK_RESEARCH_2026-08-21.md` 작성. PLAN-009를 completed로 보존하고
+PLAN-010 Proposed를 ACTIVE_PLAN으로 등록. 권장 순서는 Phase/설명 → timed cue → Trigger Link →
+overlay → Playbook/Variant → player learning → delivery. 3D/VR·tracking·AI·realtime collab은 보류.
+Validation: 문서 변경만. `npm run harness:verify` PASS(0 warnings). 코드 게이트는 NOT RUN(코드 변경 없음).
+
