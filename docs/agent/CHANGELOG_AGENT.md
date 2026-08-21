@@ -1167,3 +1167,33 @@ Problem: SCENARIOS 프리셋(A/B)이 테스트에서만 쓰이고 UI 진입점�
 Change: `src/presets/scenarios.ts`에 6종 추가(세 번째 선수 움직임, 오버랩 vs 언더랩, 4-3-3 후방 빌드업, 전방 압박 트리거, 수비→공격 전환, 컷백 마무리) — 각각 4~9 선수, 이벤트 트리거 체인, 주석 포함 완결 문서. ActionsPanel(왼쪽 사이드바) 하단에 '예시 전술' 카드: 클릭 = replaceDocument(단일 undo) + `playWindow('all', 0, playableEnd(compile(doc)))`로 즉시 재생. i18n 3키 추가. 사용자 후보 중 '코너킥 니어포스트'만 보류(세트피스, 후속 후보).
 Validation: typecheck/lint/test 172/build/harness PASS. examples probe(신규): 8버튼 렌더 → 각 클릭 → 재생 시작 → 자연 종료(held-result) → 콘솔 에러 0, 스크린샷 검수 — ALL PASS.
 
+### CHG-20260821-124 — PRESET — 예시 전술 8종 위치·단계·패스 타이밍 전면 재저작
+
+Problem: 8개 예시의 path에 `step`이 없어 단일 단계 UI에서는 전부 1단계로 보였고, 첫 편집/relayout 시 세밀한 trigger 타이밍이 한 단계로 다시 배치될 위험이 있었다. 일부 장면은 짧은 패스와 긴 압박 이동이 같은 창에 묶이거나, 수신자가 먼저 종점에 서 있어 전술 의도와 재생이 조잡하게 보였다.
+
+Change: `src/presets/scenarios.ts`의 8개 예시를 모두 다시 저작했다. 2~3단계의 명시적 simple-mode sequence, 역할별 시작 간격, 공격 지원·수비 압박/커버/복귀, GK 반응, 패스·스루패스·클리어런스·슛의 release/arrival과 연속 소유를 정합화했다. 모든 builder는 production `relayoutStepsInDraft`로 마감해 로드 직후와 첫 편집 후 규칙이 동일하다. `scenarios.test.ts`에 8종 전수 step count·same-step window·release anchor·receiver arrival·pitch bounds·시작 간격·byte-idempotence 계약을 추가했다.
+
+Validation: scenario 전수 5 tests PASS, typecheck PASS, 1440×1000 Playwright 실제 UI에서 8개 중간/종료 frame과 자동 재생·단계 칩 확인 PASS. 전체 게이트는 `CURRENT_STATE`의 Last Verified에 기록.
+
+### CHG-20260821-124 — FIX — Ctrl+클릭 1회 투입 복구 + focus를 '움직임 편집'으로 한정
+
+Problem (사용자 2026-08-21): (1) Ctrl+좌/우클릭이 **두 번 눌러야** 선수가 생김. (2) 선수 하나를
+잡으면 다른 모든 엔티티가 흐릿해져 보드가 안 보임. 사용자는 원인을 "애니메이션 모드"로 추정했으나,
+실제 원인은 어제 도입한 focus(c31dbf9/a8580fd) 두 곳이다 — ADR-0009 v4에서 `animMode`는 이미
+dead state로 제거됐고 현재 보드에는 모드가 없다.
+- 원인 1: `SimplePitch` add 분기가 `focusIds.size > 0`이면 클릭을 **삼키고** 포커스만 해제했다.
+  선수 투입은 곧바로 그 선수를 select → focus를 만들므로, 두 번째 투입부터 매번 1회를 잃었다.
+- 원인 2: `focusIds`가 `selection`에서 파생돼 **토큰을 고르기만 해도** 전체 보드가 감쇠했다.
+Change: (1) Ctrl+클릭은 ADR-0009의 명시적 투입 제스처이므로 편집 중에도 항상 첫 클릭에 투입한다.
+편집 종료는 평범한 클릭('marquee' → clearSelection)의 역할로 남긴다. (2) focus 판정을 순수 함수
+`deriveFocusIds(selectedSegmentId, segmentOwnerId, ballId)`로 추출(`pathPresentation.ts`) —
+**선택된 '움직임'이 있을 때만** focus. 토큰 선택·드래그·삭제는 보드를 흐리지 않는다. 경로/고스트/
+배지를 선택하면 기존 격리(감쇠 + 히트 우선)는 그대로 동작한다. (3) 푸터 라벨 `mode.anim`
+'애니메이션' → '전술 보드' — 기본 보드를 모드로 오인하게 만든 표현을 ADR-0009 v4 방침에 맞춤.
+Validation: typecheck/lint/build/harness PASS. `deriveFocusIds` 유닛 4종 추가. Playwright
+`modefix.cjs` 구/신 대조 — 수정 전 7 FAIL(Ctrl+클릭 #2~#4·우클릭이 첫 클릭에 실패하고 "second
+click DID add it", 토큰 선택 시 5개 중 4개 감쇠), 수정 후 11/11 PASS(움직임 선택 시 감쇠 4개는
+의도대로 유지), 콘솔 에러 0.
+Note: 같은 시각 Codex 세션이 `scenarios.ts`를 재작성해 scenario A의 `ball-pass` 세그먼트 id가
+사라졌고, 이를 하드코딩한 기존 `pathPresentation.test.ts > deriveAttachedPathStart` 2건이 FAIL
+상태다. 본 변경과 무관하며(순수 HEAD에서는 9/9 PASS) 해당 파일 소유 세션이 정리해야 한다.

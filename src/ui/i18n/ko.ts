@@ -215,7 +215,7 @@ export const ko = {
   'app.versionCopied': '{v} 복사됨',
   'draw.select': '선택·이동 — 그리다가 선수/공 옮기기',
   'mode.label': '모드',
-  'mode.anim': '애니메이션',
+  'mode.anim': '전술 보드',
   'mode.draw': '그리기',
   'draw.pen': '펜',
   'draw.eraser': '지우개 (획 단위)',

@@ -50,6 +50,7 @@ import { teamColorOf } from '../teamColor'
 import { AnimatedToken } from './AnimatedToken'
 import {
   deriveAttachedPathStart,
+  deriveFocusIds,
   derivePathPhase,
   deriveRestMutedIds,
   ghostOpacityForStep,
@@ -1049,13 +1050,9 @@ export function SimplePitch() {
       }
       case 'add-home-player':
       case 'add-away-player':
-        // Focused board: the first empty-grass click ENDS the edit (user 2026-08-21: 한 번
-        // 클릭해서 편집 끝) — it never drops a new player mid-edit.
-        if (focusIds.size > 0) {
-          st.clearSelection()
-          st.selectSegment(null)
-          return
-        }
+        // Ctrl+click is the EXPLICIT placement gesture (ADR-0009), so it always drops a player on
+        // the first click — even mid-edit (user 2026-08-21: 한 번 클릭에 생겨야). Ending an edit is
+        // the PLAIN click's job: that resolves to 'marquee', which clears the selection below.
         st.clearSelection()
         gesture.current = {
           type: 'add',
@@ -1556,20 +1553,11 @@ export function SimplePitch() {
 
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
   // placeStepBadges nudges overlapping badges apart deterministically (B-03).
-  // FOCUS (user 2026-08-21): while editing one entity, only ITS timeline stays vivid — plus
-  // the ball's, which always travels with the play. Everything else recedes so a crowded
-  // board stays readable.
-  const focusIds = (() => {
-    const set = new Set<Id>(selection)
-    if (ui.selectedSegmentId) {
-      const f = findSegment(doc, ui.selectedSegmentId)
-      if (f) set.add(f.track.entityId)
-    }
-    // a focused PLAYER always brings the ball along (the play travels with it); a focused
-    // ball narrows to the ball's own timeline (user 2026-08-21: 선수든 공이든)
-    if ([...set].some((id) => id !== doc.ball.id)) set.add(doc.ball.id)
-    return set
-  })()
+  const focusIds = deriveFocusIds(
+    ui.selectedSegmentId,
+    ui.selectedSegmentId ? (findSegment(doc, ui.selectedSegmentId)?.track.entityId ?? null) : null,
+    doc.ball.id,
+  )
 
   const badgeAnchors = doc.scenes[0]
     ? doc.scenes[0].timeline.tracks.flatMap((tr) =>

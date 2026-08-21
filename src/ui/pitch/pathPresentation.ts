@@ -172,6 +172,27 @@ export function deriveRestMutedIds(
 }
 
 /**
+ * Focus set (user 2026-08-21): the entities that stay vivid while ONE movement is being edited.
+ * Everything else on the board recedes and its strokes stop competing for the press.
+ *
+ * Focus is entered ONLY by selecting a movement (path, ghost or badge). Selecting a token — to
+ * drag, delete or inspect it — is NOT focus: dimming the whole board for an ordinary pick made a
+ * crowded board unreadable (user 2026-08-21: 선수 엔티티 하나를 잡으면 다른 모든 엔티티가 흐릿).
+ * A focused player brings the ball along (the play travels with it); a focused ball stays alone.
+ */
+export function deriveFocusIds(
+  selectedSegmentId: Id | null,
+  segmentOwnerId: Id | null,
+  ballId: Id,
+): Set<Id> {
+  const set = new Set<Id>()
+  if (!selectedSegmentId || !segmentOwnerId) return set
+  set.add(segmentOwnerId)
+  if (segmentOwnerId !== ballId) set.add(ballId)
+  return set
+}
+
+/**
  * Display-only path with its END pulled back by `trimM` metres, so the arrowhead floats clear of
  * the entity/ghost sitting on the endpoint (user 2026-08-20: 화살촉이 가려짐). Returns an SVG
  * polyline `d`; null when the path is too short to trim. Hit-testing keeps the full path.
