@@ -6,6 +6,7 @@ import type { Id, Player, TacticDocument, Team, Vec2 } from '@/domain/types'
 import type { EditorCore } from './editorCore'
 import { clampToPitch, fractionToPitch } from './geometry'
 import { formationSlots, getFormation } from '@/presets/formations'
+import { relayoutStepsInDraft } from './stepCommands'
 
 export function newId(prefix: string): Id {
   const rnd =
@@ -108,6 +109,9 @@ export function removeEntities(core: EditorCore, ids: readonly Id[]): void {
       scene.timeline.tracks = scene.timeline.tracks.filter((t) => !set.has(t.entityId))
     }
     pruneDanglingHolder(d as TacticDocument)
+    // The removed player may have been holding or receiving the ball; the pipeline drops those
+    // references and re-derives every anchor around them (ADR-0010 Q4 — commands END here).
+    relayoutStepsInDraft(d as TacticDocument)
   })
 }
 
@@ -277,6 +281,7 @@ function applyFormationInDraft(
   d.formationRefs = { ...(d.formationRefs ?? {}), [team.id]: f.id }
   pruneDanglingHolder(d)
   pruneDanglingBallSegments(d, keepIds)
+  relayoutStepsInDraft(d)
   // First fill of an empty pitch: the ball starts with this team's player nearest to it (kick-off feel),
   // so "Alt+drag the ball = pass" works immediately. Later formation changes never reassign.
   const ballHasSegments = d.scenes.some((sc) =>
@@ -304,5 +309,6 @@ export function clearTeam(core: EditorCore, teamId: Id): void {
     if (d.formationRefs) delete d.formationRefs[teamId]
     pruneDanglingHolder(d as TacticDocument)
     pruneDanglingBallSegments(d as TacticDocument, new Set(d.players.map((p) => p.id)))
+    relayoutStepsInDraft(d as TacticDocument)
   })
 }

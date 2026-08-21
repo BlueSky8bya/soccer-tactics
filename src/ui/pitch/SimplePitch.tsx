@@ -1834,6 +1834,11 @@ export function SimplePitch() {
     ;(window as unknown as Record<string, unknown>).__stCompiled = compiled
     // eslint-disable-next-line no-underscore-dangle
     ;(window as unknown as Record<string, unknown>).__stClock = () => useUiStore.getState().playback
+    // Resolved state at any instant — lets a probe check what the board actually DEPICTS over the
+    // whole play (ball continuity, where a pass leaves from) instead of re-deriving it outside.
+    // eslint-disable-next-line no-underscore-dangle
+    ;(window as unknown as Record<string, unknown>).__stStateAt = (at: number) =>
+      stateAt(compiled, doc, at)
   }, [doc, compiled])
 
   // Geometric pick inputs (PLAN-007 M1): sampled FULL paths, cached by segment identity.

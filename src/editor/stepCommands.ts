@@ -57,6 +57,41 @@ export function stepCounts(doc: TacticDocument): number[] {
  */
 export function relayoutStepsInDraft(draft: TacticDocument): void {
   const scene = sceneOf(draft)
+
+  /*
+   * 0) DANGLING REFERENCES — first, because everything below reads them.
+   *
+   * A deleted player can still be named as a holder or a receiver. The ball then rides someone who
+   * is not on the pitch: `stateAt` finds no such player and falls back to the kickoff spot, so the
+   * ball snapped across the field the moment that possession began (browser marathon: 29 m). The
+   * formation commands already pruned this; deleting a player with Delete did not, and neither
+   * healed the anchors afterwards. Doing it HERE means every route in and every document out of
+   * storage arrives consistent, whatever created it.
+   */
+  const alive = new Set(draft.players.map((p) => p.id))
+  if (draft.ball.initialHolderId && !alive.has(draft.ball.initialHolderId))
+    delete draft.ball.initialHolderId
+  scene.timeline.tracks = scene.timeline.tracks.filter(
+    (t) => t.entityKind === 'ball' || alive.has(t.entityId),
+  )
+  for (const track of scene.timeline.tracks) {
+    if (track.entityKind !== 'ball') continue
+    track.segments = track.segments.filter(
+      (s) => !(s.kind === 'possessed' && !alive.has(s.holderId)),
+    )
+    for (const s of track.segments) {
+      if (s.kind === 'travel' && s.receiverId && !alive.has(s.receiverId)) {
+        delete s.receiverId
+        // nobody is waiting for it any more: it is a ball rolling into space
+        if (s.travelKind === 'pass') s.travelKind = 'loose'
+      }
+    }
+    const ids = new Set(track.segments.map((s) => s.id))
+    for (const s of track.segments)
+      if (s.trigger.type === 'afterSegment' && !ids.has(s.trigger.segmentId))
+        s.trigger = { type: 'at', t: 0 }
+  }
+
   const authored = scene.timeline.tracks
     .flatMap((t) => t.segments)
     .filter((s) => 'path' in s && !s.id.startsWith(GEN_PREFIX))
