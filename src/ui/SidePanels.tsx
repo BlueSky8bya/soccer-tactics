@@ -111,6 +111,19 @@ export function ActionsPanel() {
           <span>{t('panel.undoDo')}</span>
         </div>
       </div>
+
+      {/* Playback keys live here, not in the right-hand 조작법 panel: this column had the room
+          once the example card went, and the play controls are what a first-timer reaches for
+          (user 2026-08-21: 빈 공간인 왼쪽 사이드바에 넣어줘). */}
+      <div className={styles.panelCard}>
+        <div className={styles.sectionLabel}>{t('tl.play')}</div>
+        {GUIDE_PLAY_BINDINGS.map((b) => (
+          <div key={b.label} className={styles.panelHintLine}>
+            <span className={styles.kbd}>{b.label}</span>
+            <span>{b.hint}</span>
+          </div>
+        ))}
+      </div>
     </aside>
   )
 }
@@ -138,12 +151,6 @@ export function GuidePanel() {
       <div className={styles.guideGroup}>
         <div className={styles.guideTitle}>{t('panel.anim')}</div>
         {GUIDE_ANIM_BINDINGS.map((b) => (
-          <Row key={b.label} b={b} />
-        ))}
-      </div>
-      <div className={styles.guideGroup}>
-        <div className={styles.guideTitle}>{t('tl.play')}</div>
-        {GUIDE_PLAY_BINDINGS.map((b) => (
           <Row key={b.label} b={b} />
         ))}
       </div>

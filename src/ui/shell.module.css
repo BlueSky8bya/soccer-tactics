@@ -1801,17 +1801,25 @@
 
 .panelHintLine {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding-left: 2px;
   font-size: 12.5px;
+  /* same as the .kbd chip, so the first text line sits level with the key and wrapped lines
+     stack evenly underneath it */
+  line-height: 17px;
   color: var(--st-text-2);
-  white-space: nowrap;
 }
 
 .panelHintLine .kbd {
   flex: none;
   font-size: 11.5px;
+}
+
+/* Long guidance (Space 꾹) has to wrap inside the card. The row used to be nowrap, which was
+   invisible while every hint was three words and ran off the panel the moment one was not. */
+.panelHintLine > :last-child {
+  min-width: 0;
 }
 
 /* M2: hierarchy — frequent action big and near (Fitts), destructive quiet until intent */

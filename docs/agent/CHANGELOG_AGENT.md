@@ -1297,3 +1297,18 @@ Playwright `guide.cjs` 26/26 PASS — 예시 카드 부재, 조작법 11행이 �
 Note: 사용자가 붙여넣은 목록의 '공 더블클릭+드래그' 문구는 CHG-129 이전(구) 버전이었다. 세기
 의미로 바꾼 것이 사용자 본인의 직전 지시이므로 최신 문구를 유지했다.
 
+### CHG-20260821-131 — UX — 재생 단축키 안내를 왼쪽 사이드바로 이동 (+ 힌트 줄바꿈 수정)
+
+Problem (사용자 2026-08-21): 재생 조작법(Space / Space 꾹)을 오른쪽 조작법 패널이 아니라 **왼쪽
+사이드바 빈 공간**에 두고 싶다. 예시 전술 카드를 뺀 자리가 비어 있었다.
+Change: `GuidePanel`의 재생 그룹을 제거하고 `ActionsPanel` 하단에 '재생' `panelCard` 추가 —
+`GUIDE_PLAY_BINDINGS`를 그대로 소비하므로 문구 단일 소스는 유지된다. 오른쪽 조작법은 제스처
+9행만 남는다.
+부수 수정: `.panelHintLine`이 `white-space: nowrap`이라 'Space 꾹' 힌트가 카드 밖으로 잘려
+나갔다(스크린샷 확인). 힌트가 전부 세 단어짜리라 그동안 드러나지 않던 문제 — nowrap을 걷고
+`align-items: flex-start` + `line-height: 17px`(`.kbd` 칩과 동일)로 첫 줄을 칩과 정렬,
+마지막 자식에 `min-width: 0`을 줘 카드 안에서 줄바꿈되게 했다.
+Validation: typecheck/lint/build/harness PASS, 198 tests PASS. Playwright `playcard.cjs` 9/9 PASS
+— 왼쪽 카드 순서 팀 구성|정리|**재생**, 두 행의 라벨·문구 정확 일치, 왼쪽 열 세로 오버플로 없음,
+오른쪽 조작법에 Space 부재·제스처 9행 유지, **어떤 힌트도 카드 경계를 넘지 않음**. 콘솔 에러 0.
+
