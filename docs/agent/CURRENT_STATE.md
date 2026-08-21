@@ -1,17 +1,26 @@
 # Current State
 
-Last Updated: 2026-08-21 (세션 15, PLAN-010 기능 로드맵 Proposed — 외부 벤치마크 13종·연구 근거 기반. 구현 없음) (직전: 세션 14, PLAN-009 완료 — 공 정션 구조 봉합. 게이트 167 tests PASS)
+Last Updated: 2026-08-21 (세션 16, PLAN-011 완료 — 예시 전술 8종의 위치·단계·패스 동기화 전면 재저작) (직전: 세션 15, PLAN-010 기능 로드맵 parked)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 
 ## Current Objective
 
-**PLAN-010(설명 가능한 전술 시퀀서 로드맵, 2026-08-21) Proposed** — 저장소 현황과 전술 보드·코칭·
+**PLAN-011(예시 전술 품질 개선, 2026-08-21) 완료** — 8개 예시의 모든 이동/공 경로에 명시적
+단계를 부여하고, 선수 간격·지원/압박/커버 위치·공 소유권·패스/슈팅 도착을 다시 저작했다. 모든 예시는
+production `relayoutStepsInDraft`를 거쳐 첫 편집 후에도 단계가 무너지지 않으며, 전수 회귀 테스트와
+1440×1000 실제 UI 중간/종료 frame 점검을 통과했다. 구현: `src/presets/scenarios.ts`, 계약:
+`src/presets/scenarios.test.ts`.
+
+### Parked: PLAN-010
+
+**PLAN-010(설명 가능한 전술 시퀀서 로드맵, 2026-08-21) Parked** — 저장소 현황과 전술 보드·코칭·
 비디오 분석 제품 13종, 축구 동적 시각화·video-based decision training·multimedia learning 연구를 조사했다.
 권장 순서: `Phase/설명 모드 → timed coaching layer → Trigger Link → 전술 오버레이 → Playbook/Variant → 선수 학습 → 공유`.
 3D/VR, 실경기 tracking, 생성형 AI, 실시간 협업은 보류. 상세 근거는
-`docs/product/BENCHMARK_RESEARCH_2026-08-21.md`, 실행안은 `docs/agent/plans/ACTIVE_PLAN.md`.
-**구현 전 Decision Gates G1~G5 사용자 확정 필요.** 현재 코드 동작 변경 없음.
+`docs/product/BENCHMARK_RESEARCH_2026-08-21.md`, 실행안은
+`docs/agent/plans/PLAN-20260821-010-feature-roadmap-draft.md`.
+**사용자가 다시 요청하기 전 자동 재개하지 않는다.** 구현 전 Decision Gates G1~G5 사용자 확정 필요.
 
 ### 이전 목표(완료): PLAN-009
 
@@ -50,7 +59,7 @@ R5(pick dispatch)/R7(blur·lostpointercapture cancel)/R12-D(letterbox 7px)/R12-E
 
 **동작하는 전체 플로우** (`npm run dev`):
 
-- ☰ 문서 메뉴: 새 전술 · **예시 불러오기(2v2 패스&압박 / 원투&침투)** · JSON 열기/저장 · PNG/SVG 내보내기 · 자동 저장(브라우저, 새로고침 복원).
+- 왼쪽 사이드바 **예시 전술 8종**: 2v2 압박 탈출 · 원투 · 제3자 침투 · 오버랩/언더랩 · 4-3-3 빌드업 · 전방 압박 · 전환 · 컷백. 클릭 시 로드·자동 재생. ☰ 문서 메뉴: 새 전술 · JSON 열기/저장 · PNG/SVG 내보내기 · 자동 저장.
 - 배치: 포메이션 12종 · 선수 추가(W) · drag/스냅/그룹 드래그/마퀴/Ctrl 클릭/Ctrl+A · 공 주기(드롭 또는 버튼).
 - 움직임: Alt+드래그 / 더블클릭 / E → 드래그 = 이동 경로(시작=재생 위치) · 공 선택 후 드래그 = 패스(수신자 자동, 패스 후 재생 위치=도착) · waypoint 편집 · 세그먼트 인스펙터(시작 조건 5종·속도·길이·easing·종류·궤적·수신자·경유지 대기) · 트랙 블록 드래그/리사이즈.
 - 재생: Space/scrub/속도/반복, 공 패턴·회전·로빙·잔상, 킥/리시브 pulse, 이동 중 방향 쐐기.
@@ -149,12 +158,13 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 
 ## Last Verified
 
-- `npm run typecheck` → PASS — 2026-08-20
-- `npm run lint` → PASS — 2026-08-20
-- `npm test` → PASS (17 files / 90 tests) — 2026-08-20
-- `npm run build` → PASS — 2026-08-20
-- `npm run format:check` → PASS — 2026-08-20
-- `npm run harness:verify` → PASS — 2026-08-20
+- `npm run typecheck` → PASS — 2026-08-21
+- `npm run lint` → PASS — 2026-08-21
+- `npm test` → PASS (29 files / 176 tests) — 2026-08-21
+- `npm run build` → PASS — 2026-08-21
+- `npm run format:check` → PASS — 2026-08-21
+- `npm run harness:verify` → PASS (0 warnings) — 2026-08-21
+- 예시 8종 UI 자동 재생(1440×1000, 중간/종료 frame) → PASS — 2026-08-21
 - dev 서버 모듈 200 — 2026-08-20
 - Playwright 첫 방문 워크스루(빈 localStorage, 1440×900, 라이트/다크) → PASS (스크린샷 육안, R2) — 2026-08-20
 - 브라우저 체감(스프링/fling/scrub) → NOT VERIFIED (사용자 리뷰)

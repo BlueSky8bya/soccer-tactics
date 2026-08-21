@@ -1,132 +1,74 @@
 # Active ExecPlan
 
-Plan ID: PLAN-20260821-010
-Status: Draft — Proposed 로드맵, 사용자 우선순위·결정 게이트 승인 전 구현 금지
-Task Risk: L3 예상 (Scene/Phase·Trigger authoring·영속 Variant·공유 경계)
+Plan ID: PLAN-20260821-011
+Status: Completed
+Task Risk: L2 (모든 예시 전술의 좌표·경로·단계·타이밍 행동 변경)
 Created: 2026-08-21
 Updated: 2026-08-21
-Execution Owner: Unassigned
+Execution Owner: Codex
 
 ## Objective
 
-축구 전술 보드·코칭 제품 13종과 스포츠/멀티미디어 학습 연구를 바탕으로, 현재의 결정론적
-타임라인 우위를 `설명 → 인과 저작 → 재사용 → 선수 학습` 흐름으로 확장한다.
+현재 제공되는 예시 전술 8개를 전수 감사하고, 현재 Accepted 단일 단계 모델(ADR-0009)에 맞는
+선수 위치·공 소유·패스 시점·수비 반응·경로·단계로 다시 저작한다. 예시를 불러와 한 번 편집해도
+단계와 타이밍이 붕괴하지 않아야 한다.
 
-상세 근거와 후보 비교: `docs/product/BENCHMARK_RESEARCH_2026-08-21.md`.
+## Fixed Decisions
 
-## Product Bets
-
-1. 초보는 순차적 `설명 모드`, 숙련자는 동시 관계가 보존된 `전체 전개 모드`를 선택할 수 있어야 한다.
-2. Trigger는 Inspector의 숨은 고급 데이터가 아니라 pitch 위에서 연결하는 직접 조작이어야 한다.
-3. annotation도 시간축을 가져야 하며, 신호는 한 시점에 소수만 보여야 한다.
-4. 전술 품질 자동 점수보다 검증 가능한 거리·시간·오프사이드와 코치 저작 원칙을 우선한다.
-5. 선수 학습은 AI 정답 생성이 아니라 코치가 만든 선택지·이유·Variant에서 시작한다.
-
-## Decision Gates — 구현 전 사용자 확정 필요
-
-- G1 주 사용자: **권장 — 코치/분석가 저작 → 선수 전달**. 대안은 콘텐츠 제작자 우선.
-- G2 Scene/Phase: **권장 — Scene은 불연속 장면, Phase는 같은 timeline의 연속 구간**.
-- G3 Release A: **권장 — Phase + timed cue + 설명/전체 재생을 한 묶음으로**.
-- G4 공유: **권장 — Release C까지 local-first·no-login 유지**, link/응답 수집은 별도 L3.
-- G5 학습 주장: **권장 — 이해·대화·mental reps 보조까지만**, 경기력 향상 문구는 검증 전 금지.
+- 예시 수는 8개를 유지한다. 새 기능·새 UI는 추가하지 않는다.
+- 정밀 trigger showcase보다 현재 사용자 UI의 1~9 단계 의미와 편집 안정성을 우선한다.
+- 같은 단계에서 긴 선수 이동과 짧은 패스를 묶어 공이 비정상적으로 느려지지 않도록 장면을 분절한다.
+- 공격 마무리 예시는 골키퍼와 수비 복귀 위치를 포함한다.
+- 모든 위치는 105×68m domain 좌표이며 실제 전술 의도가 읽히는 간격을 사용한다.
 
 ## Milestones
 
-### M0 — Baseline research and task benchmark
+### M1 — Audit and timing diagnostics
 
-- 초보 3명, 코치/분석가 3명으로 현재 Scenario A 기준선을 수집한다.
-- 측정: 저작 시간, 순서 회상, 이유 설명, 재생 횟수, mental effort 1~7, undo/오류 수.
-- 과업 스크립트와 익명 결과를 `docs/product/`에 남긴다.
-- Exit: 세 집단이 없더라도 최소 5명, 초보/숙련 구분을 유지한 기준선.
+- 8개 예시별 시작 구조, segment/step, compiled time, pass receiver, arrival distance를 표로 확인.
+- 현재 모든 path가 implicit step 1인 편집 붕괴 위험을 회귀 테스트로 고정.
+- **완료** — 기존 path의 implicit step 1 집중과 relayout 후 타이밍 붕괴 원인을 확인하고 계약 테스트로 고정.
 
-### M1 — Phase/Chapter additive domain
+### M2 — Re-author scenarios A–D
 
-- 기존 `Scene[]`의 의미를 고정하고 동일 timeline 안 `Phase`/marker 모델을 additive로 설계한다.
-- Phase: id, title, start/end anchor, coaching point, optional pause/loop 정책.
-- 기존 schema v1 문서는 단일 unnamed phase처럼 재생하되 저장 시 불필요한 migration 금지.
-- compile/stateAt 결과는 Phase 유무와 무관하게 동일해야 한다.
-- Exit: JSON round-trip, invalid overlap/reference, old fixtures, determinism tests.
+- 2v2 패스&압박, 원투&침투, 세 번째 선수, 오버랩/언더랩.
+- 전술 의도별 2~4단계, 자연스러운 support/cover 경로, 명시적 step.
+- **완료** — 폭 확보→패스→압박 탈출, 원투, 제3자 침투, 오버랩/언더랩을 단계별로 재저작.
 
-### M2 — Explain mode / Full-play mode
+### M3 — Re-author scenarios E–H
 
-- 설명 모드: Phase nav, 구간 반복, 끝 멈춤, 현재 행동 cue.
-- 전체 모드: authored timing과 모든 동시 관계 보존.
-- 기존 StepBar를 대체하지 않고 Phase가 한 단계 위의 narrative layer가 되게 한다.
-- Exit: 3-Phase 전술을 키보드·포인터로 작성/재생; 720/1440px; reduced-motion.
+- 4-3-3 빌드업, 전방 압박, 수비→공격 전환, 컷백.
+- 롱볼/압박/컷백 동기화, GK·수비 복귀, 명시적 step.
+- **완료** — 빌드업, 압박 트리거, 전환, 컷백의 선수 간격·수비 반응·GK·공 시점을 재저작.
 
-### M3 — Timed Coaching Layer
+### M4 — Scenario quality contracts
 
-- 기존 drawing `visible`을 저작하는 `항상 / 현재부터 / 이 Phase` 프리셋.
-- spotlight, entity highlight, callout의 최소 세트. `followEntityId`는 별도 schema 판단.
-- 설명 모드 중 signal budget과 focus hierarchy를 정의한다.
-- Exit: scrub/replay/GIF parity, annotation undo transaction, 최대 2 cue 샘플.
+- 모든 authored path에 유효한 step.
+- 각 step의 compiled start/end가 `stepWindow`와 일치.
+- 모든 수신 패스 도착 시 receiver가 endpoint 근처에 존재.
+- pass/shot origin이 release 시 ball position과 일치.
+- 좌표/경로가 pitch safety 범위 안이며 compile error가 없음.
+- 예시를 `relayoutStepsInDraft` 재실행해도 byte-idempotent.
+- **완료** — 5개 전수 회귀 테스트로 step/동기화/좌표/간격/멱등성을 검증.
 
-### M4 — Canvas Trigger Link
+### M5 — Visual playback acceptance
 
-- segment/event anchor와 start pill을 직접 연결한다.
-- `at`, `afterSegment`, `onEvent` ↔ 자연어 pill을 lossless 변환한다.
-- cycle, dangling, ambiguous endpoint는 commit 전에 차단하고 이유를 표시한다.
-- simple Step relayout과 advanced trigger truth의 precedence를 ADR로 고정한다.
-- Exit: Acceptance Scenario A를 Inspector 없이 작성, undo 1 link=1 step, old JSON parity.
-
-### M5 — Tactical overlays and factual lint
-
-- pure TS metre 기반 overlays/metrics: thirds, five lanes, half-spaces, Zone 14, 거리, 폭·길이.
-- 1차 lint: offside-at-event, impossible speed, out-of-pitch. 경고만, 자동 수정 없음.
-- 코치의 전술 평가와 기하/규칙 사실을 데이터·UI에서 분리한다.
-- Exit: renderer pixel 독립, scrub deterministic, engine/domain purity.
-
-### M6 — Playbook and persistent variants
-
-- 태그: 상황, 인원, 원칙, 난이도, Phase, 코칭 포인트.
-- 10~15개 hand-authored pattern, 복제하여 변형, 나란히/ghost compare.
-- session-only `VariantSession`을 영속 관계로 확장할 migration/ownership ADR.
-- Exit: 복제→한 반응 변경→비교→원본 복귀 2분 usability task.
-
-### M7 — Player learning mode
-
-- 역할별 focus, temporal-occlusion question marker, coach-authored choices/answer/reason.
-- 답 뒤 전체 전개와 관련 Variant를 비교한다.
-- 점수/서버 없이 local session부터 검증한다.
-- Exit: 기존 전술을 5분 이내 1-question 학습 장면으로 변환, 응답·이유 표시.
-
-### M8 — Delivery boundary (별도 승인)
-
-- local/offline read-only player package 먼저.
-- 그 뒤에만 share link, 권한, 비동기 comment/response, privacy를 L3로 재계획한다.
-- browser-side MP4/WebM, 16:9/1:1/9:16 framing은 성능 spike 후 결정한다.
-- 3D/VR, video tracking, generative tactic authoring, real-time collaboration은 범위 밖.
+- 8개 예시를 실제 UI에서 중간/결과 frame으로 캡처해 겹침·텍스트·경로 가독성 확인.
+- 자동 재생과 단계 칩이 저작된 단계에 맞게 진행되는지 확인.
+- **완료** — 1440×1000 로컬 UI에서 8개 자동 재생의 중간·종료 frame과 단계 칩을 확인. 런타임 오류 없음(개발 서버의 기존 404 리소스 메시지 1건 제외).
 
 ## Verification
 
-각 milestone 기본 게이트:
+`npm run typecheck && npm run lint && npm test && npm run build && npm run harness:verify && npm run format:check`
 
-`npm run typecheck && npm run lint && npm test && npm run build && npm run harness:verify`
-
-추가:
-
-- Domain: old document round-trip, deterministic `stateAt`, trigger cycle/dangling, Phase boundary.
-- UI: keyboard-only, pointer/touch hit, screen reader label, 720/1440px, reduced-motion.
-- Performance: 22 players, 10 phases, 100 segments에서 편집·재생 frame budget 기록.
-- Research: 초보/숙련 분리, 동일 과업 전후 비교. 유의성 없이 학습 효과를 주장하지 않는다.
-
-## Stop / Reversal Criteria
-
-- Phase 저작이 기존 단계 과업 시간을 25% 이상 늘리면 StepBar 통합 방식을 재설계한다.
-- timed cue가 이해를 높이지 않고 mental effort만 높이면 자동 cue를 제거한다.
-- Trigger Link가 simple mode 오류를 늘리면 Advanced timeline에만 격리한다.
-- quiz 준비가 전술당 5분을 넘으면 선택지 템플릿을 단순화한다.
-- server/auth가 필요해지는 순간 M8을 새 L3 계획으로 분리하고 사용자 승인을 받는다.
+추가로 scenario 전수 테스트와 가능하면 로컬 브라우저 playback probe를 실행한다.
 
 ## Ambiguity Register
 
-- A1 Phase가 Scene에 속하는 marker 범위인지 별도 객체인지 — M1 전 G2 확정.
-- A2 timed cue의 entity attachment가 v1 additive field인지 UI 파생인지 — M3 spike.
-- A3 Step와 explicit Trigger 충돌 시 authoritative source — M4 ADR 필수.
-- A4 Variant를 같은 document 내부 branch로 둘지 document relation으로 둘지 — M6 ADR 필수.
-- A5 player response 저장 위치/개인정보 — M8 전 서버 경계 승인.
+- “완벽”은 주관적이므로 전술적 개연성, 단계 편집 안정성, 수신 동기화, 화면 가독성을 객관 계약으로 사용한다.
+- ADR-0009의 same-step same-end는 유지한다. 실제 이벤트 지연이 필요한 장면은 다음 step으로 분리한다.
 
 ## Plan Reversal Log
 
-- 2026-08-21: 벤치마크에서 흔한 3D/AI/video tracking을 선행하지 않고, 현재 엔진 우위를 살리는
-  Phase/Trigger/learning 순으로 제안. 사용자 승인 전 Proposed 유지.
+- 2026-08-21: PLAN-010 장기 로드맵을 parked하고, 사용자 요청에 따라 예시 8개 품질 개선을 우선 실행.
+- 2026-08-21: M1~M5 완료. PLAN-010은 별도 parked 문서로 유지하며 자동 재개하지 않는다.
