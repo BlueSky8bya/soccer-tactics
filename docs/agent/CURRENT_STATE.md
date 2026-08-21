@@ -195,11 +195,11 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
   조작 19종 + 세션 끝 undo→redo 되감기, 결과 기준 불변식 10개) → **위반 0** — 2026-08-22
   (`ST_FUZZ_SHORT=6000 ST_FUZZ_LONG=1200 npx vitest run tacticFuzz`, 415초)
 - **브라우저 마라톤** 실제 포인터 제스처 19종 무작위, 매 제스처 후 페이지 안에서 같은 불변식 →
-  1500 제스처/25세션 **위반 0** — 2026-08-22 (`pw/marathon.cjs`)
+  최종 빌드에서 **1800 제스처/30세션 + 600 제스처/12세션 위반 0** — 2026-08-22 (`pw/marathon.cjs`)
 - 내장 예시 8종 B1 연속 (`scenarioContinuity.test.ts`) → PASS — 2026-08-22
-- 브라우저 프로브 20종(ballmoment/ballrest/midghost/throughball/steps/aimclick/passland/orbit/
+- 브라우저 프로브 21종(ballmoment/ballrest/midghost/throughball/steps/aimclick/passland/orbit/
   identity/colors/homeanchor/overhaul/fling/cues/panelbtns/launchorigin/throughplayer/gif/
-  render/carrylook) → PASS — 2026-08-22
+  render/carrylook/receiveside) → 전부 PASS(최종 빌드 전수 재실행) — 2026-08-22
 - 렌더 대조(`render.cjs`) — 재생 중 토큰의 실제 SVG transform vs 시계: 최대 0.22m(스프링 정착),
   m↔px 왕복 1.4e-14m → PASS — 2026-08-22
 
