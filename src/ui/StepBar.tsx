@@ -1,7 +1,13 @@
 import type { CSSProperties } from 'react'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
-import { MAX_STEP, setSegmentStep, stepCounts, stepWindow } from '@/editor/stepCommands'
+import {
+  MAX_STEP,
+  setSegmentStep,
+  stepCounts,
+  stepRangeFor,
+  stepWindow,
+} from '@/editor/stepCommands'
 import { playWindow } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { entityChipOf } from './teamColor'
@@ -50,8 +56,10 @@ export function StepBar() {
     // colour, the click has to mean what the colour says (and it is what makes the action bar's
     // own step dropdown redundant).
     if (selectedSegmentId) {
+      const range = stepRangeFor(doc, selectedSegmentId)
       const landed = setSegmentStep(core, selectedSegmentId, n)
-      if (landed !== null && landed !== n) flashToast(t('simple.stepClamped', { n: landed }))
+      if (landed !== null && landed !== n && range)
+        flashToast(t('simple.stepRange', { a: range.lo, b: range.hi }))
     }
     if ((counts[n - 1] ?? 0) === 0) return
     const w = stepWindow(doc, n)

@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useEditor } from '@/editor/EditorContext'
 import { removeEntities } from '@/editor/commands'
-import { clearAllMovements, removeStepSegment, setSegmentStep } from '@/editor/stepCommands'
+import {
+  clearAllMovements,
+  removeStepSegment,
+  setSegmentStep,
+  stepRangeFor,
+} from '@/editor/stepCommands'
 import { replaceDocument } from '@/editor/moreCommands'
 import { createEmptyDocument } from '@/domain'
 import { seedDefaultTeams } from '@/editor/commands'
@@ -204,8 +209,10 @@ export function useEditorKeyboard(): void {
             if (ui.selectedSegmentId) {
               // The chain's neighbours may leave no room for the step that was asked for — say
               // where it actually landed rather than looking like a dead key.
+              const range = stepRangeFor(core.getDocument(), ui.selectedSegmentId)
               const landed = setSegmentStep(core, ui.selectedSegmentId, n)
-              if (landed !== null && landed !== n) ui.flashToast(t('simple.stepClamped', { n: landed }))
+              if (landed !== null && landed !== n && range)
+                ui.flashToast(t('simple.stepRange', { a: range.lo, b: range.hi }))
             }
           }
           return

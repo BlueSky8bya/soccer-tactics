@@ -17,7 +17,13 @@ import { addStepPass } from './stepCommands'
 
 const INDENT = '\n    '
 /** Sessions are hundreds of compiles each; the default 5 s cannot cover the campaign. */
-const BUDGET_MS = 180_000
+const BUDGET_MS = 1_800_000
+/**
+ * Campaign size. The committed default is what every `npm test` run pays for; a soak run widens it
+ * without editing anything — `ST_FUZZ_SHORT=3000 ST_FUZZ_LONG=600 npx vitest run tacticFuzz`.
+ */
+const SHORT = Number(process.env.ST_FUZZ_SHORT ?? 300)
+const LONG = Number(process.env.ST_FUZZ_LONG ?? 60)
 
 function report(f: Failure): string {
   return f.why + INDENT + f.log.join(INDENT)
@@ -25,10 +31,10 @@ function report(f: Failure): string {
 
 describe('tactic fuzz — every operation, random order, result invariants', () => {
   it(
-    '300 short sessions stay consistent',
+    `${SHORT} short sessions stay consistent`,
     () => {
       const bad: string[] = []
-      for (let seed = 1; seed <= 300 && bad.length < 3; seed++) {
+      for (let seed = 1; seed <= SHORT && bad.length < 3; seed++) {
         const f = session(seed, 12)
         if (f) bad.push(report(f))
       }
@@ -38,10 +44,10 @@ describe('tactic fuzz — every operation, random order, result invariants', () 
   )
 
   it(
-    '60 long sessions stay consistent',
+    `${LONG} long sessions stay consistent`,
     () => {
       const bad: string[] = []
-      for (let seed = 1001; seed <= 1060 && bad.length < 3; seed++) {
+      for (let seed = 100_001; seed <= 100_000 + LONG && bad.length < 3; seed++) {
         const f = session(seed, 40)
         if (f) bad.push(report(f))
       }
