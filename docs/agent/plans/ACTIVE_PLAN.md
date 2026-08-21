@@ -1,7 +1,7 @@
 # Active ExecPlan
 
 Plan ID: PLAN-20260822-012
-Status: In Progress — M1·M2 landed and measured, M3~M5 awaiting the research brief
+Status: In Progress — M1~M4 landed and measured; M5 open, plus two WCAG AA gaps found
 Task Risk: L3 (shell layout, motion system, interaction feel — touches ADR-0006 and ADR-0009)
 Created: 2026-08-22
 Updated: 2026-08-22
@@ -48,25 +48,30 @@ Exit: 게이트 PASS + 스프링 유닛 5 PASS. **달성**.
 측정: 피치는 105:68 고정비라 이 그리드에서 **모든 노트북 폭에서 width-constrained**이고, 쓰지 못하는
 세로 여유가 120~220px 남는다. 즉 사이드 크롬 1px = 보드 1px 손실.
 
-- 고정 260/304 → `clamp(196px,14vw,244px) / clamp(220px,15vw,268px)`.
+- 고정 260/304 → `clamp(222px,14vw,244px) / clamp(238px,15vw,268px)`. (196/220 floor는 한국어 힌트가 단어 중간에서 끊겨 실측 후 상향.)
 - 실측 보드 폭: 1280 667→809px(**면적 +47%**), 1440 821→958px(+17%), 1920 1283→1331px(+3.7%),
   2560은 0(거기선 height-constrained라 넓은 패널이 공짜).
 - 최소 폭에서 텍스트 잘림 0 · 가로 스크롤 0 · 종횡비 유지 — 4개 해상도 실측.
 
 Exit: layout probe 16/16 PASS. **달성**.
 
-### M3 — 조화: 간격·위계 (PENDING RESEARCH)
+### M3 — 조화: 간격·위계 (DONE)
 
-- 4pt 그리드 이탈값(15px 카드 패딩, 11px 바 패딩, 3/5/6/7px 산재) 정리 범위 결정.
-  주의: 촘촘한 컨트롤의 2px 갭은 의도된 것일 수 있어 일괄 치환 금지.
-- 섹션 라벨/본문/힌트의 타입 스케일 정리.
-- 대기 근거: 모듈러 스케일의 실증 여부, 그룹으로 읽히는 데 필요한 간격 비율(게슈탈트 근접성).
+- **일괄 8pt 정리는 하지 않기로 했다** — 리서치가 명시적으로 반대. Carbon 스케일은 비균일이고
+  Apple 데스크톱 컨트롤도 6/8/10/12를 쓴다. 빠진 단계(2, 40, 48)만 채웠다.
+- **게슈탈트 근접성**(Kubovy Pure Distance Law): 그룹 간/내 간격비가 1.5 이하면 다중안정.
+  왼쪽 패널이 정확히 1.5였다 → 16px(2.0)로. 카드 패딩 15px(스케일 밖) → 16px.
+- 짧은 뷰포트(≤860px)에서는 카드 패딩만 줄여 **조작 열이 잘리지 않게** 하고 그룹 비율은 지켰다.
+- 참조 열(조작법)은 1280에서 어떤 폭으로도 안 들어가므로(필요 ~760px, 가용 657px) 스크롤 +
+  가장자리 페이드로 처리 — 리서치상 참조 패널이 양보 대상이다.
 
-### M4 — 몰입: 크롬 후퇴와 연속성 (PENDING RESEARCH)
+### M4 — 몰입: zen 모드 (DONE)
 
-- 재생 중 크롬 후퇴는 이미 있음(`data-playing` opacity 0.45) — 강도·대상 재검토.
-- 패널 등장/퇴장과 선택 전환의 공간적 연속성.
-- 대기 근거: 애니메이션이 이해를 돕는 조건 vs 비용이 되는 조건, 몰입 저해 요인.
+- **F = 크롬 숨김, 보드만.** Photoshop·Blender·Figma·VS Code·Sketch가 예외 없이 40년간 제공한
+  "도킹 기본 + 원키 전체 캔버스" 패턴. Figma는 플로팅 패널을 실험했다 *"사람을 느리게 만든다"*는
+  이유로 되돌렸다. 실측 보드 +16%(1440에서 921→1069px), 복귀 시 정확히 원복.
+- 기본은 계속 보이게 둔다 — Budiu(NN/g)의 임계 검정: 크롬을 줄여도 비율이 실질 개선되지 않으면
+  보여라. 1440에서 사이드 패널은 16.5%로 그 기준을 넘지 못한다.
 
 ### M5 — 조작감: 직접 조작의 물성 (PENDING RESEARCH)
 
@@ -81,6 +86,15 @@ Exit: layout probe 16/16 PASS. **달성**.
 ## Verification
 
 `npm run typecheck && npm run lint && npm test && npm run build && npm run harness:verify`
+
+### M7 — 접근성 AA 부적합 2건 (NEW — 사용자 결정 필요)
+
+리서치가 찾아낸 **실제 규격 미달**. 범위가 커서 이번 개편에 넣지 않고 올린다.
+
+- **SC 2.5.7 Dragging Movements (AA)**: 드래그로 하는 모든 기능에 드래그 없는 단일 포인터 대안이
+  있어야 한다. **키보드 대안은 이 기준을 충족하지 않는다**(W3C 명시). 이 앱 저작은 전부 드래그다.
+  최소 비용 해법: 클릭으로 경유지 찍는 경로 모드 + 선수 클릭 → 목적지 클릭 배치.
+- **SC 2.5.8 Target Size (AA)**: 최소 24×24px. `--st-hit-handle`이 **16px**로 미달.
 
 ## Ambiguity Register
 

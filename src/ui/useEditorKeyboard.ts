@@ -125,6 +125,12 @@ export function useEditorKeyboard(): void {
         case 'g':
           ui.setLoop(!ui.playback.loop)
           return
+        case 'f':
+          // Chrome off, board only. Docked-by-default plus a one-key escape is what every
+          // professional canvas tool ships (Sketch, Figma, VS Code, Blender, Photoshop).
+          e.preventDefault()
+          ui.setZen(!ui.zen)
+          return
         case 'Escape':
           if (ui.drag || ui.pathDraft) return // pitch handles gesture cancel
           if (ui.selectedSegmentId) ui.selectSegment(null)

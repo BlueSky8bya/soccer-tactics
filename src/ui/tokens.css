@@ -29,13 +29,19 @@
   --st-ball: #ffffff;
   --st-ball-path: #ffffff;
 
-  /* Spacing (4pt grid) */
+  /* Spacing — fine at the small end, coarse at the top (IBM Carbon's shape, not a pure 8pt grid).
+     A strict 8-multiple scale bloats a dense professional tool: Apple's own desktop control
+     metrics use 6/8/10/12. The 8pt argument is a pixel-snapping one, which is real engineering —
+     the "8 is more harmonious" part is convention, with no study behind it. */
+  --st-space-0: 2px;
   --st-space-1: 4px;
   --st-space-2: 8px;
   --st-space-3: 12px;
   --st-space-4: 16px;
   --st-space-6: 24px;
   --st-space-8: 32px;
+  --st-space-10: 40px;
+  --st-space-12: 48px;
 
   /* Radius */
   --st-radius-s: 7px;

@@ -127,6 +127,13 @@ export interface UiState {
   setDrawDraft: (d: { kind: 'rect' | 'ellipse' | 'arrow'; a: Vec2; b: Vec2 } | null) => void
   setTextEdit: (t: { at: Vec2; id?: Id; value: string } | null) => void
   setAnnotateOn: (on: boolean) => void
+  /**
+   * Chrome hidden, board only. Every professional canvas tool ships docked chrome plus a
+   * one-key escape to full canvas (Sketch ⌘., Figma ⌘⇧\, VS Code Zen) — four decades of
+   * unanimous precedent, and the cheapest way to hand the board the whole window.
+   */
+  zen: boolean
+  setZen: (on: boolean) => void
   setAnnotate: (patch: Partial<Omit<UiState['annotate'], 'on'>>) => void
 }
 
@@ -157,6 +164,7 @@ export const useUiStore = create<UiState>((set) => ({
   textEdit: null,
   // VIC reference defaults: PEN_COLORS[0] black, PEN_WIDTHS[2] = 5px
   annotate: { on: false, tool: 'pen', color: '#000000', width: 5 },
+  zen: false,
   onboardingDismissed:
     typeof localStorage !== 'undefined' && localStorage.getItem('st.onboardingDismissed') === '1',
 
@@ -225,6 +233,7 @@ export const useUiStore = create<UiState>((set) => ({
   setDrawDraft: (drawDraft) => set({ drawDraft }),
   setTextEdit: (textEdit) => set({ textEdit }),
   setAnnotateOn: (on) => set((s) => ({ annotate: { ...s.annotate, on } })),
+  setZen: (zen) => set({ zen }),
   setAnnotate: (patch) => set((s) => ({ annotate: { ...s.annotate, ...patch } })),
   setHelpOpen: (helpOpen) => {
     try {

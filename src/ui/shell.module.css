@@ -959,7 +959,7 @@
  * 2560 the pitch is height-constrained, so widening the panels there costs nothing).
  */
 .shell[data-simple='true'] {
-  grid-template-columns: clamp(196px, 14vw, 244px) 1fr clamp(220px, 15vw, 268px);
+  grid-template-columns: clamp(222px, 14vw, 244px) 1fr clamp(238px, 15vw, 268px);
   grid-template-areas:
     'top top top'
     'left pitch right'
@@ -970,18 +970,28 @@
   grid-area: left;
   display: flex;
   flex-direction: column;
-  gap: var(--st-space-3);
+  /* Cards are 8px inside, so 12px between them is a ratio of exactly 1.5 — the point at which
+     grouping goes multistable and the cards can read as one long field. 16px (2.0) clears it. */
+  gap: var(--st-space-4);
   padding: var(--st-space-3);
   background: transparent;
   overflow: auto;
   min-height: 0;
 }
 
+/*
+ * The guide is REFERENCE — read, not operated — so it is the one column allowed to scroll when
+ * the viewport is short. Measured: its content needs ~760px even at 300px wide, and a 1280x800
+ * window only offers 657px, so no width setting makes it fit. A fade marks the cut as "more
+ * below" instead of leaving it looking clipped; the full list also lives in the ? overlay.
+ */
 .sideRight {
   grid-area: right;
   display: flex;
   flex-direction: column;
-  gap: var(--st-space-3);
+  gap: var(--st-space-4);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
   padding: var(--st-space-3);
   background: transparent;
   overflow: auto;
@@ -994,7 +1004,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--st-space-2);
-  padding: 15px;
+  padding: var(--st-space-4);
   background: var(--st-surface);
   border-radius: var(--st-radius-card);
   box-shadow: var(--st-depth-rest);
@@ -2008,3 +2018,48 @@
   }
 }
 
+
+/*
+ * Short viewports (1280x800 and friends): the controls column is the one that must never be cut
+ * off — it is operated, not read. Tighten its internal padding rather than its BETWEEN-card gap,
+ * so the 2.0 grouping ratio survives while the column gets ~32px back.
+ */
+@media (max-height: 860px) {
+  .shell[data-simple='true'] .panelCard {
+    padding: var(--st-space-3);
+  }
+
+  .shell[data-simple='true'] .sideLeft,
+  .shell[data-simple='true'] .sideRight {
+    padding: var(--st-space-2) var(--st-space-3);
+  }
+}
+
+/*
+ * Zen (F): chrome off, board only. Docked-by-default plus a one-key escape to full canvas is what
+ * Photoshop, Blender, Figma, VS Code and Sketch have all shipped for decades — the panels stay
+ * visible and discoverable by default, and the board can still take the whole window on demand.
+ * The columns collapse on the overlay spring so the board grows into the space rather than
+ * snapping; the panels themselves fade and stop taking pointer events.
+ */
+.shell[data-simple='true'][data-zen='true'] {
+  grid-template-columns: 0 1fr 0;
+}
+
+.shell[data-simple='true'] {
+  transition: grid-template-columns var(--st-spring-overlay-ms) var(--st-spring-overlay);
+}
+
+.shell[data-zen='true'] .sideLeft,
+.shell[data-zen='true'] .sideRight {
+  opacity: 0;
+  pointer-events: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell[data-simple='true'] {
+    transition: none;
+  }
+}

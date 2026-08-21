@@ -133,7 +133,12 @@ export function AppShell() {
   )
 
   return (
-    <div className={styles.shell} data-simple="true" data-playing={ui.playback.playing}>
+    <div
+      className={styles.shell}
+      data-simple="true"
+      data-playing={ui.playback.playing}
+      data-zen={ui.zen}
+    >
       <header className={styles.top}>
         <button
           type="button"

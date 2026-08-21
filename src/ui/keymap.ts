@@ -29,6 +29,7 @@ export const KEYMAP = {
     },
     restart: { key: 'Home', label: 'Home', hint: '처음으로' },
     loop: { key: 'g', label: 'G', hint: '반복' },
+    zen: { key: 'f', label: 'F', hint: '패널 숨기고 보드만 (다시 F)' },
   },
   edit: {
     undo: { label: 'Ctrl+Z', hint: '실행 취소' },
@@ -105,7 +106,11 @@ export const CTRL_BINDINGS: Binding[] = [
 
 export const GUIDE_PLACE_BINDINGS: Binding[] = PLACE_BINDINGS.filter((b) => b.compact)
 export const GUIDE_ANIM_BINDINGS: Binding[] = ANIM_BINDINGS.filter((b) => b.compact)
-export const GUIDE_PLAY_BINDINGS: Binding[] = [KEYMAP.playback.toggle, KEYMAP.playback.boost]
+export const GUIDE_PLAY_BINDINGS: Binding[] = [
+  KEYMAP.playback.toggle,
+  KEYMAP.playback.boost,
+  KEYMAP.playback.zen,
+]
 
 export const KEYMAP_GROUPS: { title: string; items: Binding[] }[] = [
   { title: '배치', items: PLACE_BINDINGS },
