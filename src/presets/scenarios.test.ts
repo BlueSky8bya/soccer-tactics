@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { compile } from '@/engine/compile'
+import { describeJump, maxBallJump } from '@/engine/ballContinuity'
+import { ATTACH_RADIUS_M, compile } from '@/engine/compile'
 import { stateAt } from '@/engine/stateAt'
 import { isTacticDocument } from '@/editor/persistence'
 import { relayoutStepsInDraft, stepCounts, stepOf, stepWindow } from '@/editor/stepCommands'
@@ -80,13 +81,32 @@ describe('scenario presets', () => {
         ).toBeLessThan(0.05)
 
         if (!segment.receiverId) continue
+        // The pass ends where the ball COMES TO REST on the receiver, not on their centre point.
+        // This used to assert the endpoint sat exactly on the player (<0.05 m) — which guaranteed
+        // the opposite of what it looked like it was protecting: the carry resolver then re-seated
+        // the ball a dribble-length away the instant it landed, and all eight presets teleported
+        // the ball by 2–7 m on every catch (invariant B1, user 2026-08-22).
         const endpoint = segment.path.waypoints[segment.path.waypoints.length - 1]!.p
+        const restingBall = stateAt(compiled, doc, timing.end).ball.pos
+        expect(
+          Math.hypot(endpoint.x - restingBall.x, endpoint.y - restingBall.y),
+          `${preset.id}/${segment.id} receiver arrival`,
+        ).toBeLessThan(0.05)
         const receiver = stateAt(compiled, doc, timing.end).players[segment.receiverId]!.pos
         expect(
           Math.hypot(endpoint.x - receiver.x, endpoint.y - receiver.y),
-          `${preset.id}/${segment.id} receiver arrival`,
-        ).toBeLessThan(0.05)
+          `${preset.id}/${segment.id} lands within a touch of the receiver`,
+        ).toBeLessThan(ATTACH_RADIUS_M)
       }
+    }
+  })
+
+  it('never teleports the ball (invariant B1)', () => {
+    for (const preset of SCENARIOS) {
+      const jump = maxBallJump(preset.build())
+      expect(jump === null ? 'continuous' : `${preset.id}: ${describeJump(jump)}`).toBe(
+        'continuous',
+      )
     }
   })
 

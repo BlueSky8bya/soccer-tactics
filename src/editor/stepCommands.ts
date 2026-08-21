@@ -6,7 +6,8 @@
  */
 import type { Track, Id, Path, TacticDocument, Vec2, Waypoint } from '@/domain/types'
 import { GEN_PREFIX } from '@/engine/opponent'
-import { carryOffset, compile } from '@/engine/compile'
+import { heldBallPos } from '@/engine/carry'
+import { BALL_OFFSET, carryOffset, compile } from '@/engine/compile'
 import { buildPathLUT } from '@/engine/path'
 import { stateAt } from '@/engine/stateAt'
 import { newId } from './commands'
@@ -24,6 +25,7 @@ import {
   removeSegmentInDraft,
   sceneOf,
   syncTravelReceiverInDraft,
+  type ReceiverCandidate,
 } from './segmentCommands'
 
 export const MAX_STEP = 9
@@ -98,67 +100,110 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
       t = Math.round((t + stepDur) * 100) / 100
     }
   }
-  deriveTimings()
-
-  // 3) ORIGIN = BALL AT LAUNCH (ADR-0010 D2): the authored origin snaps to the ball position
-  //    at the EXACT launch instant. Since M1 the compiled release anchor IS the shared carry
-  //    resolver, so stateAt(t) at a travel start returns that same anchor — no ±ε sampling
-  //    tricks (audit R4), and a second pass moves nothing (idempotence).
-  {
-    const cm0 = compile(draft)
-    let moved = false
+  /**
+   * THROUGH BALL (user 2026-08-20): a pass aimed at a receiver's FUTURE spot must ARRIVE when the
+   * runner does — stretch the pass duration, never shrink it. It runs INSIDE the anchor loop
+   * because it moves the arrival instant, which moves the anchor: sequenced after the snap it left
+   * the pass attached to wherever the receiver stood at the un-stretched arrival, metres from
+   * where they actually collect it (fuzz seed 572). `deriveTimings` resets durations to the step
+   * window, so this re-applies at the top of every round.
+   */
+  const syncThroughBall = (): void => {
     for (const track of scene.timeline.tracks) {
       if (track.entityKind !== 'ball') continue
       for (const seg of track.segments) {
-        if (seg.kind !== 'travel' || seg.id.startsWith(GEN_PREFIX)) continue
-        if (seg.trigger.type !== 'at') continue
-        const first = seg.path.waypoints[0]
-        if (!first) continue
-        const rs = stateAt(cm0, draft, seg.trigger.t)
-        const launch = rs.ball.pos
-        const dx = launch.x - first.p.x
-        const dy = launch.y - first.p.y
-        if (Math.hypot(dx, dy) > 0.25) {
-          moved = true
-          first.p = { x: launch.x, y: launch.y }
-          if (first.handleIn)
-            first.handleIn = { x: first.handleIn.x + dx, y: first.handleIn.y + dy }
-          if (first.handleOut)
-            first.handleOut = { x: first.handleOut.x + dx, y: first.handleOut.y + dy }
+        if (seg.kind !== 'travel' || !seg.receiverId || seg.id.startsWith(GEN_PREFIX)) continue
+        if (seg.trigger.type !== 'at' || !('duration' in seg.timing)) continue
+        const end = seg.path.waypoints[seg.path.waypoints.length - 1]?.p
+        if (!end) continue
+        const rTrack = scene.timeline.tracks.find((tr) => tr.entityId === seg.receiverId)
+        if (!rTrack) continue
+        for (const run of rTrack.segments) {
+          if (!('path' in run) || run.id.startsWith(GEN_PREFIX)) continue
+          if (run.trigger.type !== 'at' || !('duration' in run.timing)) continue
+          const rEnd = run.path.waypoints[run.path.waypoints.length - 1]?.p
+          // Pass ends rest at the receiver's CARRIED spot (2.0–2.6m) — the match tolerance
+          // must cover that attachment distance.
+          if (!rEnd || Math.hypot(rEnd.x - end.x, rEnd.y - end.y) > 3.0) continue
+          const receiverArrives = run.trigger.t + run.timing.duration
+          const synced = receiverArrives - seg.trigger.t
+          if (synced > seg.timing.duration) {
+            seg.timing.duration = Math.round(synced * 100) / 100
+          }
+          break
         }
       }
     }
-    // lengths changed → re-derive the step timings once
-    if (moved) deriveTimings()
   }
+
+  deriveTimings()
 
-  // 4) THROUGH BALL constraint (user 2026-08-20): a pass aimed at a receiver's FUTURE spot
-  //    must ARRIVE when the runner does — stretch the pass duration (never shrink).
-  for (const track of scene.timeline.tracks) {
-    if (track.entityKind !== 'ball') continue
-    for (const seg of track.segments) {
-      if (seg.kind !== 'travel' || !seg.receiverId || seg.id.startsWith(GEN_PREFIX)) continue
-      if (seg.trigger.type !== 'at' || !('duration' in seg.timing)) continue
-      const end = seg.path.waypoints[seg.path.waypoints.length - 1]?.p
-      if (!end) continue
-      const rTrack = scene.timeline.tracks.find((tr) => tr.entityId === seg.receiverId)
-      if (!rTrack) continue
-      for (const run of rTrack.segments) {
-        if (!('path' in run) || run.id.startsWith(GEN_PREFIX)) continue
-        if (run.trigger.type !== 'at' || !('duration' in run.timing)) continue
-        const rEnd = run.path.waypoints[run.path.waypoints.length - 1]?.p
-        // Pass ends rest at the receiver's CARRIED spot (2.0–2.6m) — the match tolerance
-        // must cover that attachment distance.
-        if (!rEnd || Math.hypot(rEnd.x - end.x, rEnd.y - end.y) > 3.0) continue
-        const receiverArrives = run.trigger.t + run.timing.duration
-        const synced = receiverArrives - seg.trigger.t
-        if (synced > seg.timing.duration) {
-          seg.timing.duration = Math.round(synced * 100) / 100
+  // 3) BALL ANCHORS (invariant B1 — ADR-0010 D7). Both ends of every pass are DERIVED from the
+  //    one carry resolver, never composed here as `pos + offset`:
+  //      · arrival  — where the ball comes to rest on the receiver
+  //      · origin   — where the ball is at the launch instant
+  //    They are computed together, from ONE compile, because each depends on the other through the
+  //    clock: an arrival moves the path, the path length moves the step timings, and the timings
+  //    move every launch instant. Snapping them in sequence left the first one stale (fuzz seeds
+  //    169/415/448/572). Iterate to a fixed point instead; four passes is far past what any real
+  //    document needs, and a document that will not settle keeps its last anchors rather than
+  //    spinning.
+  for (let round = 0; round < 4; round++) {
+    syncThroughBall()
+    const cm = compile(draft)
+    let moved = false
+    const shift = (w: Waypoint, to: Vec2): void => {
+      const inc = { x: to.x - w.p.x, y: to.y - w.p.y }
+      w.p = to
+      if (w.handleIn) w.handleIn = { x: w.handleIn.x + inc.x, y: w.handleIn.y + inc.y }
+      if (w.handleOut) w.handleOut = { x: w.handleOut.x + inc.x, y: w.handleOut.y + inc.y }
+    }
+    for (const track of scene.timeline.tracks) {
+      if (track.entityKind !== 'ball') continue
+      for (let i = 0; i < track.segments.length; i++) {
+        const seg = track.segments[i]!
+        if (seg.kind !== 'travel' || seg.id.startsWith(GEN_PREFIX)) continue
+        const times = cm.segmentTimes[seg.id]
+        const wps = seg.path.waypoints
+        const first = wps[0]
+        const last = wps[wps.length - 1]
+
+        // arrival: the receiver's carried spot at the instant the ball gets there
+        const arrival = times?.end
+        if (last && seg.receiverId && arrival !== undefined && Number.isFinite(arrival)) {
+          const rp = stateAt(cm, draft, arrival).players[seg.receiverId]
+          const hold = track.segments[i + 1]
+          const held = hold && hold.kind === 'possessed' && hold.holderId === seg.receiverId
+          if (rp) {
+            const to = heldBallPos(
+              { pos: rp.pos, moving: rp.moving },
+              rp.carryAhead,
+              (held ? hold.offset : undefined) ?? BALL_OFFSET,
+            )
+            if (Math.hypot(to.x - last.p.x, to.y - last.p.y) > 0.25) {
+              shift(last, to)
+              moved = true
+            }
+            // the standing offset has to agree with the anchor we just placed
+            if (held) hold.offset = { x: to.x - rp.pos.x, y: to.y - rp.pos.y }
+          }
         }
-        break
+
+        // origin: wherever the ball IS when this travel fires
+        if (first && seg.trigger.type === 'at') {
+          const launch = stateAt(cm, draft, seg.trigger.t).ball.pos
+          if (Math.hypot(launch.x - first.p.x, launch.y - first.p.y) > 0.25) {
+            shift(first, launch)
+            moved = true
+          }
+        }
       }
     }
+    if (!moved) break
+    // path lengths changed → step timings, and with them every arrival and launch instant
+    deriveTimings()
   }
+  syncThroughBall()
 
   // 5) Ball possessions with an absolute time: keep them at/before the pass they precede.
   for (const track of scene.timeline.tracks) {
@@ -302,8 +347,15 @@ export function resolvePassReceiverInDraft(
       if (end) ghostSpots.push({ id: tr.entityId, pos: end })
     }
   }
-  const candidateSets: { id: Id; pos: { x: number; y: number } }[][] = [
-    doc.players.map((p) => ({ id: p.id, pos: rs.players[p.id]?.pos ?? p.home })),
+  const candidateSets: ReceiverCandidate[][] = [
+    // The resolved set carries the motion state too, so the catch point is placed by the carry
+    // resolver rather than composed from a bare offset (invariant B1).
+    doc.players.map((p) => ({
+      id: p.id,
+      pos: rs.players[p.id]?.pos ?? p.home,
+      moving: rs.players[p.id]?.moving ?? false,
+      ...(rs.players[p.id]?.carryAhead ? { carry: rs.players[p.id]!.carryAhead } : {}),
+    })),
     doc.players.map((p) => ({ id: p.id, pos: p.home })),
     ghostSpots,
     doc.players.map((p) => ({ id: p.id, pos: lastKnownPosition(doc, p.id) })),

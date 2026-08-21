@@ -1,7 +1,7 @@
 # Active ExecPlan
 
 Plan ID: PLAN-20260822-012
-Status: In Progress — M1~M4 landed and measured; M5 open, plus two WCAG AA gaps found
+Status: In Progress — M1~M4 landed and measured; M5 open, two WCAG AA gaps found; B1 규명·수정 완료(계획 외 긴급)
 Task Risk: L3 (shell layout, motion system, interaction feel — touches ADR-0006 and ADR-0009)
 Created: 2026-08-22
 Updated: 2026-08-22
@@ -95,6 +95,13 @@ Exit: layout probe 16/16 PASS. **달성**.
   있어야 한다. **키보드 대안은 이 기준을 충족하지 않는다**(W3C 명시). 이 앱 저작은 전부 드래그다.
   최소 비용 해법: 클릭으로 경유지 찍는 경로 모드 + 선수 클릭 → 목적지 클릭 배치.
 - **SC 2.5.8 Target Size (AA)**: 최소 24×24px. `--st-hit-handle`이 **16px**로 미달.
+
+### M8 — 공 발사점 고질 결함 (DONE — 계획 외, 사용자 재보고 2026-08-22)
+
+사용자가 "고쳤다고 몇 번을 말해도 꾸준히 생긴다"고 지목한 결함. 원인 3건 확정·수정, ADR-0010 D7로
+기록. 핵심은 개별 수정이 아니라 **불변식**을 세운 것: `ballContinuity.ts`가 "공은 순간이동하지 않는다"를
+결과 기준으로 검사하고, 퍼즈가 **저작 순서**를 무작위화한다(3000세션 0건). 손으로 만든 시나리오가 이
+결함을 계속 놓친 이유가 정확히 순서 의존이었기 때문이다. 상세: CHG-20260822-139.
 
 ## Ambiguity Register
 

@@ -13,6 +13,7 @@ import type {
   Vec2,
   Waypoint,
 } from '@/domain/types'
+import { heldBallPos, type CarryAhead } from '@/engine/carry'
 import { carryOffset } from '@/engine/compile'
 import { newId } from './commands'
 import type { EditorCore } from './editorCore'
@@ -360,6 +361,19 @@ export function moveTravelEndInDraft(
 export const RECEIVE_RADIUS_M = 3.5
 
 /**
+ * A candidate receiver AND the motion state that decides where the ball comes to rest on them.
+ * `moving`/`carry` are what `heldBallPos` needs: without them the catch point is composed here as
+ * `pos + offset` while playback resolves it through the carry rule, and the two disagree by up to
+ * the dribble-ahead distance every time the receiver ran onto the pass (invariant B1).
+ */
+export interface ReceiverCandidate {
+  id: Id
+  pos: Vec2
+  moving?: boolean
+  carry?: CarryAhead
+}
+
+/**
  * Re-resolve who receives a travel segment from its END point and the players' positions at arrival.
  * Keeps the following `possessed` segment in sync (set/insert/remove) and pass↔loose kind.
  * Used after the end of a pass was dragged (tail/waypoint edit) — ISSUE: receiver used to stay stale → ball teleported.
@@ -367,7 +381,7 @@ export const RECEIVE_RADIUS_M = 3.5
 export function syncTravelReceiverInDraft(
   draft: TacticDocument,
   segmentId: Id,
-  playersAtArrival: readonly { id: Id; pos: Vec2 }[],
+  playersAtArrival: readonly ReceiverCandidate[],
   radius = RECEIVE_RADIUS_M,
   opts?: { preserveEndDirection?: boolean },
 ): void {
@@ -380,7 +394,7 @@ export function syncTravelReceiverInDraft(
   const passer = prev && prev.kind === 'possessed' ? prev.holderId : undefined
   const near = playersAtArrival
     .filter((p) => p.id !== passer)
-    .map((p) => ({ id: p.id, pos: p.pos, dist: Math.hypot(p.pos.x - end.x, p.pos.y - end.y) }))
+    .map((p) => ({ ...p, dist: Math.hypot(p.pos.x - end.x, p.pos.y - end.y) }))
     .filter((x) => x.dist <= radius)
     .sort((a, b) => a.dist - b.dist)[0]
   const receiver = near?.id
@@ -418,7 +432,12 @@ export function syncTravelReceiverInDraft(
   // next pass drawn from that ghost) moves with it so the chain never tears.
   if (near && recvOffset) {
     const endWp = seg.path.waypoints[seg.path.waypoints.length - 1]!
-    const to = { x: near.pos.x + recvOffset.x, y: near.pos.y + recvOffset.y }
+    // THE catch point comes from the carry resolver, never from `pos + offset` composed here:
+    // `heldBallPos` ignores the offset whenever a carry is active, so a receiver who RAN onto the
+    // pass rests a dribble-length in front of where this used to put the arrow tip. The ball then
+    // landed at one point and was drawn at another, and every anchor downstream — the ghost the
+    // user grabs, the next pass's origin — inherited whichever its own call site read (B1).
+    const to = heldBallPos({ pos: near.pos, moving: near.moving ?? false }, near.carry, recvOffset)
     const inc = { x: to.x - endWp.p.x, y: to.y - endWp.p.y }
     if (Math.hypot(inc.x, inc.y) > 1e-9) {
       const oldEnd = endWp.p

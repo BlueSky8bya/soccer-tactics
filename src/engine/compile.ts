@@ -292,9 +292,27 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
   }
 
   const ballTrackList = byTrack.find((l) => l[0]?.entityKind === 'ball') ?? []
+
+  /**
+   * Is every segment of this player's track placed on the clock yet? A travel's release anchor
+   * asks `heldBallPosAt` where the holder IS at launch, and a schedule is built ONCE and never
+   * revisited. Tracks resolve in document order, so a ball track created BEFORE the holder's
+   * (draw a pass, then give that player their first run) reaches the travel branch while the
+   * holder's moves still have no start — `playerPosAt` answers with their HOME, and the pass
+   * launches from the player's starting spot for the rest of the document's life. Order-dependent,
+   * so it looked intermittent and outlived several fixes (user 2026-08-22, screenshots). Wait for
+   * the holder instead; `ballContinuity` guards the result.
+   */
+  const holderSettled = (holderId: Id): boolean => {
+    const l = byTrack.find((q) => q[0]?.entityId === holderId)
+    if (!l) return true
+    return l.every((q) => q.start !== undefined && (q.seg.kind !== 'move' || q.end !== undefined))
+  }
+  /** Dropped once a whole pass makes no progress, so a cycle can never deadlock the compile. */
+  let waitForHolders = true
   let progress = true
   let guard = 0
-  while (progress && guard++ < 1000) {
+  while (guard++ < 1000) {
     progress = false
     for (const list of byTrack) {
       for (const p of list) {
@@ -336,6 +354,13 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
             // Travel start position = holder position at release (if previously possessed), else path start.
             const prev = list[p.indexInTrack - 1]
             let path = seg.path
+            if (
+              waitForHolders &&
+              prev &&
+              prev.seg.kind === 'possessed' &&
+              !holderSettled(prev.seg.holderId)
+            )
+              continue
             if (prev && prev.seg.kind === 'possessed') {
               // Shared carry resolver (ADR-0010 D2): the release anchor is wherever stateAt
               // says the held ball IS at launch — front carry, junction pin and lock included.
@@ -367,6 +392,14 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
         }
       }
     }
+    if (progress) continue
+    // Stalled. Release the holder deferral once and try again, so a trigger cycle degrades to the
+    // old behaviour (and its own error issue) instead of leaving travels unscheduled.
+    if (waitForHolders) {
+      waitForHolders = false
+      continue
+    }
+    break
   }
 
   // Helper: player position at absolute t from already-resolved player segments (used for ball release).
