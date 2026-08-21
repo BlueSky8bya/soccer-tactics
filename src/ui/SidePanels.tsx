@@ -168,6 +168,7 @@ export function GuidePanel() {
       <div className={styles.guideGroup}>
         <div className={styles.guideTitle}>{t('tl.play')}</div>
         <Row b={KEYMAP.playback.toggle} />
+        <Row b={KEYMAP.playback.boost} />
         <Row b={KEYMAP.edit.undo} />
         <Row b={KEYMAP.edit.del} />
       </div>

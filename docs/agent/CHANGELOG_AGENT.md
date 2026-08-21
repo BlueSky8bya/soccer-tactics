@@ -1213,3 +1213,18 @@ Validation: typecheck/lint/build/harness PASS, 181 tests PASS(AppShell 부스트
 shell-hierarchy 테스트를 '공 투입 버튼 부재 + 공 존재' 계약으로 갱신). Playwright `boost.cjs`
 8/8 PASS(버튼 부재·공 존재·정지 시 무표시·홀드 시 pill/글로우/버튼 전환·릴리스 시 해제), 콘솔 에러 0.
 
+### CHG-20260821-126 — UX — Space 홀드(배속)를 안내에 독립 항목으로 노출
+
+Problem (사용자 2026-08-21): Space 꾹 = 3배속이 안내에 없다고 느낌. 실제로는 `KEYMAP.playback.toggle`
+힌트 꼬리에 '재생 / 일시정지 · 꾹 누르면 3배속'으로 **묻혀 있어** 별도 조작으로 읽히지 않았다.
+Change: `KEYMAP.playback.boost`를 독립 항목으로 신설(`Space 꾹` / `누르는 동안 3배속 — 놓으면 원래
+속도`)하고 toggle 힌트는 '재생 / 일시정지'로 환원. 우측 조작법 패널 재생 섹션과 `?` 오버레이
+(`KEYMAP_GROUPS`가 `Object.values(KEYMAP.playback)`을 쓰므로 자동)에 함께 노출된다. 푸터 재생
+버튼을 Home·G와 같은 `toolCol`로 감싸 키 라벨을 표시 — 평시 `Space`, 홀드 중 `Space 꾹`으로 전환.
+버튼 tooltip에도 홀드 설명을 덧붙였다. 배속·홀드 임계값은 `usePlayback`의 `BOOST_SPEED`/
+`NORMAL_SPEED`/`HOLD_TO_BOOST_MS`로 단일화해 안내 문구와 실제 동작이 어긋날 수 없게 했다
+(`useEditorKeyboard`의 하드코딩 3/1/260 제거).
+Validation: typecheck/lint/build/harness PASS, 182 tests PASS(안내 행 노출 유닛 1종 추가).
+Playwright `hint.cjs` 5/5 PASS(사이드 가이드·`?` 오버레이 양쪽에서 `Space 꾹`·`3배속` 확인,
+평문 Space 행은 재생/일시정지만), `boost.cjs` 8/8 PASS 유지. 콘솔 에러 0.
+

@@ -9,6 +9,7 @@ import { addStepPass, addStepRun } from '@/editor/stepCommands'
 import { makePath } from '@/editor/segmentCommands'
 import { useUiStore } from '@/editor/uiStore'
 import { AppShell } from './AppShell'
+import { KEYMAP } from './keymap'
 import { markTourSeen } from './tour/tourStorage'
 
 beforeAll(() => {
@@ -289,6 +290,15 @@ describe('playback staging (PLAN-006 M5)', () => {
       useUiStore.getState().returnToAuthoringStart()
     })
     expect(container.querySelector('[data-playing="true"]')).toBeNull()
+  })
+
+  it('the space-HOLD shortcut is announced as its own row, not buried in the Space hint', async () => {
+    const { container } = setup()
+    const rows = [...container.querySelectorAll('aside')].map((a) => a.textContent ?? '').join(' ')
+    expect(rows).toContain('Space 꾹')
+    expect(rows).toMatch(/3배속/)
+    // the plain Space row stays about play/pause only
+    expect(KEYMAP.playback.toggle.hint).not.toMatch(/배속/)
   })
 
   it('space-hold fast-forward is visible: pill, stage glow and transport all agree', async () => {

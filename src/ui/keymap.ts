@@ -2,6 +2,8 @@
  * Simple-mode bindings (ADR-0009 v2) — shown in the right side panel and the ? overlay.
  * The mouse does the authoring; the keyboard only plays, deletes and undoes.
  */
+import { BOOST_SPEED } from '@/editor/usePlayback'
+
 export interface Binding {
   key?: string
   label: string
@@ -10,7 +12,14 @@ export interface Binding {
 
 export const KEYMAP = {
   playback: {
-    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지 · 꾹 누르면 3배속' },
+    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지' },
+    // its own row, not a tail on the Space hint — the hold was undiscoverable buried there
+    // (user 2026-08-21: space 꾹 누르는 키도 안내하게)
+    boost: {
+      key: ' ',
+      label: 'Space 꾹',
+      hint: `누르는 동안 ${BOOST_SPEED}배속 — 놓으면 원래 속도`,
+    },
     restart: { key: 'Home', label: 'Home', hint: '처음으로' },
     loop: { key: 'g', label: 'G', hint: '반복' },
   },

@@ -14,6 +14,7 @@ import { ActionsPanel, GuidePanel } from './SidePanels'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { StepBar } from './StepBar'
 import { t } from './i18n'
+import { KEYMAP } from './keymap'
 import { prefersReducedMotion } from './motion/spring'
 import { SimplePitch } from './pitch/SimplePitch'
 import styles from './shell.module.css'
@@ -365,27 +366,33 @@ export function AppShell() {
             {modeToggle}
             <span className={styles.barDivider} aria-hidden="true" />
             <span className={styles.barGroup}>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
-                onClick={pb.toggle}
-                data-tour="play"
-                data-boost={boosted}
-                title={
-                  boosted
-                    ? t('tl.boostTitle', { n: ui.playback.speed })
-                    : `${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space)`
-                }
-                aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
-              >
-                {boosted ? (
-                  <UiIcon name="fastForward" size={18} filled />
-                ) : ui.playback.playing ? (
-                  <UiIcon name="pause" size={18} />
-                ) : (
-                  <UiIcon name="play" size={18} filled />
-                )}
-              </button>
+              <span className={styles.toolCol}>
+                {/* the transport names its own key, like Home and G — and says the hold is there */}
+                <span className={styles.toolKey} aria-hidden="true">
+                  {boosted ? KEYMAP.playback.boost.label : KEYMAP.playback.toggle.label}
+                </span>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
+                  onClick={pb.toggle}
+                  data-tour="play"
+                  data-boost={boosted}
+                  title={
+                    boosted
+                      ? t('tl.boostTitle', { n: ui.playback.speed })
+                      : `${ui.playback.playing ? t('tl.pause') : t('tl.play')} (Space) · ${KEYMAP.playback.boost.label} = ${KEYMAP.playback.boost.hint}`
+                  }
+                  aria-label={ui.playback.playing ? t('tl.pause') : t('tl.play')}
+                >
+                  {boosted ? (
+                    <UiIcon name="fastForward" size={18} filled />
+                  ) : ui.playback.playing ? (
+                    <UiIcon name="pause" size={18} />
+                  ) : (
+                    <UiIcon name="play" size={18} filled />
+                  )}
+                </button>
+              </span>
               <span className={styles.toolCol}>
                 <span className={styles.toolKey} aria-hidden="true">
                   Home

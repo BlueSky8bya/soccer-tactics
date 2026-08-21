@@ -7,7 +7,14 @@ import { createEmptyDocument } from '@/domain'
 import { seedDefaultTeams } from '@/editor/commands'
 import { t } from './i18n'
 import { useUiStore } from '@/editor/uiStore'
-import { playableEnd, returnToStart, togglePlayback } from '@/editor/usePlayback'
+import {
+  BOOST_SPEED,
+  HOLD_TO_BOOST_MS,
+  NORMAL_SPEED,
+  playableEnd,
+  returnToStart,
+  togglePlayback,
+} from '@/editor/usePlayback'
 import { compile } from '@/engine/compile'
 
 function isTypingTarget(el: EventTarget | null): boolean {
@@ -102,18 +109,18 @@ export function useEditorKeyboard(): void {
           }
           e.preventDefault()
           if (e.repeat) return
-          // TAP = play/pause (footer parity, RULE-03). HOLD ≥260ms = fast-forward ×3 while held
+          // TAP = play/pause (footer parity, RULE-03). HOLD = fast-forward while held
           // (user 2026-08-21); the pause of a tap-while-playing moves to keyup so a hold never
-          // pauses first.
+          // pauses first. Rate and threshold come from usePlayback so the key hint stays true.
           const playing = ui.playback.playing
           if (!playing) togglePlayback(duration())
           const timer = window.setTimeout(() => {
             const u = useUiStore.getState()
             if (u.playback.playing) {
-              u.setSpeed(3)
+              u.setSpeed(BOOST_SPEED)
               if (spaceHold.current) spaceHold.current.boosted = true
             }
-          }, 260)
+          }, HOLD_TO_BOOST_MS)
           spaceHold.current = { wasPlaying: playing, boosted: false, timer }
           return
         }
@@ -186,7 +193,7 @@ export function useEditorKeyboard(): void {
       window.clearTimeout(h.timer)
       const u = useUiStore.getState()
       if (h.boosted) {
-        u.setSpeed(1) // hold ends: back to normal pace, keep playing
+        u.setSpeed(NORMAL_SPEED) // hold ends: back to normal pace, keep playing
         return
       }
       if (h.wasPlaying) togglePlayback(playableEnd(compile(core.getDocument()))) // tap = pause
@@ -196,7 +203,7 @@ export function useEditorKeyboard(): void {
       if (!h) return
       spaceHold.current = null
       window.clearTimeout(h.timer)
-      if (h.boosted) useUiStore.getState().setSpeed(1)
+      if (h.boosted) useUiStore.getState().setSpeed(NORMAL_SPEED)
     }
     window.addEventListener('keydown', onKey)
     window.addEventListener('keyup', onKeyUp)

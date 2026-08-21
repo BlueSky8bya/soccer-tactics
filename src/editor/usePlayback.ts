@@ -41,6 +41,15 @@ export function advanceClock(
   return { t: next, done: false }
 }
 
+/**
+ * Space-HOLD fast-forward. One source for the rate so the key hint, the on-board pill and the
+ * clock can never disagree; `HOLD_TO_BOOST_MS` is how long the key must be down before a tap
+ * (play/pause) turns into a hold.
+ */
+export const BOOST_SPEED = 3
+export const NORMAL_SPEED = 1
+export const HOLD_TO_BOOST_MS = 260
+
 /** Footer Play / Space: the whole play. Resumes a paused frame; restarts after a finish. */
 export function playAll(duration: number): void {
   const st = useUiStore.getState()
