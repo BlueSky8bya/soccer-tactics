@@ -234,6 +234,9 @@ export function addStepRun(
   core.transaction('Add run', (d) => {
     const doc = d as TacticDocument
     const track = ensureTrack(doc, playerId, 'player')
+    // A player's own movements are inherently sequential — the next one starts where the last
+    // ended, so it cannot share that step. The chip may still push it further out.
+    step = Math.max(step, lastAuthoredStep(track) + 1)
     track.segments.push({
       id,
       kind: 'move',
@@ -264,8 +267,16 @@ export function addStepRun(
   return id
 }
 
-/** Highest authored step on the ball track (0 when no pass exists yet). */
-export function lastBallStep(track: Track | undefined): number {
+/**
+ * Highest authored step on a track (0 when it has no movements yet).
+ *
+ * ONE entity cannot hold two movements on the same step, because a step means "these start AND end
+ * together" (ADR-0009) — a player being in two places at once is not a slower animation, it is a
+ * contradiction. The ball has enforced this since 2026-08-21; players had not, so drawing three
+ * runs in a row put them all on step 1 (user 2026-08-22: 1, 1, 1로 되는 게 아니라 순차적으로
+ * 1, 2, 3이 되어야 하지 않을까).
+ */
+export function lastAuthoredStep(track: Track | undefined): number {
   let max = 0
   for (const sg of track?.segments ?? []) {
     if (!('path' in sg) || sg.id.startsWith(GEN_PREFIX)) continue
@@ -273,6 +284,9 @@ export function lastBallStep(track: Track | undefined): number {
   }
   return max
 }
+
+/** @deprecated name — `lastAuthoredStep` says what it actually does. */
+export const lastBallStep = lastAuthoredStep
 
 /** Ball pass drawn in simple mode: create + step + relayout + receiver at arrival — one undo step. */
 export function addStepPass(
