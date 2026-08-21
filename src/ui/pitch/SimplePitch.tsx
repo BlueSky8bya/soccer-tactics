@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as RPointerEvent,
+} from 'react'
 import type { Id, Path, TacticDocument, Vec2 } from '@/domain/types'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
@@ -62,7 +68,7 @@ import styles from '@/renderer/pitch.module.css'
 import { clientToPitch } from '@/renderer/pointer'
 import { clampToView, usePitchView } from './useSvgMetrics'
 import { t } from '../i18n'
-import { teamColorOf } from '../teamColor'
+import { entityColorOf, teamColorOf } from '../teamColor'
 import { AnimatedToken } from './AnimatedToken'
 import {
   deriveAttachedPathStart,
@@ -1713,11 +1719,7 @@ export function SimplePitch() {
   }, [ui.playback.t, isPlaying])
   /** Frame is away from the authoring start: playing, paused mid-play, held result, or step preview. */
   const viewingFrame = isPlaying || ui.playback.t > 0
-  const draftColor = ui.pathDraft
-    ? ui.pathDraft.entityId === doc.ball.id
-      ? 'var(--st-ball-path, #f5f5f7)'
-      : teamColorOf(doc, ui.pathDraft.entityId)
-    : ''
+  const draftColor = ui.pathDraft ? entityColorOf(doc, ui.pathDraft.entityId) : ''
   const attachedStart = deriveAttachedPathStart(doc, compiled, ui.selectedSegmentId)
 
   // A-05a rest hierarchy: paths outside the CURRENT step recede (0.55) but stay readable.
@@ -2073,9 +2075,12 @@ export function SimplePitch() {
           <g
             key={b.id}
             className={styles.stepBadge}
-            style={{
-              opacity: focusIds.size > 0 && !focusIds.has(b.entityId) ? 0.25 : undefined,
-            }}
+            style={
+              {
+                opacity: focusIds.size > 0 && !focusIds.has(b.entityId) ? 0.25 : undefined,
+                '--st-entity': entityColorOf(doc, b.entityId),
+              } as CSSProperties
+            }
             transform={`translate(${b.end.x}, ${b.end.y})`}
             onPointerDown={(e) => {
               // Select + open the in-place 1-9 picker right here (user 2026-08-20: 단계 바꾸기 간소화).
@@ -2086,6 +2091,7 @@ export function SimplePitch() {
             role="button"
             aria-label={t('simple.badge', { n: b.step })}
           >
+            {/* the badge labels ONE entity's movement — same rule as its path and waypoints */}
             <circle r={1.35} />
             <text textAnchor="middle" dominantBaseline="central">
               {b.step}
@@ -2227,21 +2233,31 @@ export function SimplePitch() {
           aria-hidden="true"
         />
       )}
-      {aim && (
-        <g className={styles.aimGuide} aria-hidden="true">
-          {aimTo && (
-            <line
-              x1={aim.from.x}
-              y1={aim.from.y}
-              x2={aimTo.x}
-              y2={aimTo.y}
-              className={styles.aimLine}
-            />
-          )}
-          <circle cx={aim.from.x} cy={aim.from.y} r={1.15} className={styles.aimAnchor} />
-          {aimTo && <circle cx={aimTo.x} cy={aimTo.y} r={0.8} className={styles.aimTip} />}
-        </g>
-      )}
+      {aim &&
+        (() => {
+          // The aim depicts THIS entity's next movement, so it is that entity's colour — blue
+          // player, blue guide; ball, white guide (user 2026-08-22).
+          const c = entityColorOf(doc, aim.entityId)
+          return (
+            <g
+              className={styles.aimGuide}
+              aria-hidden="true"
+              style={{ '--st-entity': c } as CSSProperties}
+            >
+              {aimTo && (
+                <line
+                  x1={aim.from.x}
+                  y1={aim.from.y}
+                  x2={aimTo.x}
+                  y2={aimTo.y}
+                  className={styles.aimLine}
+                />
+              )}
+              <circle cx={aim.from.x} cy={aim.from.y} r={1.15} className={styles.aimAnchor} />
+              {aimTo && <circle cx={aimTo.x} cy={aimTo.y} r={0.7} className={styles.aimTip} />}
+            </g>
+          )
+        })()}
       {slingAim && (
         <g className={styles.slingAim} aria-hidden="true">
           <line
@@ -2251,7 +2267,7 @@ export function SimplePitch() {
             y2={slingAim.to.y}
             className={styles.slingAimLine}
           />
-          <circle cx={slingAim.to.x} cy={slingAim.to.y} r={1.0} className={styles.slingAimDot} />
+          <circle cx={slingAim.to.x} cy={slingAim.to.y} r={0.45} className={styles.slingAimDot} />
         </g>
       )}
       {attachFx &&

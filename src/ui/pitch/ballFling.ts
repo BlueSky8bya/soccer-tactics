@@ -219,6 +219,22 @@ export function simulateFling(
   const impacts: NonNullable<FlingResult['goal']>['impacts'] = []
   let inNet = false
   const NET_REST = 0.05
+  /**
+   * A ball that STARTS behind a goal line, inside the mouth, is already in the net — someone is
+   * throwing it back out. It never triggered the entry test (that needs the ball moving INTO the
+   * goal), so it fell through to the pitch-boundary bounce, which mirrored it back across x=0 and
+   * reversed its velocity: an invisible wall across the goal mouth (user 2026-08-22: 골대 안에서
+   * 공을 날리면 골대 밖으로 안 나가고 가상의 벽에 막힘). While it is on its way out the net box's
+   * own walls contain it, the mouth plane is open, and the grass drag applies — it is being
+   * thrown, not caught.
+   */
+  const startSide: 'left' | 'right' | null =
+    goal && p0.y > goal.top && p0.y < goal.bot && (p0.x < 0 || p0.x > L)
+      ? p0.x < 0
+        ? 'left'
+        : 'right'
+      : null
+  let leaving = startSide !== null
   while (Math.hypot(v.x, v.y) > FLING_STOP_SPEED && t < MAX_T) {
     t += DT
     const px = p.x
@@ -226,7 +242,11 @@ export function simulateFling(
     p.x += v.x * DT
     p.y += v.y * DT
     const inMouth = goal ? p.y > goal.top && p.y < goal.bot : false
-    if (!inNet && goal && inMouth && ((p.x < 0 && v.x < 0) || (p.x > L && v.x > 0))) {
+    if (leaving && goal) {
+      // out through the mouth → back to ordinary pitch physics (and it may score again later)
+      if (startSide === 'left' ? p.x >= 0 : p.x <= L) leaving = false
+    }
+    if (!leaving && !inNet && goal && inMouth && ((p.x < 0 && v.x < 0) || (p.x > L && v.x > 0))) {
       // GOAL — the net takes over from here
       inNet = true
       const side = p.x < 0 ? 'left' : 'right'
@@ -238,7 +258,27 @@ export function simulateFling(
         impacts,
       }
     }
-    if (inNet && goal) {
+    if (leaving && goal) {
+      // Contained by the netting, free through the mouth. The panels stay as dead as they are for
+      // a caught ball — throwing one INTO the back of the net must not fire it back onto the
+      // field — but the drag is grass, because this ball is being thrown, not caught.
+      const backL = -goal.depth + 0.15
+      const backR = L + goal.depth - 0.15
+      if (p.x < backL) {
+        p.x = 2 * backL - p.x
+        v.x = -v.x * NET_REST
+      } else if (p.x > backR) {
+        p.x = 2 * backR - p.x
+        v.x = -v.x * NET_REST
+      }
+      if (p.y < goal.top + 0.1) {
+        p.y = 2 * (goal.top + 0.1) - p.y
+        v.y = -v.y * NET_REST
+      } else if (p.y > goal.bot - 0.1) {
+        p.y = 2 * (goal.bot - 0.1) - p.y
+        v.y = -v.y * NET_REST
+      }
+    } else if (inNet && goal) {
       // net box walls: back stanchion + side netting, nearly dead on impact
       const backL = -goal.depth + 0.15
       const backR = L + goal.depth - 0.15
@@ -294,7 +334,13 @@ export function simulateFling(
       }
     }
     const speed = Math.hypot(v.x, v.y)
-    const k = inNet ? FLING_NET_K : speed > FLING_TRANSITION_SPEED ? FLING_FLIGHT_K : FLING_ROLL_K
+    // a ball ON ITS WAY OUT is not being caught — grass drag, not net absorption
+    const k =
+      inNet && !leaving
+        ? FLING_NET_K
+        : speed > FLING_TRANSITION_SPEED
+          ? FLING_FLIGHT_K
+          : FLING_ROLL_K
     const decay = Math.exp(-k * DT)
     v.x *= decay
     v.y *= decay

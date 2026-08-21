@@ -276,7 +276,7 @@
 
 .waypoint {
   fill: rgba(255, 255, 255, 0.85);
-  stroke: var(--st-accent);
+  stroke: var(--st-entity, #fff);
   stroke-width: 1.5px;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
@@ -284,7 +284,7 @@
 }
 
 .waypointStart {
-  fill: var(--st-accent);
+  fill: var(--st-entity, #fff);
   stroke: #fff;
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
@@ -438,14 +438,14 @@
 
 .attachedRing {
   fill: none;
-  stroke: var(--st-accent);
+  stroke: var(--st-entity, #fff);
   stroke-width: 2px;
   vector-effect: non-scaling-stroke;
   stroke-dasharray: 3 2;
 }
 
 .attachedDot {
-  fill: var(--st-accent);
+  fill: var(--st-entity, #fff);
   stroke: #fff;
   stroke-width: 1.5px;
   vector-effect: non-scaling-stroke;
@@ -472,11 +472,12 @@
 /* The aim guide belongs to the BALL, and the ball is neutral — the accent blue read as a team
    colour on a pitch where blue is a team (user 2026-08-22). White with a dark rim carries on both
    the grass stripes and the surround. */
-/* Click-to-click path aim (ADR-0009 v16). Reads as an intention, not as ink: dashed, accent-tinted
-   so it can never be mistaken for an authored path, and it animates so an ARMED state is obvious
-   even when the cursor is still. */
+/* Click-to-click path aim (ADR-0009 v16). Reads as an intention, not as ink: dashed, in the ARMED
+   ENTITY's own colour, and it animates so an armed state is obvious even when the cursor is still.
+   `--st-entity` is set by whoever renders the mark; the white default is deliberately WRONG-looking
+   so a call site that forgets it shows up instead of quietly turning accent-blue. */
 .aimLine {
-  stroke: var(--st-accent);
+  stroke: var(--st-entity, #fff);
   stroke-width: 0.26;
   stroke-dasharray: 1.4 0.9;
   stroke-linecap: round;
@@ -485,13 +486,13 @@
 
 .aimAnchor {
   fill: none;
-  stroke: var(--st-accent);
+  stroke: var(--st-entity, #fff);
   stroke-width: 0.28;
   stroke-dasharray: 0.7 0.5;
 }
 
 .aimTip {
-  fill: var(--st-accent);
+  fill: var(--st-entity, #fff);
   stroke: #fff;
   stroke-width: 0.16;
 }
@@ -522,10 +523,12 @@
   paint-order: stroke;
 }
 
+/* The tip marks WHERE THE PULL ENDS, not where the ball lands — it should read as a light
+   handle, not a target (user 2026-08-22: 점 크기가 좀 크고, 색도 옅게). */
 .slingAimDot {
-  fill: #fff;
-  stroke: rgba(15, 23, 42, 0.55);
-  stroke-width: 0.16;
+  fill: rgba(255, 255, 255, 0.62);
+  stroke: rgba(15, 23, 42, 0.32);
+  stroke-width: 0.1;
 }
 
 /* Carry-vs-detach boundary while dragging a held ball (user 2026-08-21). Inside it the ball
@@ -556,14 +559,14 @@
 
 .stepBadge circle {
   fill: rgba(255, 255, 255, 0.75);
-  stroke: var(--st-accent, #2563eb);
+  stroke: var(--st-entity, #3a4150);
   stroke-width: 0.14;
 }
 
 .stepBadge text {
   font-size: 1.5px;
   font-weight: 700;
-  fill: var(--st-accent, #2563eb);
+  fill: var(--st-entity, #3a4150);
   user-select: none;
 }
 

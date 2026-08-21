@@ -156,6 +156,26 @@ describe('ball fling physics (pure, deterministic)', () => {
     expect(wide.final.x).toBeGreaterThanOrEqual(0)
   })
 
+  it('a ball that STARTS in the net can be thrown back out', () => {
+    const goal = { top: 34 - 3.66, bot: 34 + 3.66, depth: 2 }
+    // sitting in the left net, flung right — out through the mouth and onto the field
+    const out = simulateFling({ x: -1, y: 34 }, { x: 30, y: 0 }, PITCH, goal)
+    expect(out.final.x).toBeGreaterThan(6)
+    expect(out.goal).toBeUndefined() // leaving is not scoring
+    // it must never be mirrored back INTO the goal on the way (the old boundary bounce did that)
+    const backwards = out.points.filter((q, i) => i > 0 && q.x < out.points[i - 1]!.x)
+    expect(backwards).toHaveLength(0)
+
+    // the same from the right goal, flung left
+    const outR = simulateFling({ x: PITCH.length + 1, y: 34 }, { x: -30, y: 0 }, PITCH, goal)
+    expect(outR.final.x).toBeLessThan(PITCH.length - 6)
+
+    // thrown deeper INTO the net instead: the back panel stops it, it stays behind the line
+    const deeper = simulateFling({ x: -0.5, y: 34 }, { x: -25, y: 0 }, PITCH, goal)
+    expect(deeper.final.x).toBeLessThan(0)
+    expect(deeper.final.x).toBeGreaterThan(-goal.depth)
+  })
+
   it('caps wild swipe speeds and stays deterministic', () => {
     const a = simulateFling({ x: 10, y: 10 }, { x: 500, y: 0 }, PITCH)
     const b = simulateFling({ x: 10, y: 10 }, { x: 500, y: 0 }, PITCH)

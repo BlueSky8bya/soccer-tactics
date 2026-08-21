@@ -110,6 +110,9 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
           data-entity-of={track.entityId}
           data-phase={phase}
           className={`${styles.pathGroup} ${selected ? styles.pathSelected : ''} ${dim ? styles.pathDim : ''} ${phaseClass} ${mutedClass}`}
+          /* every mark inside this group belongs to ONE entity, so the colour is set once here and
+             inherited — see entityColorOf for the rule */
+          style={{ '--st-entity': color } as React.CSSProperties}
         >
           {/* wide invisible hit path for easy selection (full length) */}
           <path d={d} className={styles.pathHit} />
