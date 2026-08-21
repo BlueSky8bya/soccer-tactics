@@ -1923,7 +1923,7 @@
   box-shadow: var(--st-depth-overlay);
   pointer-events: none;
   z-index: 40;
-  animation: speedPillIn var(--st-motion-transition) var(--st-ease-standard);
+  animation: speedPillIn var(--st-spring-overlay-ms) var(--st-spring-overlay);
 }
 
 .speedPillRate {
@@ -1954,7 +1954,7 @@
   box-shadow: var(--st-depth-overlay);
   pointer-events: none;
   z-index: 40;
-  animation: speedPillIn var(--st-motion-transition) var(--st-ease-standard);
+  animation: speedPillIn var(--st-spring-overlay-ms) var(--st-spring-overlay);
 }
 
 .speedHintKbd {
