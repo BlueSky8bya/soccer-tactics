@@ -31,6 +31,7 @@ import {
   shiftJunctionAnchorsInDraft,
   stepOf,
   lastBallMovedStep,
+  ballMovesFromStep,
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
@@ -130,6 +131,21 @@ const AIM_CANCEL_M = 2.2
 const CARRY_DETACH_M = 3.4
 const CARRY_REATTACH_M = 2.9
 
+/**
+ * What a press names as the SUBJECT of the next movement — who moves, and from where.
+ *
+ * `atStep` is the ball's alone. A player is anchored by identity (any of its faded tokens continues
+ * the same chain from the end), but the ball is anchored by a MOMENT: grabbing it at its starting
+ * spot means it leaves there, on the step right after that spot exists, and the rest of its chain
+ * is overwritten (user 2026-08-22: 공은 예외여서 중간의 모든 시점에서 움직일 수 있게).
+ */
+interface DrawSubject {
+  entityId: Id
+  from: Vec2
+  minStep?: number
+  atStep?: number
+}
+
 type Gesture =
   | {
       type: 'token'
@@ -162,13 +178,14 @@ type Gesture =
       pointerId: number
       points: Vec2[]
       minStep?: number
+      atStep?: number
       /** Subject captured at PRESS: if this turns out to be a click, its path lands here. */
-      landFor?: { entityId: Id; from: Vec2; minStep?: number }
+      landFor?: DrawSubject
       /** Started on a GHOST — a moment, which selection cannot name, so a click arms it. */
       fromGhost?: true
     }
   /** Landing a click-to-click path: the endpoint is wherever this pointer is released. */
-  | { type: 'aim'; pointerId: number; entityId: Id; from: Vec2; minStep?: number; to: Vec2 }
+  | ({ type: 'aim'; pointerId: number; to: Vec2 } & DrawSubject)
   | {
       type: 'bend'
       segmentId: Id
@@ -292,7 +309,7 @@ export function SimplePitch() {
    * again to land a straight movement there; bend it afterwards by dragging the line. Alt+DRAG
    * still draws freehand — this is the pointer-only route beside it, not a replacement.
    */
-  const [aim, setAim] = useState<{ entityId: Id; from: Vec2; minStep?: number } | null>(null)
+  const [aim, setAim] = useState<DrawSubject | null>(null)
   const [aimTo, setAimTo] = useState<Vec2 | null>(null)
   /** endGesture runs from a ref and must not close over a stale `aim`. */
   const aimRef = useRef(aim)
@@ -303,7 +320,15 @@ export function SimplePitch() {
    * The subject a click would land a path FOR, when the selection alone names it. Read from a ref
    * because endGesture runs outside the render that computed it.
    */
-  const quickAimSubjectRef = useRef<{ entityId: Id; from: Vec2; minStep?: number } | null>(null)
+  const quickAimSubjectRef = useRef<DrawSubject | null>(null)
+  /**
+   * WHICH ball token the last press grabbed — the moment the ball leaves from.
+   *
+   * `step` is the last step that had already finished when the ball sat there: 0 for the live token
+   * at the starting position, otherwise the step of the movement whose end that faded ball marks.
+   * Null means no ball token was named, so the ball's chain simply continues from its rest.
+   */
+  const ballMomentRef = useRef<{ step: number; pos: Vec2 } | null>(null)
   /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
   const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
   const flingDoneRef = useRef<(() => void) | null>(null)
@@ -415,7 +440,13 @@ export function SimplePitch() {
     }
   }, [ballStatus, ballHolder, doc.ball.id])
 
-  const finishDraw = (entityId: Id, raw: Vec2[], minStep?: number) => {
+  // A named ball moment belongs to a selected ball. Deselect it — Escape, a click on grass, a
+  // different token — and the moment goes with it, so a later press can never inherit a stale one.
+  useEffect(() => {
+    if (!ui.selection.includes(doc.ball.id)) ballMomentRef.current = null
+  }, [ui.selection, doc.ball.id])
+
+  const finishDraw = (entityId: Id, raw: Vec2[], minStep?: number, atStep?: number) => {
     const st = useUiStore.getState()
     if (raw.length < 2) return
     // A ball path INTO the goal mouth ends in the net — never through it (user 2026-08-21).
@@ -448,16 +479,27 @@ export function SimplePitch() {
       chain.current && chain.current.entityId === entityId ? chain.current.step : st.currentStep,
       minStep ?? 1,
     )
-    // The ball's passes are strictly sequential — continuing after the last pass always lands
-    // on the NEXT step, whatever the chip says (user 2026-08-21: 0단계 발사 버그).
-    if (entityId === doc.ball.id) step = Math.max(step, lastBallMovedStep(core.getDocument()) + 1)
+    /*
+     * The ball's passes are strictly sequential — continuing after the last one always lands on the
+     * NEXT step, whatever the chip says (user 2026-08-21: 0단계 발사 버그).
+     *
+     * `atStep` overrides that outright, because it comes from a ball token the user actually
+     * grabbed: it is not a floor, it is the answer. Deriving the step from the END of everything
+     * instead meant grabbing the ball at its starting spot still fired the pass after its holder's
+     * last run, so it left from a spot the user never pointed at (user 2026-08-22).
+     */
+    const wiped = atStep !== undefined ? ballMovesFromStep(core.getDocument(), atStep) : 0
+    if (entityId === doc.ball.id)
+      step = atStep ?? Math.max(step, lastBallMovedStep(core.getDocument()) + 1)
     // Chain past the last step: block BEFORE creating anything and say why (A-05).
     if (step > MAX_STEP) {
       ui.flashToast(t('simple.stepLimit'))
       return
     }
     if (entityId === doc.ball.id)
-      addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId)
+      addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId, {
+        exactStep: atStep !== undefined,
+      })
     else addStepRun(core, entityId, waypoints, step)
     // commit confirmation: subject pops again as the arrow lands (M4)
     pulseKey.current++
@@ -466,7 +508,9 @@ export function SimplePitch() {
     chain.current = { entityId, step: nextChainStep(step) ?? MAX_STEP + 1 }
     // Deliberately NOT selected: picking the next step chip must never retarget what was just drawn.
     st.selectSegment(null)
-    ui.flashToast(t('simple.added', { n: step }))
+    // The grabbed moment consumed itself; the next press names a fresh one.
+    ballMomentRef.current = null
+    ui.flashToast(wiped > 0 ? t('simple.ballRerouted', { n: wiped }) : t('simple.added', { n: step }))
   }
 
   /**
@@ -713,18 +757,23 @@ export function SimplePitch() {
         if (subject && subject.entityId !== g.entityId) {
           setAim(null)
           setAimTo(null)
-          finishDraw(subject.entityId, [subject.from, g.points[0]!], subject.minStep)
+          finishDraw(subject.entityId, [subject.from, g.points[0]!], subject.minStep, subject.atStep)
           return
         }
         if (g.fromGhost) {
-          setAim({ entityId: g.entityId, from: g.points[0]!, minStep: g.minStep })
+          setAim({
+            entityId: g.entityId,
+            from: g.points[0]!,
+            minStep: g.minStep,
+            atStep: g.atStep,
+          })
           setAimTo(null)
           ui.flashToast(t('simple.aimArmed'))
         }
         return
       }
       setAim(null)
-      finishDraw(g.entityId, g.points, g.minStep)
+      finishDraw(g.entityId, g.points, g.minStep, g.atStep)
       return
     }
 
@@ -733,7 +782,7 @@ export function SimplePitch() {
       setAimTo(null)
       setSnapPos(null)
       if (!commit) return
-      finishDraw(g.entityId, [g.from, g.to], g.minStep)
+      finishDraw(g.entityId, [g.from, g.to], g.minStep, g.atStep)
       return
     }
 
@@ -1003,16 +1052,29 @@ export function SimplePitch() {
   }
 
   /**
+   * Where this entity's next movement STARTS.
+   *
+   * For a player: wherever it ends up — no fork exists, so identity is the whole answer. For the
+   * BALL: the moment that was grabbed, if one was. A ball token is not just "the ball" — it is the
+   * ball AT A TIME, and there is only one ball, so leaving from an earlier one overwrites the rest
+   * of its chain rather than branching it (user 2026-08-22).
+   */
+  const subjectAnchor = (entityId: Id): { from: Vec2; atStep?: number } => {
+    const m = entityId === doc.ball.id ? ballMomentRef.current : null
+    return m ? { from: m.pos, atStep: m.step + 1 } : { from: entityRestPos(entityId) }
+  }
+
+  /**
    * Who a CLICK here would draw for, read BEFORE the press changes anything. `startDraw` selects
    * the pressed entity on pointerdown, so by release the previous subject is gone — it has to be
    * captured now or not at all.
    */
-  const subjectAtPress = (): { entityId: Id; from: Vec2; minStep?: number } | null => {
+  const subjectAtPress = (): DrawSubject | null => {
     const armed = aimRef.current
     if (armed) return armed
     const sel = useUiStore.getState().selection
     if (sel.length !== 1) return null
-    return { entityId: sel[0]!, from: entityRestPos(sel[0]!) }
+    return { entityId: sel[0]!, ...subjectAnchor(sel[0]!) }
   }
 
   const startDraw = (
@@ -1020,8 +1082,9 @@ export function SimplePitch() {
     pointerId: number,
     startPos: Vec2,
     minStep?: number,
-    landFor?: { entityId: Id; from: Vec2; minStep?: number },
+    landFor?: DrawSubject,
     fromGhost?: true,
+    atStep?: number,
   ) => {
     const st = useUiStore.getState()
     st.returnToAuthoringStart()
@@ -1037,6 +1100,7 @@ export function SimplePitch() {
       minStep,
       landFor,
       fromGhost,
+      atStep,
     }
     st.setPathDraft({ entityId, points: [startPos] })
     svgRef.current?.setPointerCapture(pointerId)
@@ -1130,6 +1194,7 @@ export function SimplePitch() {
         entityId: aim.entityId,
         from: aim.from,
         minStep: aim.minStep,
+        atStep: aim.atStep,
         to: pt,
       }
       setAimTo(pt)
@@ -1234,6 +1299,22 @@ export function SimplePitch() {
       tokenEntityId = ov.players[0]?.id ?? ov.ball?.id ?? null
     }
     const yieldId = ghostTop ? ghostYieldTarget(pt, livePlayers, liveBall) : null
+    /*
+     * Which BALL MOMENT this press would name, if it names one at all. A player token says only
+     * WHO; a ball token says who AND WHEN, because there is a single ball and it cannot be in two
+     * places at once — so the faded ball at the end of step 2 is a genuinely different subject from
+     * the live one at the kickoff spot (user 2026-08-22).
+     *
+     * Computed here, applied inside the cases below: `subjectAtPress()` has to read the PREVIOUS
+     * moment (a ball already grabbed is the subject of this click), so the swap comes after it.
+     */
+    const ghostMoment =
+      ghostTop && ghostTop.entityId === doc.ball.id
+        ? { step: ghostTop.step, pos: ghostTop.pos }
+        : null
+    /** The live ball token: step 0 — nothing has happened yet where it stands. */
+    const startMoment = () => ({ step: 0, pos: stateAt(compiled, doc, 0).ball.pos })
+    const tokenMoment = tokenEntityId === doc.ball.id ? startMoment() : null
     lastPickRef.current = { pick, pt, clientX: e.clientX, clientY: e.clientY }
     const intent = resolvePointerIntent(
       {
@@ -1262,14 +1343,21 @@ export function SimplePitch() {
          * faded tokens was clicked is irrelevant and only its identity matters (user 2026-08-22:
          * 어차피 분기도 없는데 왜 처음 토큰만 눌러야 해). Refusing the middle ones was a distinction
          * with nothing behind it.
+         *
+         * A BALL ghost is the exception, and the reason `ghostMoment` exists: it starts from THAT
+         * faded ball, not from where the ball ends up, because grabbing the ball early is how you
+         * change your mind about the rest of the play.
          */
+        const landFor = subjectAtPress() ?? undefined
+        if (ghostMoment) ballMomentRef.current = ghostMoment
         startDraw(
           ghostTop!.entityId,
           e.pointerId,
-          entityRestPos(ghostTop!.entityId),
+          ghostMoment ? ghostMoment.pos : entityRestPos(ghostTop!.entityId),
           undefined,
-          subjectAtPress() ?? undefined,
+          landFor,
           true,
+          ghostMoment ? ghostMoment.step + 1 : undefined,
         )
         return
       }
@@ -1282,7 +1370,7 @@ export function SimplePitch() {
           type: 'aim',
           pointerId: e.pointerId,
           entityId: subject,
-          from: entityRestPos(subject),
+          ...subjectAnchor(subject),
           to: pt,
         }
         setAimTo(pt)
@@ -1291,11 +1379,13 @@ export function SimplePitch() {
       }
       case 'press-live-token':
         // A live token sits right under the ghost press - the token wins.
+        ballMomentRef.current = yieldId === doc.ball.id ? startMoment() : null
         pressToken(yieldId!)
         return
       case 'adjust-ghost-end': {
         // Plain drag on a ghost = fine-tune that movement's end. A CARRIED ball ghost instead
         // ORBITS its holder: the drag slides the ball around the carry ring (user 2026-08-21).
+        ballMomentRef.current = ghostMoment
         const segId = ghostTop!.segId
         const f = segId ? findSegment(core.getDocument(), segId) : null
         if (!f || !('path' in f.segment)) return
@@ -1375,15 +1465,27 @@ export function SimplePitch() {
          */
         st.returnToAuthoringStart()
         const entityId = tokenEntityId!
+        const landFor = subjectAtPress() ?? undefined
+        ballMomentRef.current = tokenMoment
         const startPos =
           entityId === doc.ball.id ? resolved.ball.pos : (resolved.players[entityId]?.pos ?? pt)
-        startDraw(entityId, e.pointerId, startPos, undefined, subjectAtPress() ?? undefined)
+        startDraw(
+          entityId,
+          e.pointerId,
+          startPos,
+          undefined,
+          landFor,
+          undefined,
+          tokenMoment ? tokenMoment.step + 1 : undefined,
+        )
         return
       }
       case 'press-token':
+        ballMomentRef.current = tokenMoment
         pressToken(tokenEntityId!)
         return
       case 'press-token-additive':
+        ballMomentRef.current = tokenMoment
         pressToken(tokenEntityId!, true)
         return
       case 'bend-path': {
@@ -1876,7 +1978,7 @@ export function SimplePitch() {
   )
   const quickAim =
     drawKeyHeld && !aim && ui.selection.length === 1 && !gesture.current
-      ? { entityId: ui.selection[0]!, from: entityRestPos(ui.selection[0]!) }
+      ? { entityId: ui.selection[0]!, ...subjectAnchor(ui.selection[0]!) }
       : null
   quickAimRef.current = !!quickAim
   quickAimSubjectRef.current = quickAim

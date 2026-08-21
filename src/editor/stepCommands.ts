@@ -309,22 +309,57 @@ export function lastBallMovedStep(doc: TacticDocument): number {
   return last
 }
 
+/**
+ * Drop every authored ball movement from `step` onwards. Returns how many were removed.
+ *
+ * THE BALL IS THE ONE ENTITY WITH A PAST TO OVERWRITE. A player's chain can only ever be extended,
+ * because two of them may stand anywhere at once — so clicking any of a player's faded tokens just
+ * continues from the end. There is only one ball, so releasing it at an earlier moment does not
+ * branch the timeline, it REPLACES the rest of it: whatever the ball did after that instant simply
+ * never happens now (user 2026-08-22: 공이 동시에 존재할 수 없으니 그 이후 공들은 없어지고).
+ *
+ * Only the ball's OWN travels are removed. Carries are not stored — the ball rides with whoever
+ * holds it — so a run that used to carry the ball keeps running, empty-footed, all by itself.
+ */
+export function truncateBallFromStepInDraft(doc: TacticDocument, step: number): number {
+  const track = findTrack(doc, doc.ball.id)
+  if (!track) return 0
+  const doomed = track.segments
+    .filter((s) => 'path' in s && !s.id.startsWith(GEN_PREFIX) && stepOf(s) >= step)
+    .map((s) => s.id)
+  for (const id of doomed) removeSegmentInDraft(doc, id)
+  return doomed.length
+}
+
+/** How many authored ball movements a grab at `step` would overwrite — asked before committing. */
+export function ballMovesFromStep(doc: TacticDocument, step: number): number {
+  const track = findTrack(doc, doc.ball.id)
+  return (track?.segments ?? []).filter(
+    (s) => 'path' in s && !s.id.startsWith(GEN_PREFIX) && stepOf(s) >= step,
+  ).length
+}
+
 /** Ball pass drawn in simple mode: create + step + relayout + receiver at arrival — one undo step. */
 export function addStepPass(
   core: EditorCore,
   waypoints: Waypoint[],
   step: number,
   holderHint?: Id,
+  opts?: {
+    /** The ball was grabbed at a NAMED moment: `step` is exact, and the rest of its chain goes. */
+    exactStep?: boolean
+  },
 ): Id {
   const id = newId('seg')
   core.transaction('Add pass', (d) => {
     const doc = d as TacticDocument
     const track = ensureTrack(doc, doc.ball.id, 'ball')
+    if (opts?.exactStep) truncateBallFromStepInDraft(doc, step)
     // ONE ball: its passes are inherently sequential. A new pass can never fire at/before an
     // existing one (user 2026-08-21: 마지막 단계 이후 이어 그렸는데 0단계에서 발사) — drawing
     // from the live ball at a result frame used to inherit the step CHIP (1) and launch at t0.
     // Carrying counts as moving, so the bar is the last step the ball MOVED, pass or carry.
-    step = Math.max(step, lastBallMovedStep(doc) + 1)
+    else step = Math.max(step, lastBallMovedStep(doc) + 1)
     const last = track.segments[track.segments.length - 1]
     const holder = passerFor(doc, track, holderHint)
     if (holder && !(last && last.kind === 'possessed' && last.holderId === holder)) {

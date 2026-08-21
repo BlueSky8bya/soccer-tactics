@@ -1773,3 +1773,34 @@ Validation: typecheck/lint/build/harness PASS, 235 tests PASS.
   체인이 **[1,2,3,4]**로 곧고 이음매 간격 **0**.
 - 무회귀: throughball 8/8, steps 1/1, aimclick 9/9, passland 5/5, orbit 2/2, identity 10/10,
   colors 8/8, homeanchor 4/4, overhaul 15/15, fling 3/3, cues 9/9, panelbtns 5/5.
+
+## CHG-20260822-151 — 공은 '정체'가 아니라 '순간'으로 잡힌다 (ADR-0009 Amendment v25)
+
+Trigger: 사용자 — "2번 선수로 2단계까지 진행한 다음 **가장 처음에 있는 공**을 클릭해서 1번 선수에게
+패스하려 했는데, 공이 2번 선수의 **가장 마지막 위치**에서 나간다. 공은 예외여서 중간의 모든 시점에서
+움직일 수 있어야 한다. … 그 이후 공들은 없어지고 … **공이 동시에 존재할 수 없으니.**"
+
+Cause: v24가 모든 엔티티에 한 규칙을 적용했다 — "어느 흐린 토큰을 눌러도 그 엔티티의 **끝**에서
+이어진다". 선수에게는 맞지만(분기 금지 + 선수는 여럿), 공에게는 틀렸다. 공은 하나뿐이라 이른 순간에
+잡는 것은 분기가 아니라 **덮어쓰기**다. `subjectAtPress`가 항상 `entityRestPos`(=끝)를 물었고
+`finishDraw`가 `lastBallMovedStep + 1`로 단계를 파생했으므로, 어느 공 토큰을 눌러도 결과가 같았다.
+
+Change: ADR-0009 Amendment v25.
+
+- `DrawSubject.atStep` — 잡은 공 토큰이 정하는 **정확한** 단계(live=1, 흐린 공=그 움직임 단계+1).
+  `ballMomentRef`가 press 시점에 기록하고, 공이 선택에서 빠지면 함께 사라진다.
+- `truncateBallFromStepInDraft` / `ballMovesFromStep` (editor) — 그 단계 이후 공의 authored travel만
+  삭제. 캐리는 저장되지 않으므로 공을 잃은 런은 그대로 남는다.
+- `addStepPass(..., { exactStep })` — 자른 뒤 그 단계를 그대로 쓴다. 미지정이면 종전대로 이어 붙인다.
+- 토스트 `simple.ballRerouted` — 지워진 패스 개수를 말한다(Ctrl+Z 복구 안내).
+
+Validation: typecheck/lint/build/harness PASS, **240 tests PASS** (신규 `ballMoment.test.ts` 5).
+
+- Playwright `ballmoment.cjs` 15/15 — #2가 2단계를 캐리한 뒤 **시작 지점의 공**을 클릭 → #1의 1단계
+  고스트로 Alt+클릭: 패스가 **1단계**, 출발점 **(17.7, 53.1)** = 잡은 지점(#2의 런 끝에서 **56.3m**),
+  #1이 리시버(스루패스), #2의 캐리 고스트 **0개**, #2의 런 2개는 그대로.
+- **대조군**(`subjectAnchor`의 moment를 끈 상태): 같은 조작이 **3단계 / (75.9, 52.0)** — 사용자가
+  보고한 증상 그대로 재현. 비공허(non-vacuous) 확인.
+- 마지막 지점에서 잡으면 종전대로 **이어 붙는다**: 2번째 패스 2단계, 앞 패스 끝과 간격 **0.00m**.
+- 무회귀: ballrest 6/6, midghost 7/7, throughball 8/8, steps 1/1, aimclick 9/9, passland 5/5,
+  orbit 2/2, identity 10/10, launchorigin PASS, throughplayer PASS.
