@@ -1679,3 +1679,25 @@ Validation: typecheck/lint/build/harness PASS, **235 tests PASS**.
 - **미해결(재현 실패)**: "왼쪽 패널 버튼 3개가 안 눌린다" — 신규 `panelbtns.cjs`가 히트테스트까지
   포함해 3개 버튼을 모두 검증했고 **전부 통과**했다(새 세션, 그리고 Ctrl/Alt/Shift 홀드·재생·Alt를
   누른 채 클릭한 뒤에도). 다음 turn에 정확한 선행 조작을 받아야 원인을 좁힐 수 있다.
+
+### CHG-20260822-146 — UX — 경로 주어 지목 규칙을 하나로 합침 (단축키 어휘 축소)
+
+Problem (사용자 2026-08-22): "그냥 Alt+클릭 → Alt+클릭 기능만 없애면 되는 거 아냐? 없애면 손해가
+되는 게 있나?" → 확인 결과 손해는 **고스트(중간 시점)에서 클릭으로 시작하기** 하나뿐. 이어서
+"단축키 최대한 줄이는 방향으로 해줘. 보이는 게 다 똑같이 오류가 안 난다면."
+
+Root cause of the redundancy: 경로의 **주어를 지목하는 방법이 두 개**였다 — 토큰 Alt+클릭 '무장'과
+그냥 '선택'. 같은 뜻인데 상태가 둘(`aim` / `quickAim`)이라 **CHG-145의 버그가 바로 그 충돌**이었다.
+
+Change: ADR-0009 Amendment v21. 토큰 Alt+클릭은 **선택**이고 그게 지목이다 — 별도 무장 상태 없음.
+안내선은 Alt를 누른 동안 선택 위에 뜬다. **고스트만** 계속 무장한다(시점은 선택으로 표현 불가,
+`minStep` 강제 필요). 사용자에게 보이는 동작은 동일하고, 조작법 패널에서 한 줄이 빠지며 고스트 줄은
+'흐린 토큰 Alt+드래그·클릭'으로 합쳐진다. WCAG 2.5.7 유지.
+
+Validation: typecheck/lint/build/harness PASS, 235 tests PASS.
+
+- Playwright `aimclick.cjs` 9/9 — 토큰 Alt+클릭이 **선택 1개**를 만들고(별도 무장 상태 없음),
+  Alt를 누르면 그 대상에서 안내선이 뜨고, 두 번째 Alt+클릭이 중간 엔티티를 지나 직선 경로를 놓고,
+  **고스트 클릭은 여전히 무장**하며 Esc로 해제, Alt+드래그는 불변.
+- 무회귀: passland 5/5, orbit 2/2, identity 10/10, colors 8/8, homeanchor 4/4, overhaul 15/15,
+  fling 3/3, cues 9/9, panelbtns 5/5.

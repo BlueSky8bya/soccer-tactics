@@ -164,6 +164,8 @@ type Gesture =
       minStep?: number
       /** Subject captured at PRESS: if this turns out to be a click, its path lands here. */
       landFor?: { entityId: Id; from: Vec2; minStep?: number }
+      /** Started on a GHOST — a moment, which selection cannot name, so a click arms it. */
+      fromGhost?: true
     }
   /** Landing a click-to-click path: the endpoint is wherever this pointer is released. */
   | { type: 'aim'; pointerId: number; entityId: Id; from: Vec2; minStep?: number; to: Vec2 }
@@ -691,15 +693,20 @@ export function SimplePitch() {
       /*
        * A press that never travelled is a CLICK, and a click means one of two things:
        *
-       *  · a subject is already armed → this is the DESTINATION, whatever is under it.
-       *  · nothing is armed → this press names the subject.
+       *  · a subject already stands → this is the DESTINATION, whatever is under it.
+       *  · nothing stands → this press names the subject.
        *
        * Landing on a token is not an edge case, it is the main case: a pass ends ON a player. The
        * intent resolver reads a token press as "draw from this token" before it ever sees the
-       * armed state, so aiming the ball at its receiver re-armed the RECEIVER instead and tore the
-       * ball's chain in half (user 2026-08-22: 시작점으로 다시 눌리면서 공 이동경로가 끊기잖아).
+       * standing subject, so aiming the ball at its receiver re-armed the RECEIVER instead and tore
+       * the ball's chain in half (user 2026-08-22: 시작점으로 다시 눌리면서 공 이동경로가 끊기잖아).
        * Deciding it here — at release, where a click and a drag are finally distinguishable —
        * leaves Alt+DRAG on a token drawing that token's own path exactly as before.
+       *
+       * Naming a TOKEN as the subject is just selecting it, and `startDraw` already did that. There
+       * is no second "armed" state to enter and no second rule to learn (user 2026-08-22: 단축키
+       * 최대한 줄이는 방향으로) — the guide appears because Alt is down over a selection. A GHOST
+       * still arms, because a ghost names a MOMENT and selection can only name an entity.
        */
       if (strokeLength(g.points) < CLICK_SLOP_M) {
         const subject = g.landFor
@@ -709,9 +716,11 @@ export function SimplePitch() {
           finishDraw(subject.entityId, [subject.from, g.points[0]!], subject.minStep)
           return
         }
-        setAim({ entityId: g.entityId, from: g.points[0]!, minStep: g.minStep })
-        setAimTo(null)
-        ui.flashToast(t('simple.aimArmed'))
+        if (g.fromGhost) {
+          setAim({ entityId: g.entityId, from: g.points[0]!, minStep: g.minStep })
+          setAimTo(null)
+          ui.flashToast(t('simple.aimArmed'))
+        }
         return
       }
       setAim(null)
@@ -996,6 +1005,7 @@ export function SimplePitch() {
     startPos: Vec2,
     minStep?: number,
     landFor?: { entityId: Id; from: Vec2; minStep?: number },
+    fromGhost?: true,
   ) => {
     const st = useUiStore.getState()
     st.returnToAuthoringStart()
@@ -1003,7 +1013,15 @@ export function SimplePitch() {
     // start acknowledgement: the subject pops once so the ink clearly belongs to it (M4)
     pulseKey.current++
     setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
-    gesture.current = { type: 'draw', entityId, pointerId, points: [startPos], minStep, landFor }
+    gesture.current = {
+      type: 'draw',
+      entityId,
+      pointerId,
+      points: [startPos],
+      minStep,
+      landFor,
+      fromGhost,
+    }
     st.setPathDraft({ entityId, points: [startPos] })
     svgRef.current?.setPointerCapture(pointerId)
   }
@@ -1227,6 +1245,8 @@ export function SimplePitch() {
           e.pointerId,
           { x: ghostTop!.pos.x, y: ghostTop!.pos.y },
           minStep,
+          undefined,
+          true,
         )
         return
       }

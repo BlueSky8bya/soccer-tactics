@@ -88,18 +88,17 @@ export const PLACE_BINDINGS: Binding[] = [
 export const ANIM_BINDINGS: Binding[] = [
   { label: 'Alt+드래그', hint: '선수는 이동 경로, 공은 패스', compact: true, cue: 'alt' },
   {
-    label: '선수·공 선택 + Alt+클릭',
-    hint: '클릭한 지점까지 직선 경로 — 중간에 뭐가 있든 상관없음 (휘는 건 나중에 선을 당겨서)',
+    label: 'Alt+클릭',
+    hint: '고른 대상이 클릭한 지점까지 직선으로 — 중간에 뭐가 있든 상관없음 (휘는 건 나중에 선을 당겨서)',
     compact: true,
     cue: 'alt',
   },
   {
-    label: 'Alt+클릭 → Alt+클릭',
-    hint: '시작점을 직접 찍어서 (흐린 토큰에서도)',
+    label: '흐린 토큰 Alt+드래그·클릭',
+    hint: '그 위치에서 이어서 그리기',
     compact: true,
     cue: 'alt',
   },
-  { label: '흐린 토큰 Alt+드래그', hint: '그 위치에서 이어서 그리기', compact: true, cue: 'alt' },
   { label: '흐린 토큰 드래그', hint: '그 움직임의 끝 위치 미세조정', compact: true },
   { label: '경로 클릭', hint: '선택 후 Delete 삭제, 숫자키로 단계 변경', compact: true },
   { label: '경로 드래그', hint: '잡은 지점을 당겨 곡선으로 휘기', compact: true },
