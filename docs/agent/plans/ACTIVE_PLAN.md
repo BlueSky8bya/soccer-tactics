@@ -1,7 +1,7 @@
 # Active ExecPlan
 
 Plan ID: PLAN-20260822-012
-Status: In progress — M1·M2 landed and measured, M3~M5 awaiting the research brief
+Status: In Progress — M1·M2 landed and measured, M3~M5 awaiting the research brief
 Task Risk: L3 (shell layout, motion system, interaction feel — touches ADR-0006 and ADR-0009)
 Created: 2026-08-22
 Updated: 2026-08-22
