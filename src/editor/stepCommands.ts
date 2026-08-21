@@ -319,6 +319,9 @@ export function resolvePassReceiverInDraft(
  * Grab-and-bend: pick (or insert) the waypoint nearest to `at` on the segment's polyline.
  * Returns the waypoint id to drag. Existing waypoint within 1.2 m is reused.
  */
+/** Grab an existing waypoint within this radius instead of inserting a new one. */
+export const BEND_GRAB_RADIUS_M = 2.4
+
 export function bendGrabWaypointInDraft(
   doc: TacticDocument,
   segmentId: Id,
@@ -327,9 +330,11 @@ export function bendGrabWaypointInDraft(
   const f = findSegment(doc, segmentId)
   if (!f || !('path' in f.segment)) return null
   const wps = f.segment.path.waypoints
-  // nearest existing waypoint
+  // Reuse a nearby existing waypoint rather than spawning another one beside it. The old 1.2m
+  // radius meant bending twice at roughly the same place left two control points a metre apart,
+  // which kinks the curve and makes it feel twitchy (user 2026-08-22: 너무 민감하게 점이 잡혀).
   let bestI = -1
-  let bestD = 1.2
+  let bestD = BEND_GRAB_RADIUS_M
   for (let i = 0; i < wps.length; i++) {
     const d = Math.hypot(wps[i]!.p.x - at.x, wps[i]!.p.y - at.y)
     if (d < bestD) {

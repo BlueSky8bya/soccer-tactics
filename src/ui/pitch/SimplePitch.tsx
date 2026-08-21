@@ -93,6 +93,12 @@ const ERASER_CURSOR =
   '%3C/svg%3E") 12 12, crosshair'
 
 const DRAG_THRESHOLD_PX = 4
+/**
+ * A bend INSERTS a control point, so it must be a deliberate pull — at the 4px token threshold
+ * the wobble of an ordinary click was enough to drop a new point on the path and twitch the
+ * curve (user 2026-08-22: 곡률 선정될 때 너무 민감하게 점이 잡혀).
+ */
+const BEND_START_PX = 10
 /** Window for the second press of a slingshot double-click (shorter than the re-click cycle). */
 const DOUBLE_CLICK_MS = 350
 /**
@@ -136,6 +142,9 @@ type Gesture =
       entityId: Id
       pointerId: number
       startClient: { x: number; y: number }
+      /** Pitch point of the PRESS — the control point belongs where the user aimed, not where
+       *  the pointer had already drifted to by the time the threshold was crossed. */
+      startPt: Vec2
       started: boolean
       wpId: Id | null
     }
@@ -1133,6 +1142,7 @@ export function SimplePitch() {
           entityId: f.track.entityId,
           pointerId: e.pointerId,
           startClient: { x: e.clientX, y: e.clientY },
+          startPt: pt,
           started: false,
           wpId: wps[wps.length - 1]!.id,
         }
@@ -1170,6 +1180,7 @@ export function SimplePitch() {
           entityId: segTop!.entityId,
           pointerId: e.pointerId,
           startClient: { x: e.clientX, y: e.clientY },
+          startPt: pt,
           started: false,
           wpId: null,
         }
@@ -1276,7 +1287,7 @@ export function SimplePitch() {
     if (g.type === 'bend') {
       if (!g.started) {
         const moved = Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y)
-        if (moved < DRAG_THRESHOLD_PX) return
+        if (moved < BEND_START_PX) return
         g.started = true
         st.returnToAuthoringStart()
         core.begin('Bend path')
@@ -1284,7 +1295,7 @@ export function SimplePitch() {
           g.wpId = bendGrabWaypointInDraft(
             d as TacticDocument,
             g.segmentId,
-            clampToPitch(pt, doc.pitch),
+            clampToPitch(g.startPt, doc.pitch),
           )
         })
       }

@@ -4,10 +4,18 @@ import type { TacticDocument } from '@/domain/types'
 import { carryOffset, compile } from '@/engine/compile'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
-import { DEFAULT_PLAYER_SPEED, findTrack, makePath, moveTravelEndInDraft } from './segmentCommands'
+import {
+  DEFAULT_PLAYER_SPEED,
+  findSegment,
+  findTrack,
+  makePath,
+  moveTravelEndInDraft,
+} from './segmentCommands'
 import {
   addStepPass,
   addStepRun,
+  BEND_GRAB_RADIUS_M,
+  bendGrabWaypointInDraft,
   bendMoveWaypointInDraft,
   relayoutStepsInDraft,
   clearAllMovements,
@@ -718,3 +726,69 @@ describe('relayout pipeline (ADR-0010 — audit Q4/R1)', () => {
     }
   })
 })
+
+describe('bendGrabWaypointInDraft — reuse a nearby point instead of spawning another', () => {
+  const build = () => {
+    const core = new EditorCore(
+      seedDefaultTeams(createEmptyDocument({ id: 'b', now: '2026-08-22T00:00:00.000Z' })),
+    )
+    applyFormations(core, [{ teamId: 'team-a', formationId: '4-3-3' }])
+    const p = core.getDocument().players[0]!
+    const segId = addStepRun(
+      core,
+      p.id,
+      makePath([p.home, { x: p.home.x + 30, y: p.home.y }]).waypoints,
+      1,
+    )
+    return { core, segId, from: p.home }
+  }
+  const wpsOf = (doc: TacticDocument, segId: string) => {
+    const f = findSegment(doc, segId)!
+    return (f.segment as { path: { waypoints: { id: string }[] } }).path.waypoints
+  }
+
+  it('a grab away from any waypoint inserts ONE new control point', () => {
+    const { core, segId, from } = build()
+    const before = wpsOf(core.getDocument(), segId).length
+    let id: string | null = null
+    core.transaction('bend', (d) => {
+      id = bendGrabWaypointInDraft(d as TacticDocument, segId, { x: from.x + 15, y: from.y })
+    })
+    expect(id).not.toBeNull()
+    expect(wpsOf(core.getDocument(), segId)).toHaveLength(before + 1)
+  })
+
+  it('bending again nearby REUSES that point rather than kinking the curve with a second one', () => {
+    const { core, segId, from } = build()
+    let first: string | null = null
+    core.transaction('bend', (d) => {
+      first = bendGrabWaypointInDraft(d as TacticDocument, segId, { x: from.x + 15, y: from.y })
+    })
+    const afterFirst = wpsOf(core.getDocument(), segId).length
+    let second: string | null = null
+    core.transaction('bend again', (d) => {
+      second = bendGrabWaypointInDraft(d as TacticDocument, segId, {
+        x: from.x + 15 + (BEND_GRAB_RADIUS_M - 0.4),
+        y: from.y,
+      })
+    })
+    expect(second).toBe(first)
+    expect(wpsOf(core.getDocument(), segId)).toHaveLength(afterFirst)
+  })
+
+  it('a grab well beyond the radius still makes its own point', () => {
+    const { core, segId, from } = build()
+    core.transaction('bend', (d) => {
+      bendGrabWaypointInDraft(d as TacticDocument, segId, { x: from.x + 10, y: from.y })
+    })
+    const afterFirst = wpsOf(core.getDocument(), segId).length
+    core.transaction('bend far', (d) => {
+      bendGrabWaypointInDraft(d as TacticDocument, segId, {
+        x: from.x + 10 + BEND_GRAB_RADIUS_M * 2,
+        y: from.y,
+      })
+    })
+    expect(wpsOf(core.getDocument(), segId)).toHaveLength(afterFirst + 1)
+  })
+})
+

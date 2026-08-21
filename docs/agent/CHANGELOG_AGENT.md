@@ -1394,3 +1394,16 @@ Validation: typecheck/lint/build/harness PASS, 200 tests PASS(AppShell 부스트
 Note: 계측을 위해 DEV 전용 QA 훅에 `__stClock`(재생 상태 반환)을 추가했다 — 기존 `__stDoc`/
 `__stCompiled`와 같은 자리·같은 DEV 가드.
 
+### CHG-20260822-137 — FIX — 경로 곡률 조절 시 제어점이 과민하게 생기던 문제
+
+Problem (사용자 2026-08-22): 이동경로 곡률을 잡을 때 점이 너무 민감하게 잡힌다.
+Change: 원인 세 가지 — (1) 휘기가 토큰 드래그와 같은 `DRAG_THRESHOLD_PX(4px)`에서 시작돼 선택만
+하려는 클릭의 손떨림에도 제어점이 삽입됐다 → `BEND_START_PX = 10` 분리(휘기는 점을 삽입하는
+조작이므로 의도적 당김 요구). (2) 제어점을 임계값 통과 시점의 포인터 위치에 꽂아, 겨눈 곳보다
+밀린 자리에 생겼다 → press 시점 좌표(`startPt`)로 변경. (3) 기존 점 재사용 반경이 1.2m라 같은 자리를
+두 번 휘면 제어점이 하나 더 생겨 꺾였다 → `BEND_GRAB_RADIUS_M = 2.4m`.
+Validation: typecheck/lint/build/harness PASS, 203 tests PASS(stepCommands 유닛 +3: 신규 삽입 1개,
+반경 내 재사용, 반경 밖 신규). Playwright `bend.cjs` 6/6 PASS 및 **구/신 대조** — 수정 전에는 7px
+흔들림만으로 점이 추가되고(2→3) 근처 재휘기가 또 하나 쌓였으나(4→5), 수정 후 흔들림은 점 추가 0,
+의도적 당김은 정확히 1개, 제어점 x=50.0(누른 자리와 일치), 재휘기 3→3. 콘솔 에러 0.
+
