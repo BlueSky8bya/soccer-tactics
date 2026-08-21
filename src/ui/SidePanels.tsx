@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
 import {
+  CTRL_BINDINGS,
   GUIDE_ANIM_BINDINGS,
   GUIDE_PLACE_BINDINGS,
   GUIDE_PLAY_BINDINGS,
@@ -65,14 +66,6 @@ export function ActionsPanel() {
         >
           ⚽ {t('panel.fill')}
         </button>
-        <div className={styles.panelHintLine}>
-          <span className={styles.kbd}>Ctrl+좌클릭</span>
-          <span>{t('panel.hintHomeDo')}</span>
-        </div>
-        <div className={styles.panelHintLine}>
-          <span className={styles.kbd}>Ctrl+우클릭</span>
-          <span>{t('panel.hintAwayDo')}</span>
-        </div>
       </div>
 
       <div className={styles.panelCard}>
@@ -106,10 +99,19 @@ export function ActionsPanel() {
           🗑 {t('panel.reset')}
           <span className={styles.btnKbd}>⇧R</span>
         </button>
-        <div className={styles.panelHintLine}>
-          <span className={styles.kbd}>Ctrl+Z</span>
-          <span>{t('panel.undoDo')}</span>
-        </div>
+      </div>
+
+      {/* The three Ctrl chords in one box (user 2026-08-22): they were scattered across the team
+          and cleanup cards, where they read as footnotes to those buttons rather than as the
+          keyboard's own vocabulary. */}
+      <div className={styles.panelCard}>
+        <div className={styles.sectionLabel}>{t('panel.ctrl')}</div>
+        {CTRL_BINDINGS.map((b) => (
+          <div key={b.label} className={styles.panelHintLine}>
+            <span className={styles.kbd}>{b.label}</span>
+            <span>{b.hint}</span>
+          </div>
+        ))}
       </div>
 
       {/* Playback keys live here, not in the right-hand 조작법 panel: this column had the room

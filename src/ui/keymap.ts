@@ -92,6 +92,17 @@ export const DRAW_BINDINGS: Binding[] = [
  * 추가, 잔디 드래그 선택, Ctrl+Z, Delete 등은 왼쪽 패널 버튼과 힌트가 이미 말해 주므로 뺐다.
  * 전체 목록은 `KEYMAP_GROUPS`(? 오버레이)가 계속 들고 있다.
  */
+/**
+ * The Ctrl chords, boxed together in the left panel (user 2026-08-22: Ctrl 삼형제 따로 묶어서).
+ * Scattered under the team and cleanup buttons they read as footnotes to those buttons; together
+ * they read as what they are — the modifier's own vocabulary.
+ */
+export const CTRL_BINDINGS: Binding[] = [
+  { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가' },
+  { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
+  { label: 'Ctrl+Z', hint: '되돌리기' },
+]
+
 export const GUIDE_PLACE_BINDINGS: Binding[] = PLACE_BINDINGS.filter((b) => b.compact)
 export const GUIDE_ANIM_BINDINGS: Binding[] = ANIM_BINDINGS.filter((b) => b.compact)
 export const GUIDE_PLAY_BINDINGS: Binding[] = [KEYMAP.playback.toggle, KEYMAP.playback.boost]

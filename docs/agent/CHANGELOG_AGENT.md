@@ -1407,3 +1407,15 @@ Validation: typecheck/lint/build/harness PASS, 203 tests PASS(stepCommands 유�
 흔들림만으로 점이 추가되고(2→3) 근처 재휘기가 또 하나 쌓였으나(4→5), 수정 후 흔들림은 점 추가 0,
 의도적 당김은 정확히 1개, 제어점 x=50.0(누른 자리와 일치), 재휘기 3→3. 콘솔 에러 0.
 
+### CHG-20260822-138 — UX — Ctrl 단축키 3종을 왼쪽 사이드바 전용 박스로 분리
+
+Problem (사용자 2026-08-22): Ctrl+좌클릭 / Ctrl+우클릭 / Ctrl+Z가 '팀 구성'과 '정리' 카드에 흩어져
+있어 각 버튼의 각주처럼 읽힌다. 하나로 묶어 달라.
+Change: `CTRL_BINDINGS`를 `keymap.ts`(문구 단일 소스)에 신설하고, `ActionsPanel`에 'Ctrl 단축키'
+`panelCard`를 추가해 세 줄을 렌더한다. 팀 구성 카드에서 좌/우클릭 힌트를, 정리 카드에서 Ctrl+Z
+힌트를 제거 — 두 카드는 이제 버튼만 갖는다. 카드 순서: 팀 구성 → 정리 → **Ctrl 단축키** → 재생
+(키보드 성격의 두 카드가 이웃). i18n `panel.ctrl` 추가.
+Validation: typecheck/lint/build/harness PASS, 203 tests PASS. Playwright `ctrlcard.cjs` 9/9 PASS —
+카드 순서 확인, Ctrl 박스가 정확히 3줄(라벨·문구 일치), 팀 구성·정리의 힌트 줄 0개,
+다른 카드에 Ctrl 행 중복 없음, 카드 밖으로 넘치는 텍스트 없음. 스크린샷 육안 확인. 콘솔 에러 0.
+

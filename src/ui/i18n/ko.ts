@@ -235,6 +235,7 @@ export const ko = {
   'panel.hintAway': 'Ctrl+우클릭 = 상대팀 추가',
   'panel.team': '팀 구성',
   'panel.cleanup': '정리',
+  'panel.ctrl': 'Ctrl 단축키',
   'panel.actions': '기능',
   'panel.fill': '양 팀 채우기',
   'panel.reset': '새로 시작',
