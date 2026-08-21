@@ -255,6 +255,10 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
               { pos: rp.pos, moving: rp.moving },
               rp.carryAhead,
               (held ? hold.offset : undefined) ?? BALL_OFFSET,
+              // playback honours the pinned side; the anchor has to be computed the same way or the
+              // pass end and the resting ball disagree by the width of the carry ring
+              held ? hold.offsetLocked : undefined,
+              arrival,
             )
             if (Math.hypot(to.x - last.p.x, to.y - last.p.y) > 0.25) {
               shift(last, to)

@@ -145,10 +145,15 @@ function resolveBall(
     if (!h) return BALL_OFFSET
     return carryOffset({ x: doc.ball.home.x - h.home.x, y: doc.ball.home.y - h.home.y })
   }
-  const holderPos = (id: Id, offset: Vec2, offsetLocked?: boolean): Vec2 | undefined => {
+  const holderPos = (
+    id: Id,
+    offset: Vec2,
+    offsetLocked?: boolean,
+    since?: number,
+  ): Vec2 | undefined => {
     const p = players[id]
     if (!p) return undefined
-    return heldBallPos({ pos: p.pos, moving: p.moving }, p.carryAhead, offset, offsetLocked)
+    return heldBallPos({ pos: p.pos, moving: p.moving }, p.carryAhead, offset, offsetLocked, since)
   }
 
   if (!track || track.segments.length === 0) {
@@ -164,7 +169,7 @@ function resolveBall(
   if (seg) {
     switch (seg.kind) {
       case 'possessed': {
-        const pos = holderPos(seg.holderId, seg.offset, seg.offsetLocked)
+        const pos = holderPos(seg.holderId, seg.offset, seg.offsetLocked, seg.start)
         return {
           pos: pos ?? doc.ball.home,
           status: 'possessed',
@@ -219,7 +224,7 @@ function resolveBall(
     }
   }
   if (lastEnded.kind === 'possessed') {
-    const pos = holderPos(lastEnded.holderId, lastEnded.offset, lastEnded.offsetLocked)
+    const pos = holderPos(lastEnded.holderId, lastEnded.offset, lastEnded.offsetLocked, lastEnded.start)
     return {
       pos: pos ?? doc.ball.home,
       status: 'possessed',

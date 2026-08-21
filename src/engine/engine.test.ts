@@ -351,7 +351,13 @@ describe('compile + stateAt', () => {
     expect(launch2.ball.pos.x).toBeCloseTo(before2.ball.pos.x, 2)
     expect(launch2.ball.pos.y).toBeCloseTo(before2.ball.pos.y, 2)
 
-    // 3) LOCKED offset beats the front-rest while standing (user pinned the ball-ghost side).
+    /*
+     * 3) A LOCKED offset beats the front-rest while standing (the user pinned the ball-ghost side)
+     *    — but only until its holder dribbles. A pin says where the ball RESTS on this player from
+     *    the catch; once they have run with it, the ball is wherever that run left it, and
+     *    re-asserting the pin the instant they stopped threw it back across them (tactic fuzz).
+     *    Here the possession begins AFTER the run, so nothing has been dribbled inside it.
+     */
     const doc3 = baseDoc()
     doc3.scenes[0]!.timeline.tracks.push(
       track('b1', 'player', [
@@ -367,7 +373,7 @@ describe('compile + stateAt', () => {
         {
           id: 'p1',
           kind: 'possessed',
-          trigger: { type: 'at', t: 0 },
+          trigger: { type: 'at', t: 1.2 },
           timing: { duration: 0 },
           holderId: 'b1',
           offset: { x: -2.2, y: 0 },
@@ -390,6 +396,41 @@ describe('compile + stateAt', () => {
     expect(launch3.ball.pos.y).toBeCloseTo(34, 3)
     expect(launch3.ball.pos.x).toBeCloseTo(before3.ball.pos.x, 2)
     expect(launch3.ball.pos.y).toBeCloseTo(before3.ball.pos.y, 2)
+
+    // 4) …and the pin is SPENT once its holder dribbles inside the same possession: the ball ends
+    //    up out front where the run left it, and gets there continuously.
+    const doc4 = baseDoc()
+    doc4.scenes[0]!.timeline.tracks.push(
+      track('b1', 'player', [
+        {
+          id: 'm',
+          kind: 'move',
+          trigger: { type: 'at', t: 0 },
+          timing: { speed: 10 },
+          path: line([40, 34], [50, 34]),
+        },
+      ]),
+      track('ball', 'ball', [
+        {
+          id: 'p1',
+          kind: 'possessed',
+          trigger: { type: 'at', t: 0 },
+          timing: { duration: 0 },
+          holderId: 'b1',
+          offset: { x: -2.2, y: 0 },
+          offsetLocked: true,
+        },
+      ]),
+    )
+    const c4 = compile(doc4)
+    const rest4 = stateAt(c4, doc4, 1.5)
+    expect(rest4.ball.pos.x).toBeGreaterThan(50) // out in front, not pinned behind
+    let prev4 = stateAt(c4, doc4, 0).ball.pos
+    for (let t = 0.02; t <= 1.5; t += 0.02) {
+      const now = stateAt(c4, doc4, t).ball.pos
+      expect(Math.hypot(now.x - prev4.x, now.y - prev4.y)).toBeLessThan(0.6)
+      prev4 = now
+    }
   })
 })
 

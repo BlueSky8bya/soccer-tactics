@@ -18,12 +18,15 @@ import type { Id, TacticDocument, Vec2 } from '@/domain/types'
 import { describeJump, maxBallJump } from '@/engine/ballContinuity'
 import { compile } from '@/engine/compile'
 import { stateAt } from '@/engine/stateAt'
-import { applyFormations, seedDefaultTeams } from './commands'
+import { addPlayer, applyFormations, removeEntities, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
+import { SCENARIOS } from '@/presets/scenarios'
+import { carryOffset } from '@/engine/compile'
 import {
   findSegment,
   makePath,
   moveBallStartInDraft,
+  moveTravelEndInDraft,
   sceneOf,
   shiftBallAnchorsForPlayerInDraft,
   shiftEntityPathsInDraft,
@@ -34,6 +37,7 @@ import {
   bendGrabWaypointInDraft,
   bendMoveWaypointInDraft,
   MAX_STEP,
+  clearStep,
   relayoutStepsInDraft,
   removeStepSegment,
   resolvePassReceiverInDraft,
@@ -239,6 +243,11 @@ type Op =
   | 'ballMoment'
   | 'undo'
   | 'redo'
+  | 'addPlayer'
+  | 'deletePlayer'
+  | 'clearStep'
+  | 'carrySide'
+  | 'receiveSide'
 
 const OPS: Op[] = [
   'run', 'run', 'run',
@@ -252,6 +261,11 @@ const OPS: Op[] = [
   'ballMoment',
   'undo',
   'redo',
+  'addPlayer',
+  'deletePlayer',
+  'clearStep',
+  'carrySide',
+  'receiveSide',
 ]
 
 export interface Failure {
@@ -260,18 +274,32 @@ export interface Failure {
   why: string
 }
 
+/**
+ * One session's starting board. A third of them start from a BUILT-IN SCENARIO instead of a blank
+ * formation: those are authored documents that ship with the app, and "does editing one of the
+ * examples break it" is exactly the question (user 2026-08-22: 어떠한 전술 재현에도).
+ */
 export function session(seed: number, steps: number, out?: { core?: EditorCore }): Failure | null {
   const rand = rng(seed)
   const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rand() * xs.length)]!
-  const core = board()
+  const fromPreset = rand() < 0.34
+  const preset = pick(SCENARIOS)
+  const core = fromPreset ? new EditorCore(preset.build()) : board()
   if (out) out.core = core
   const doc0 = core.getDocument()
-  const squad = doc0.players.filter((p) => p.teamId === doc0.teams[0]!.id)
-  const opener = pick(squad)
-  const log: string[] = [`seed ${seed}`, `ball → #${opener.number}`]
-  core.transaction('give', (dd) =>
-    moveBallStartInDraft(dd as TacticDocument, { x: opener.home.x + 2, y: opener.home.y }, opener.id),
-  )
+  const squad0 = doc0.players.filter((p) => p.teamId === doc0.teams[0]!.id)
+  const opener = pick(squad0)
+  const log: string[] = [`seed ${seed}`, fromPreset ? `preset ${preset.id}` : 'blank board']
+  if (!fromPreset && opener) {
+    log.push(`ball → #${opener.number}`)
+    core.transaction('give', (dd) =>
+      moveBallStartInDraft(
+        dd as TacticDocument,
+        { x: opener.home.x + 2, y: opener.home.y },
+        opener.id,
+      ),
+    )
+  }
 
   const fail = (why: string): Failure => ({ seed, log, why })
 
@@ -295,6 +323,8 @@ export function session(seed: number, steps: number, out?: { core?: EditorCore }
     const op = pick(OPS)
     const doc = core.getDocument()
     const segs = authored(doc)
+    const squad = doc.players.filter((p) => p.teamId === doc.teams[0]!.id)
+    if (squad.length === 0) break
     let did = ''
 
     switch (op) {
@@ -426,6 +456,59 @@ export function session(seed: number, steps: number, out?: { core?: EditorCore }
         })
         did = `ball start → (${to.x.toFixed(1)}, ${to.y.toFixed(1)})${onPlayer ? ` on #${target.number}` : ' loose'}`
         void d
+        break
+      }
+      case 'addPlayer': {
+        const team = pick(doc.teams).id
+        const at = clampToPitch({ x: 4 + rand() * 97, y: 4 + rand() * 60 })
+        addPlayer(core, team, at)
+        did = `add player at (${at.x.toFixed(1)}, ${at.y.toFixed(1)})`
+        break
+      }
+      case 'deletePlayer': {
+        if (doc.players.length <= 2) continue
+        const who = pick(doc.players)
+        removeEntities(core, [who.id])
+        did = `delete #${who.number}`
+        break
+      }
+      case 'clearStep': {
+        if (!segs.length) continue
+        const step = pick(segs).step
+        clearStep(core, step)
+        did = `clear step ${step}`
+        break
+      }
+      case 'carrySide': {
+        // ball-ghost orbit on a carried run: pin which side of the runner the ball sits
+        const runs = segs.filter((s) => s.kind === 'move')
+        if (!runs.length) continue
+        const r = pick(runs)
+        const off = carryOffset({ x: (rand() - 0.5) * 4, y: (rand() - 0.5) * 4 })
+        core.transaction('Set carry side', (dd) => {
+          const d = dd as TacticDocument
+          const f = findSegment(d, r.id)
+          if (f && f.segment.kind === 'move') f.segment.carryEnd = off
+          relayoutStepsInDraft(d)
+        })
+        did = `carry side on step ${r.step}`
+        break
+      }
+      case 'receiveSide': {
+        // arrival-ghost orbit: slide where the receiver collects it, curvature untouched
+        const recv = segs.filter((s) => s.kind === 'travel' && s.receiverId)
+        if (!recv.length) continue
+        const t = pick(recv)
+        const rp = doc.players.find((p) => p.id === t.receiverId)
+        if (!rp) continue
+        const around = restOf(rp.id)
+        const off = carryOffset({ x: (rand() - 0.5) * 5, y: (rand() - 0.5) * 5 })
+        core.transaction('Set receive side', (dd) => {
+          const d = dd as TacticDocument
+          moveTravelEndInDraft(d, t.id, { x: around.x + off.x, y: around.y + off.y }, around)
+          relayoutStepsInDraft(d)
+        })
+        did = `receive side on step ${t.step}`
         break
       }
       case 'undo': {

@@ -1852,3 +1852,31 @@ Validation: typecheck/lint/build/harness PASS, **244 tests PASS**.
 - 브라우저 프로브 18종 전부 PASS: ballmoment 15/15, ballrest, midghost, throughball, steps, aimclick,
   passland, orbit, identity, colors, homeanchor, overhaul, fling, cues, panelbtns, launchorigin,
   throughplayer, gif.
+
+## CHG-20260822-153 — 퍼즈 확장(내장 예시·엔티티 삭제·오빗) + 고정된 캐리 면이 되살아나던 결함
+
+Trigger: CHG-152의 퍼즈를 사용자가 열거한 조작 전체로 넓혔다 — 선수 추가/삭제, 단계 전체 지우기,
+캐리 면 고정(`carryEnd`), 도착 면 고정(`moveTravelEndInDraft`), 그리고 **세션의 1/3은 빈 판이 아니라
+내장 예시 8종 중 하나에서 시작**한다(사용자: "어떠한 전술 재현에도").
+
+발견·수정된 결함 2종:
+
+1. **삭제된 선수를 공이 계속 타고 있었다** — `removeEntities`가 holder/receiver 참조를 남겨,
+   `stateAt`이 그 선수를 못 찾고 공을 킥오프 지점으로 돌려보냈다(브라우저 마라톤 29m). 포메이션
+   커맨드만 하던 정리를 **파이프라인 0단계**로 옮겼다: 어떤 경로로 들어오든, 저장소에서 나오든
+   문서는 일관된 상태로 도착한다. 삭제·팀 비우기·포메이션 교체가 이제 파이프라인으로 끝난다.
+
+2. **고정한 캐리 면이 소유자가 멈추는 순간 되살아났다** — 도착 고스트를 끌어 정한 면(`offsetLocked`)은
+   **잡은 순간의 정지 위치**를 뜻하는데, 소유자가 드리블한 뒤 멈추면 그 핀이 다시 적용돼 공이 선수를
+   가로질러 캐리 링 지름만큼 튀었다(1.3~3.8m, 내장 예시 포함). → 핀은 **그 소유 구간 안에서 드리블하면
+   소진된다**: `CarryAhead.prevEnd`로 "이번 소유 중에 끝난 런이 있는가"를 묻고, 있으면 공은 그 런이
+   남긴 자리에 있다. 램프의 출발점도 같은 규칙을 쓴다(핀이 살아 있으면 핀에서 출발). 잡기 전에 뛰었던
+   런은 **가지고 있지 않던 공에 대해 아무 말도 하지 않으므로** 핀이 그대로 유효하다.
+   파이프라인의 도착 앵커도 이제 `offsetLocked`를 함께 넘긴다 — 재생과 앵커가 다른 계산을 하고 있었다.
+
+Validation: typecheck/lint/build/harness PASS, **252 tests PASS**.
+
+- `tacticFuzz` 360 세션(예시 시작 포함) 위반 0. 신규 `scenarioContinuity.test.ts` — 출고되는 예시 8종
+  전부 B1 연속(사용자가 처음 보는 문서이므로 계약으로 고정).
+- `engine.test.ts`의 "잠긴 오프셋이 정면 캐리를 이긴다" 케이스는 **소유 시작 후 런이 없을 때**로 정정하고,
+  드리블 후에는 정면에 놓이며 그 과정이 연속임을 검사하는 케이스를 추가했다.

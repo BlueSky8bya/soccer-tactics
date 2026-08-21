@@ -369,6 +369,7 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
                 p.start,
                 prev.seg.offset ?? BALL_OFFSET,
                 prev.seg.offsetLocked,
+                prev.start,
               )
               if (release && path.waypoints.length >= 1) {
                 const first = path.waypoints[0]!
@@ -428,6 +429,7 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
     t: number,
     offset: Vec2,
     offsetLocked?: boolean,
+    since?: number,
   ): Vec2 | undefined {
     const pos = playerPosAt(playerId, t)
     if (!pos) return undefined
@@ -447,7 +449,7 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
         if (t >= q.start && t < q.end) moving = true
       }
     }
-    return heldBallPos({ pos, moving }, carryAheadFor(moves, t), offset, offsetLocked)
+    return heldBallPos({ pos, moving }, carryAheadFor(moves, t), offset, offsetLocked, since)
   }
 
   // Unresolved → errors (cycle or dangling reference)

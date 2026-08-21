@@ -34,6 +34,8 @@ export interface CarryAhead {
   vec: Vec2
   ramp: number
   from?: Vec2
+  /** When the run that `from` comes from ended — lets a caller ask "was that during this hold?". */
+  prevEnd?: number
 }
 
 /** Ahead-of-the-feet carry vector for a heading. */
@@ -105,10 +107,10 @@ export function carryAheadFor(moves: readonly CarryMove[], t: number): CarryAhea
     return {
       vec,
       ramp: Math.max(0, Math.min(1, lt / DRIBBLE_RAMP_S)),
-      ...(prev ? { from: endCarryVec(prev) } : {}),
+      ...(prev ? { from: endCarryVec(prev), prevEnd: prev.end } : {}),
     }
   }
-  if (prev) return { vec: endCarryVec(prev), ramp: 1 }
+  if (prev) return { vec: endCarryVec(prev), ramp: 1, prevEnd: prev.end }
   return undefined
 }
 
@@ -121,12 +123,27 @@ export function heldBallPos(
   carry: CarryAhead | undefined,
   offset: Vec2,
   offsetLocked?: boolean,
+  /** When this possession began — a pin is spent once its holder has dribbled inside it. */
+  since = Number.POSITIVE_INFINITY,
 ): Vec2 {
-  if (offsetLocked && !holder.moving)
-    return { x: holder.pos.x + offset.x, y: holder.pos.y + offset.y }
+  /*
+   * A PINNED side (the user dragged the arrival ghost) says where the ball RESTS on this holder.
+   * It is the truth from the catch until they set off with it — and no longer, because once they
+   * have dribbled the ball is wherever that run left it. Re-asserting the pin the instant they
+   * stopped threw the ball back across them by the width of the carry ring, every time, on the
+   * shipped examples as well as on anything the user draws (tactic fuzz: 1.3–3.8 m).
+   *
+   * "Inside this possession" is the whole distinction: a run they made BEFORE the catch says
+   * nothing about a ball they did not have.
+   */
+  const dribbled = carry?.prevEnd !== undefined && carry.prevEnd > since
+  const pinned = !!offsetLocked && !dribbled
+  if (pinned && !holder.moving) return { x: holder.pos.x + offset.x, y: holder.pos.y + offset.y }
   if (carry) {
     const r = carry.ramp
-    const base = carry.from ?? offset
+    // The ramp leaves from where the ball actually is: the pin while it still stands, otherwise the
+    // previous run's end-carry, which is what makes a chained run pass exactly through its junction.
+    const base = pinned ? offset : (carry.from ?? offset)
     return {
       x: holder.pos.x + base.x * (1 - r) + carry.vec.x * r,
       y: holder.pos.y + base.y * (1 - r) + carry.vec.y * r,
