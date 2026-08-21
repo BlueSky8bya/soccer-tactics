@@ -3,6 +3,7 @@
  * The mouse does the authoring; the keyboard only plays, deletes and undoes.
  */
 import { BOOST_FACTOR } from '@/editor/playbackRates'
+import type { Cue } from './cueHighlight'
 
 export interface Binding {
   key?: string
@@ -21,11 +22,17 @@ export interface Binding {
    * anywhere (user 2026-08-22: 정렬 없이 너무 들쭉날쭉). One rule — keycaps are for keys.
    */
   chip?: boolean
+  /**
+   * Which shortcut family this belongs to. While the user is actually in that state — Ctrl held,
+   * the play running, Alt down for a path — its rows light up, so the panel answers what you are
+   * doing instead of listing everything at one volume (user 2026-08-22).
+   */
+  cue?: Cue
 }
 
 export const KEYMAP = {
   playback: {
-    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지', chip: true },
+    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지', chip: true, cue: 'space' },
     // its own row, not a tail on the Space hint — the hold was undiscoverable buried there
     // (user 2026-08-21: space 꾹 누르는 키도 안내하게)
     boost: {
@@ -33,9 +40,10 @@ export const KEYMAP = {
       label: 'Space 꾹',
       hint: `누르는 동안 ${BOOST_FACTOR}배속`,
       chip: true,
+      cue: 'space',
     },
-    restart: { key: 'Home', label: 'Home', hint: '처음으로', chip: true },
-    loop: { key: 'g', label: 'G', hint: '반복', chip: true },
+    restart: { key: 'Home', label: 'Home', hint: '처음으로', chip: true, cue: 'space' },
+    loop: { key: 'g', label: 'G', hint: '반복', chip: true, cue: 'space' },
     zen: { key: 'f', label: 'F', hint: '패널 숨기기 / 되돌리기', chip: true },
   },
   edit: {
@@ -55,8 +63,8 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
   { label: '드래그', hint: '옮기기 (여러 명이면 같이)' },
   { label: '빈 잔디 드래그', hint: '박스로 여러 명 선택' },
-  { label: 'Shift+잔디 드래그', hint: '기존 선택에 박스 추가' },
-  { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)' },
+  { label: 'Shift+잔디 드래그', hint: '기존 선택에 박스 추가', cue: 'shift' },
+  { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)', cue: 'ctrl' },
   {
     label: '겹친 곳 다시 클릭',
     hint: '겹쳐 있는 다음 대상 선택 (선수→고스트→경로 순환)',
@@ -78,18 +86,20 @@ export const PLACE_BINDINGS: Binding[] = [
 
 /** 경로 그리기·다듬기·재생. */
 export const ANIM_BINDINGS: Binding[] = [
-  { label: 'Alt+드래그', hint: '선수는 이동 경로, 공은 패스', compact: true },
+  { label: 'Alt+드래그', hint: '선수는 이동 경로, 공은 패스', compact: true, cue: 'alt' },
   {
     label: '선수·공 선택 + Alt+클릭',
     hint: '클릭한 지점까지 직선 경로 — 중간에 뭐가 있든 상관없음 (휘는 건 나중에 선을 당겨서)',
     compact: true,
+    cue: 'alt',
   },
   {
     label: 'Alt+클릭 → Alt+클릭',
     hint: '시작점을 직접 찍어서 (흐린 토큰에서도)',
     compact: true,
+    cue: 'alt',
   },
-  { label: '흐린 토큰 Alt+드래그', hint: '그 위치에서 이어서 그리기', compact: true },
+  { label: '흐린 토큰 Alt+드래그', hint: '그 위치에서 이어서 그리기', compact: true, cue: 'alt' },
   { label: '흐린 토큰 드래그', hint: '그 움직임의 끝 위치 미세조정', compact: true },
   { label: '경로 클릭', hint: '선택 후 Delete 삭제, 숫자키로 단계 변경', compact: true },
   { label: '경로 드래그', hint: '잡은 지점을 당겨 곡선으로 휘기', compact: true },
@@ -117,9 +127,9 @@ export const DRAW_BINDINGS: Binding[] = [
  * they read as what they are — the modifier's own vocabulary.
  */
 export const CTRL_BINDINGS: Binding[] = [
-  { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가', chip: true },
-  { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가', chip: true },
-  { label: 'Ctrl+Z', hint: '되돌리기', chip: true },
+  { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가', chip: true, cue: 'ctrl' },
+  { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가', chip: true, cue: 'ctrl' },
+  { label: 'Ctrl+Z', hint: '되돌리기', chip: true, cue: 'ctrl' },
 ]
 
 export const GUIDE_PLACE_BINDINGS: Binding[] = PLACE_BINDINGS.filter((b) => b.compact)

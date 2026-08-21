@@ -1618,3 +1618,33 @@ Validation: typecheck/lint/build/harness PASS, **228 tests PASS**.
   클릭 지점에 생성, 하단 칩·인라인 피커 모두 rgb(224,62,62), 액션 바에 `<select>` 0개, 칩 클릭으로
   선택된 움직임이 4단계로 재지정.
 - 무회귀: colors 6/6, aimclick 7/7, homeanchor 4/4, overhaul 15/15, fling 3/3.
+
+### CHG-20260822-144 — FIX/UX — 공 단계 배지 실종 · 칩 카운트 색 · 문맥 기반 단축키 하이라이팅
+
+Problem (사용자 2026-08-22): (1) 공 애니메이션 단계 수정 버튼이 안 보임 (2) 단계 바에서 버튼은 색깔
+구분하는데 작은 숫자는 파란색 그대로 (3) 지금 하는 일에 따라 관련 단축키가 자동으로 하이라이팅되면
+좋겠다 — 단, 키를 아주 빠르게 눌렀다 뗐을 때 점멸되지 않아야 한다.
+
+Root cause (1): v18에서 배지에 `--st-entity`(**잔디 위** 역할)를 물렸다. 공은 거기서 흰색인데 배지는
+**밝은 바탕의 채워진 칩**이라 흰 테두리 + 흰 글씨 = 완전 실종. "엔티티 색"이 바탕에 따라 두 역할이라는
+것을 배지에 적용하지 않은 실수. `--st-entity-chip`으로 교체(공은 어두운 색).
+
+Change: ADR-0009 Amendment v19 (a~c).
+
+- 배지·인라인 피커는 칩 역할(`--st-entity-chip`)을 쓴다.
+- 카운트 배지와 '사용된 단계' 테두리는 **중립**으로. "이 단계에 N개"는 모든 엔티티에 걸친 문서 사실이라
+  어느 엔티티의 색도, accent도 주장할 수 없다. 단 **활성 칩 위의** 카운트는 그 칩의 정체성을 따른다.
+- `cueHighlight.ts`(순수) + `useActiveCues.ts`(훅) 신설. Ctrl/Alt/Shift 홀드와 재생 중 상태를
+  `Binding.cue`로 태그된 행에 연결해 켠다. 게이트: **켜짐 180ms / 꺼짐 340ms**. 비대칭이 안티플리커의
+  핵심 — 꺼짐 여운 덕에 창 안의 재입력은 애초에 켜져 있어 깜빡일 수 없다. 하이라이팅은 색만 바꿔
+  레이아웃이 흔들리지 않는다.
+
+Validation: typecheck/lint/build/harness PASS, **235 tests PASS**(신규 7).
+
+- `cueHighlight.test.ts` — 밀리초 타임라인 구동: 홀드는 정확히 180ms에 켜지고, **60ms 탭은 한 번도
+  켜지지 않으며**, 40ms 간격 연타의 표시 변화는 **≤2회**, 꺼짐 창 안의 재입력은 계속 켜진 상태 유지,
+  꺼짐은 정확히 340ms에.
+- Playwright `cues.cjs` 9/9 — 공 배지 stroke·text 모두 `rgb(29,29,31)`(흰-위-흰 아님), 활성 칩 카운트가
+  칩과 같은 `rgb(29,29,31)`, 정지 상태에서 켜진 행 0개, Ctrl 홀드 시 Ctrl 3행, Alt 홀드 시 Alt 4행,
+  재생 중 Space 2행, **Ctrl 연타 6회에 한 번도 켜지지 않음**.
+- 무회귀: identity 10/10, colors 6/6, aimclick 7/7, homeanchor 4/4, overhaul 15/15, fling 3/3.

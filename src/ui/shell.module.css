@@ -1084,6 +1084,35 @@
   padding-top: 1px;
 }
 
+/*
+ * Live highlight: while you are actually in a shortcut family, its rows lift out of the list. It
+ * is a colour change only — never a size or position one — so a row cannot nudge its neighbours
+ * as it comes and goes. The anti-flicker gate lives in cueHighlight.ts; this is just the look.
+ */
+.shortcutRowOn,
+.shortcutRowOn.shortcutRowInline {
+  background: var(--st-accent-soft);
+  box-shadow: 0 0 0 6px var(--st-accent-soft);
+  border-radius: 4px;
+}
+
+.shortcutRowOn .shortcutHint {
+  color: var(--st-text);
+}
+
+.shortcutRowOn .kbd,
+.shortcutRowOn .shortcutLabel {
+  color: var(--st-accent);
+  border-color: color-mix(in srgb, var(--st-accent) 35%, transparent);
+}
+
+.shortcutRow,
+.shortcutRowInline {
+  transition:
+    background-color var(--st-motion-transition) var(--st-ease-out),
+    box-shadow var(--st-motion-transition) var(--st-ease-out);
+}
+
 .shortcutLabel {
   font-size: 12.5px;
   font-weight: 600;
@@ -1553,9 +1582,12 @@
   border-left: 1px solid var(--st-border);
 }
 
+/* "This step already holds movements" is a DOCUMENT fact spanning every entity, so it claims
+   neither one entity's colour nor the accent — the accent is for selection and system actions. It
+   just reads as filled-in (user 2026-08-22: 버튼은 색깔 구분하는데 왜 작은 숫자는 파란색 그대로야). */
 .stepChipUsed {
-  border-color: var(--st-accent);
-  color: var(--st-accent);
+  border-color: var(--st-text-3);
+  color: var(--st-text);
 }
 
 /* Falls back to the accent when no movement is selected — then the chip picks the step for
@@ -1574,8 +1606,8 @@
   min-width: 15px;
   height: 15px;
   border-radius: 8px;
-  background: var(--st-accent-soft);
-  color: var(--st-accent);
+  background: var(--st-surface-3);
+  color: var(--st-text-2);
   font-size: 10px;
   font-weight: 700;
   display: inline-flex;
@@ -1584,8 +1616,11 @@
   padding: 0 3px;
 }
 
+/* On the active chip the count sits on the filled ground, so it picks up the same identity the
+   button just took. */
 .stepChipActive .stepCount {
   background: #fff;
+  color: var(--st-entity-chip, var(--st-accent));
 }
 
 .panelField {

@@ -2125,7 +2125,7 @@ export function SimplePitch() {
             style={
               {
                 opacity: focusIds.size > 0 && !focusIds.has(b.entityId) ? 0.25 : undefined,
-                '--st-entity': entityColorOf(doc, b.entityId),
+                '--st-entity-chip': entityChipOf(doc, b.entityId).fill,
               } as CSSProperties
             }
             transform={`translate(${b.end.x}, ${b.end.y})`}

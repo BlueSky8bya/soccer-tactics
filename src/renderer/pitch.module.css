@@ -558,15 +558,15 @@
 }
 
 .stepBadge circle {
-  fill: rgba(255, 255, 255, 0.75);
-  stroke: var(--st-entity, #3a4150);
-  stroke-width: 0.14;
+  fill: rgba(255, 255, 255, 0.85);
+  stroke: var(--st-entity-chip, #3a4150);
+  stroke-width: 0.16;
 }
 
 .stepBadge text {
   font-size: 1.5px;
   font-weight: 700;
-  fill: var(--st-entity, #3a4150);
+  fill: var(--st-entity-chip, #3a4150);
   user-select: none;
 }
 
@@ -717,8 +717,9 @@
   pointer-events: none;
 }
 
-/* The picker edits ONE movement, so its current chip carries that entity's identity — accent blue
-   on a red team's step picker said nothing about whose step it was (user 2026-08-22). */
+/* Picker and badge are FILLED CHIPS on a light ground, so they take the chip role, not the grass
+   one: the ball is white on grass but white-on-white here, which is why its badge disappeared
+   entirely (user 2026-08-22: 공 애니메이션 단계 수정 버튼 안 보여). */
 .stepPickerItemActive circle {
   fill: var(--st-entity-chip, var(--st-accent, #0a7aff));
 }

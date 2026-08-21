@@ -15,10 +15,12 @@ import {
   GUIDE_PLAY_BINDINGS,
   type Binding,
 } from './keymap'
+import { useActiveCues } from './useActiveCues'
 import styles from './shell.module.css'
 
 /** Left panel: the feature buttons (always visible). */
 export function ActionsPanel() {
+  const cues = useActiveCues()
   const core = useEditor()
   const { doc } = useEditorSnapshot()
   const flashToast = useUiStore((s) => s.flashToast)
@@ -108,7 +110,7 @@ export function ActionsPanel() {
         <div className={styles.sectionLabel}>{t('panel.ctrl')}</div>
         <div className={styles.shortcutList}>
           {CTRL_BINDINGS.map((b) => (
-            <ShortcutRow key={b.label} b={b} />
+            <ShortcutRow key={b.label} b={b} active={!!b.cue && cues.has(b.cue)} />
           ))}
         </div>
       </div>
@@ -120,7 +122,7 @@ export function ActionsPanel() {
         <div className={styles.sectionLabel}>{t('tl.play')}</div>
         <div className={styles.shortcutList}>
           {GUIDE_PLAY_BINDINGS.map((b) => (
-            <ShortcutRow key={b.label} b={b} />
+            <ShortcutRow key={b.label} b={b} active={!!b.cue && cues.has(b.cue)} />
           ))}
         </div>
       </div>
@@ -140,12 +142,16 @@ export function ActionsPanel() {
  * card's left edge, so every row shares one straight edge, and rhythm does the separating instead
  * of a hairline under each line.
  */
-export function ShortcutRow({ b }: { b: Binding }) {
+export function ShortcutRow({ b, active }: { b: Binding; active?: boolean }) {
   // A keycap is a compact token and reads inline; a gesture is a phrase and needs its own line.
   // One rule, and it also buys back the height the stacked-everything version cost — the left
   // column ran off the bottom of a 900px window with its last hint cut in half.
   return (
-    <div className={b.chip ? styles.shortcutRowInline : styles.shortcutRow}>
+    <div
+      className={`${b.chip ? styles.shortcutRowInline : styles.shortcutRow} ${
+        active ? styles.shortcutRowOn : ''
+      }`}
+    >
       {b.chip ? (
         <span className={styles.kbd}>{b.label}</span>
       ) : (
@@ -158,13 +164,14 @@ export function ShortcutRow({ b }: { b: Binding }) {
 
 /** Right panel: always-visible gesture guide, split by mode. */
 export function GuidePanel() {
+  const cues = useActiveCues()
   return (
     <aside className={styles.sideRight} aria-label={t('panel.guide')}>
       <div className={styles.panelCard}>
         <div className={styles.sectionLabel}>{t('panel.place')}</div>
         <div className={styles.shortcutList}>
           {GUIDE_PLACE_BINDINGS.map((b) => (
-            <ShortcutRow key={b.label} b={b} />
+            <ShortcutRow key={b.label} b={b} active={!!b.cue && cues.has(b.cue)} />
           ))}
         </div>
       </div>
@@ -172,7 +179,7 @@ export function GuidePanel() {
         <div className={styles.sectionLabel}>{t('panel.anim')}</div>
         <div className={styles.shortcutList}>
           {GUIDE_ANIM_BINDINGS.map((b) => (
-            <ShortcutRow key={b.label} b={b} />
+            <ShortcutRow key={b.label} b={b} active={!!b.cue && cues.has(b.cue)} />
           ))}
         </div>
       </div>
