@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { memo, type CSSProperties, type ReactNode } from 'react'
 import type { Id, Vec2 } from '@/domain/types'
 import styles from './pitch.module.css'
 
@@ -70,6 +70,7 @@ export const Token = memo(function Token(p: TokenProps) {
       <>
         {/* soft ground shadow — lifts the piece off the grass (design polish 2026-08-20) */}
         <ellipse cx={0.22} cy={0.3} rx={r * 1.02} ry={r * 0.62} className={styles.tokenShadow} />
+        {p.hovered && <circle r={r + 0.62} className={styles.hoverHalo} />}
         {p.moving && p.heading !== undefined && (
           <path
             d={`M ${r + 0.2} -0.55 L ${r + 1.1} 0 L ${r + 0.2} 0.55 Z`}
@@ -111,6 +112,7 @@ export const Token = memo(function Token(p: TokenProps) {
           className={styles.ballShadow}
           style={{ opacity: Math.max(0.12, 0.42 - h * 0.05) }}
         />
+        {p.hovered && <circle r={r + 0.55} className={styles.hoverHalo} />}
         <g transform={`scale(${scale})`}>
           <circle r={r} className={`${styles.ball} ${p.selected ? styles.ballSelected : ''}`} />
           <g transform={`rotate(${spinDeg}) scale(${r})`}>
@@ -130,6 +132,8 @@ export const Token = memo(function Token(p: TokenProps) {
       transform={`translate(${p.pos.x} ${p.pos.y})`}
       data-entity={p.id}
       data-kind={p.kind}
+      /* the hover halo (and anything else that depicts THIS piece) reads its colour from here */
+      style={{ '--st-entity': p.kind === 'ball' ? '#fff' : p.color } as CSSProperties}
     >
       {p.wrap ? p.wrap(body) : body}
     </g>

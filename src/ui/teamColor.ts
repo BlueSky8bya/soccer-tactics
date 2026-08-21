@@ -18,3 +18,17 @@ export function teamColorOf(doc: TacticDocument, playerId: Id): string {
 export function entityColorOf(doc: TacticDocument, entityId: Id): string {
   return entityId === doc.ball.id ? 'var(--st-ball-path, #f5f5f7)' : teamColorOf(doc, entityId)
 }
+
+/**
+ * The same identity, but for a FILLED chip rather than a mark on grass.
+ *
+ * On the pitch the ball is white, which is right against green — but a white chip on a light panel
+ * has no edge at all, so a control that belongs to the ball goes dark with white type instead
+ * (user 2026-08-22 proposed exactly this). Players keep their team colour with white type.
+ * Two roles, because "the ball's colour" honestly differs by ground.
+ */
+export function entityChipOf(doc: TacticDocument, entityId: Id): { fill: string; ink: string } {
+  return entityId === doc.ball.id
+    ? { fill: 'var(--st-ball-chip, #1d1d1f)', ink: '#fff' }
+    : { fill: teamColorOf(doc, entityId), ink: '#fff' }
+}

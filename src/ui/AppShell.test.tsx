@@ -106,11 +106,12 @@ describe('AppShell (simple mode, ADR-0009)', () => {
       .find((s) => 'path' in s)!
     expect(useUiStore.getState().selectedSegmentId).toBe(seg.id)
     expect(seg.step ?? 1).toBe(1)
-    // picker: exact assignment 1 -> 5 in one change
-    const picker = screen.getByRole('combobox', { name: /이 움직임의 단계/ })
+    // Exact assignment 1 -> 5 in one action. This used to go through a native dropdown in the
+    // action bar; that was the fourth control assigning the same value and is gone (2026-08-22).
+    // The footer chip now retargets the selected movement, exactly as its number key already did.
+    const chip5 = screen.getByTitle(/^5단계 —/)
     await act(async () => {
-      const { fireEvent } = await import('@testing-library/react')
-      fireEvent.change(picker, { target: { value: '5' } })
+      chip5.click()
     })
     const seg2 = core
       .getDocument()

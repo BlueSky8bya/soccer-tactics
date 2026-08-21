@@ -238,6 +238,7 @@ export const ko = {
   'panel.ctrl': 'Ctrl 단축키',
   'zen.exit': '패널 보이기',
   'player.roleNone': '지정 안 함',
+  'sab.stepIs': '{n}단계',
   'panel.actions': '기능',
   'panel.fill': '양 팀 채우기',
   'panel.reset': '새로 시작',

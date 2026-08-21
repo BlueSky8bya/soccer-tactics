@@ -68,7 +68,7 @@ import styles from '@/renderer/pitch.module.css'
 import { clientToPitch } from '@/renderer/pointer'
 import { clampToView, usePitchView } from './useSvgMetrics'
 import { t } from '../i18n'
-import { entityColorOf, teamColorOf } from '../teamColor'
+import { entityChipOf, entityColorOf, teamColorOf } from '../teamColor'
 import { AnimatedToken } from './AnimatedToken'
 import {
   deriveAttachedPathStart,
@@ -157,8 +157,8 @@ type Gesture =
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2; additive: boolean }
   | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[]; minStep?: number }
-  /** Second half of a click-to-click path: the endpoint is wherever this pointer is released. */
-  | { type: 'aim'; pointerId: number; to: Vec2 }
+  /** Landing a click-to-click path: the endpoint is wherever this pointer is released. */
+  | { type: 'aim'; pointerId: number; entityId: Id; from: Vec2; minStep?: number; to: Vec2 }
   | {
       type: 'bend'
       segmentId: Id
@@ -287,6 +287,8 @@ export function SimplePitch() {
   /** endGesture runs from a ref and must not close over a stale `aim`. */
   const aimRef = useRef(aim)
   aimRef.current = aim
+  /** Alt held with ONE entity selected: the same guide, without an arming click. */
+  const quickAimRef = useRef(false)
   /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
   const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
   const flingDoneRef = useRef<(() => void) | null>(null)
@@ -689,11 +691,11 @@ export function SimplePitch() {
     }
 
     if (g.type === 'aim') {
-      const a = aimRef.current
       setAim(null)
       setAimTo(null)
-      if (!commit || !a) return
-      finishDraw(a.entityId, [a.from, g.to], a.minStep)
+      setSnapPos(null)
+      if (!commit) return
+      finishDraw(g.entityId, [g.from, g.to], g.minStep)
       return
     }
 
@@ -1040,7 +1042,14 @@ export function SimplePitch() {
         setAimTo(null)
         return
       }
-      gesture.current = { type: 'aim', pointerId: e.pointerId, to: pt }
+      gesture.current = {
+        type: 'aim',
+        pointerId: e.pointerId,
+        entityId: aim.entityId,
+        from: aim.from,
+        minStep: aim.minStep,
+        to: pt,
+      }
       setAimTo(pt)
       svg.setPointerCapture(e.pointerId)
       return
@@ -1152,7 +1161,11 @@ export function SimplePitch() {
         insidePitch: pt.x >= 0 && pt.x <= L && pt.y >= 0 && pt.y <= W,
       },
       { button: e.button, draw: e.altKey, ctrl: e.ctrlKey || e.metaKey },
-      { liveTokenNearGhost: !!yieldId, chainActive: !!chain.current },
+      {
+        liveTokenNearGhost: !!yieldId,
+        chainActive: !!chain.current,
+        soloSelection: st.selection.length === 1,
+      },
     )
 
     switch (intent) {
@@ -1167,6 +1180,22 @@ export function SimplePitch() {
           { x: ghostTop!.pos.x, y: ghostTop!.pos.y },
           minStep,
         )
+        return
+      }
+      case 'draw-to-point': {
+        // The selection already named the subject; this press only says WHERE. Start from where
+        // that entity currently ends up, which is the same anchor a chained drag would use.
+        const subject = st.selection[0]!
+        st.returnToAuthoringStart()
+        gesture.current = {
+          type: 'aim',
+          pointerId: e.pointerId,
+          entityId: subject,
+          from: lastKnownPosition(core.getDocument(), subject),
+          to: pt,
+        }
+        setAimTo(pt)
+        svg.setPointerCapture(e.pointerId)
         return
       }
       case 'press-live-token':
@@ -1310,8 +1339,9 @@ export function SimplePitch() {
     const g = gesture.current
     if (!g || g.pointerId !== e.pointerId) {
       if (!g) {
-        // armed but not yet pressed: the rubber band follows the cursor so the aim is visible
-        if (aimRef.current) {
+        // armed (or Alt held over a selection): the rubber band follows the cursor, so what the
+        // next click will do is visible before it happens
+        if (aimRef.current || quickAimRef.current) {
           const sv = svgRef.current
           if (sv) setAimTo(clampToPitch(clientToPitch(sv, e.clientX, e.clientY), doc.pitch))
         }
@@ -1428,7 +1458,7 @@ export function SimplePitch() {
     if (g.type === 'aim') {
       // same snapping as a stroke's release, so landing "on" a target is equally unambiguous
       let p = clampToPitch(pt, doc.pitch)
-      const t2 = aimRef.current ? nearestSnapTarget(p, aimRef.current.entityId) : null
+      const t2 = nearestSnapTarget(p, g.entityId)
       if (t2) {
         p = t2
         setSnapPos(t2)
@@ -1720,6 +1750,23 @@ export function SimplePitch() {
   /** Frame is away from the authoring start: playing, paused mid-play, held result, or step preview. */
   const viewingFrame = isPlaying || ui.playback.t > 0
   const draftColor = ui.pathDraft ? entityColorOf(doc, ui.pathDraft.entityId) : ''
+  /**
+   * Alt held with exactly one entity selected: the selection already names the subject, so the
+   * next Alt+click lands the path — no arming click. Previewing it is what makes that discoverable
+   * (user 2026-08-22: 굳이 두 번 눌러야 하는 이유가 있어?).
+   */
+  const stepPickerChip = entityChipOf(
+    doc,
+    (stepPicker
+      ? sceneTracks(doc).find((tr) => tr.segments.some((sg) => sg.id === stepPicker.segId))
+          ?.entityId
+      : undefined) ?? doc.ball.id,
+  )
+  const quickAim =
+    drawKeyHeld && !aim && ui.selection.length === 1 && !gesture.current
+      ? { entityId: ui.selection[0]!, from: lastKnownPosition(doc, ui.selection[0]!) }
+      : null
+  quickAimRef.current = !!quickAim
   const attachedStart = deriveAttachedPathStart(doc, compiled, ui.selectedSegmentId)
 
   // A-05a rest hierarchy: paths outside the CURRENT step recede (0.55) but stay readable.
@@ -2183,17 +2230,23 @@ export function SimplePitch() {
             key={g.id}
             className={styles.ghostToken}
             transform={`translate(${g.pos.x}, ${g.pos.y})`}
-            style={{
-              opacity:
-                (drawKeyHeld || hoverKey === `ghost:${g.segId}:${g.entityId}`
-                  ? Math.min(0.9, g.opacity + 0.3)
-                  : g.opacity) * (focusIds.size > 0 && !focusIds.has(g.entityId) ? 0.25 : 1),
-            }}
+            style={
+              {
+                opacity:
+                  (drawKeyHeld || hoverKey === `ghost:${g.segId}:${g.entityId}`
+                    ? Math.min(0.9, g.opacity + 0.3)
+                    : g.opacity) * (focusIds.size > 0 && !focusIds.has(g.entityId) ? 0.25 : 1),
+                '--st-entity': g.color,
+              } as CSSProperties
+            }
             data-ghost={g.entityId}
             data-move-seg={g.segId}
             data-gx={g.pos.x}
             data-gy={g.pos.y}
           >
+            {hoverKey === `ghost:${g.segId}:${g.entityId}` && (
+              <circle r={g.kind === 'ball' ? 1.35 : 2.1} className={styles.hoverHalo} />
+            )}
             {g.kind === 'ball' ? (
               <g
                 className={`${styles.ghostBall} ${
@@ -2232,6 +2285,29 @@ export function SimplePitch() {
           className={carryRing.detached ? styles.carryRingOut : styles.carryRing}
           aria-hidden="true"
         />
+      )}
+      {quickAim && !aim && (
+        <g
+          className={styles.aimGuide}
+          aria-hidden="true"
+          style={{ '--st-entity': entityColorOf(doc, quickAim.entityId) } as CSSProperties}
+        >
+          {/* the anchor appears the instant Alt goes down — waiting for the first pointer move
+              meant holding Alt showed nothing at all */}
+          <circle cx={quickAim.from.x} cy={quickAim.from.y} r={1.15} className={styles.aimAnchor} />
+          {aimTo && (
+            <>
+              <line
+                x1={quickAim.from.x}
+                y1={quickAim.from.y}
+                x2={aimTo.x}
+                y2={aimTo.y}
+                className={styles.aimLine}
+              />
+              <circle cx={aimTo.x} cy={aimTo.y} r={0.7} className={styles.aimTip} />
+            </>
+          )}
+        </g>
       )}
       {aim &&
         (() => {
@@ -2288,6 +2364,13 @@ export function SimplePitch() {
         <g
           data-step-picker="true"
           className={styles.stepPicker}
+          /* the picker edits ONE movement, so its active chip wears that entity's identity */
+          style={
+            {
+              '--st-entity-chip': stepPickerChip.fill,
+              '--st-entity-ink': stepPickerChip.ink,
+            } as CSSProperties
+          }
           transform={`translate(${Math.min(Math.max(stepPicker.at.x, 11), L - 11)}, ${Math.max(stepPicker.at.y - 3.4, 2)})`}
         >
           <rect

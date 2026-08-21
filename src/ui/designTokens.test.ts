@@ -81,6 +81,7 @@ describe('semantic design tokens', () => {
       '.aimLine',
       '.aimAnchor',
       '.aimTip',
+      '.hoverHalo',
       '.stepBadge circle',
       '.stepBadge text',
     ]

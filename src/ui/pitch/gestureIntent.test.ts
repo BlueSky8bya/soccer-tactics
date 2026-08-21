@@ -18,6 +18,7 @@ const mods = (over: Partial<PointerMods> = {}): PointerMods => ({
 const ctx = (over: Partial<PointerContext> = {}): PointerContext => ({
   liveTokenNearGhost: false,
   chainActive: false,
+  soloSelection: false,
   ...over,
 })
 
@@ -66,6 +67,26 @@ describe('resolvePointerIntent', () => {
     expect(
       resolvePointerIntent(hit({ token: true }), mods({ draw: true }), ctx({ chainActive: true })),
     ).toBe('draw-from-token')
+  })
+
+  it('grass + Alt with ONE entity selected: land a straight path here, no arming click', () => {
+    // The selection already names the subject, so a second click to say so is ceremony. With
+    // nothing selected the same press was inert, so the shortcut takes nothing away.
+    const alt = mods({ draw: true })
+    expect(resolvePointerIntent(hit(), alt, ctx({ soloSelection: true }))).toBe('draw-to-point')
+    expect(resolvePointerIntent(hit(), alt, ctx())).toBe('marquee')
+    // Ctrl still wins: adding a player is not a path
+    expect(
+      resolvePointerIntent(hit(), mods({ draw: true, ctrl: true }), ctx({ soloSelection: true })),
+    ).toBe('add-home-player')
+    // and an in-progress chain still owns the press
+    expect(resolvePointerIntent(hit(), alt, ctx({ soloSelection: true, chainActive: true }))).toBe(
+      'draw-chain',
+    )
+    // right button never draws
+    expect(
+      resolvePointerIntent(hit(), mods({ draw: true, button: 2 }), ctx({ soloSelection: true })),
+    ).toBe('none')
   })
 
   it('grass: plain drag = marquee, Ctrl+click = home player, Ctrl+right = away player', () => {

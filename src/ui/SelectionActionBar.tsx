@@ -1,20 +1,14 @@
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { findSegment } from '@/editor/segmentCommands'
-import {
-  MAX_STEP,
-  removeStepSegment,
-  setSegmentStep,
-  stepOf,
-  stepWindow,
-} from '@/editor/stepCommands'
+import { removeStepSegment, stepOf, stepWindow } from '@/editor/stepCommands'
 import { playWindow } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
 import styles from './shell.module.css'
 
 /**
- * Native controls for the selected movement (PLAN-005 M2, C-02/C-06): what it is, an exact 1-9
- * step picker, replay of its step, delete. Renders at the PlayerCard anchor — only one card shows.
+ * Controls for the selected movement (PLAN-005 M2, C-02/C-06): what it is, which step it is on,
+ * replay of that step, delete. Renders at the PlayerCard anchor — only one card shows.
  */
 export function SelectionActionBar() {
   const core = useEditor()
@@ -36,21 +30,11 @@ export function SelectionActionBar() {
       <span className={styles.sabKind}>
         {owner} {kind}
       </span>
-      <label>
-        {t('sab.step')}
-        <select
-          className={styles.panelSelect}
-          value={step}
-          onChange={(e) => setSegmentStep(core, segId, Number(e.target.value))}
-          aria-label={t('sab.stepPicker')}
-        >
-          {Array.from({ length: MAX_STEP }, (_, i) => i + 1).map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </label>
+      {/* The step is SHOWN, not edited here. Three controls already assign it — the footer chips,
+          the badge's in-place 1-9 picker on the board, and the number keys — and a fourth native
+          dropdown in a floating pill was the worst of them (user 2026-08-22: 이거 없애도 될 것
+          같지 않아?). */}
+      <span className={styles.sabStep}>{t('sab.stepIs', { n: step })}</span>
       <button
         type="button"
         className={styles.btn}

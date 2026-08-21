@@ -1,8 +1,10 @@
-import { useEditorSnapshot } from '@/editor/EditorContext'
+import type { CSSProperties } from 'react'
+import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
-import { MAX_STEP, stepCounts, stepWindow } from '@/editor/stepCommands'
+import { MAX_STEP, setSegmentStep, stepCounts, stepWindow } from '@/editor/stepCommands'
 import { playWindow } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
+import { entityChipOf } from './teamColor'
 import { t } from './i18n'
 import styles from './shell.module.css'
 
@@ -12,11 +14,13 @@ import styles from './shell.module.css'
  * ("이 단계만" / "여기부터") lives next to the chips as context actions.
  */
 export function StepBar() {
+  const core = useEditor()
   const { doc } = useEditorSnapshot()
   const currentStep = useUiStore((s) => s.currentStep)
   const setCurrentStep = useUiStore((s) => s.setCurrentStep)
   const setPlayhead = useUiStore((s) => s.setPlayhead)
   const setPlaying = useUiStore((s) => s.setPlaying)
+  const selectedSegmentId = useUiStore((s) => s.selectedSegmentId)
   const counts = stepCounts(doc)
   const currentUsed = counts[currentStep - 1]! > 0
   const compiled = useCompiled()
@@ -40,6 +44,11 @@ export function StepBar() {
 
   const preview = (n: number) => {
     setCurrentStep(n)
+    // A number KEY already retargeted the selected movement while a CLICK on the same chip did
+    // not — one control, two behaviours. Now that the bar visibly wears the selected movement's
+    // colour, the click has to mean what the colour says (and it is what makes the action bar's
+    // own step dropdown redundant).
+    if (selectedSegmentId) setSegmentStep(core, selectedSegmentId, n)
     if ((counts[n - 1] ?? 0) === 0) return
     const w = stepWindow(doc, n)
     if (!w) return
@@ -57,8 +66,28 @@ export function StepBar() {
     if (w) playWindow('from-step', w.start, null)
   }
 
+  // With a movement selected the bar RETARGETS it (number keys change its step), so the active
+  // chip belongs to that entity and wears its identity. With nothing selected the bar picks the
+  // step for whatever gets drawn next — no entity yet, so it stays the system accent.
+  const chip = selectedSegmentId
+    ? entityChipOf(
+        doc,
+        doc.scenes[0]?.timeline.tracks.find((tr) =>
+          tr.segments.some((sg) => sg.id === selectedSegmentId),
+        )?.entityId ?? doc.ball.id,
+      )
+    : null
   return (
-    <div className={styles.stepBar} role="group" aria-label={t('simple.steps')}>
+    <div
+      className={styles.stepBar}
+      role="group"
+      aria-label={t('simple.steps')}
+      style={
+        chip
+          ? ({ '--st-entity-chip': chip.fill, '--st-entity-ink': chip.ink } as CSSProperties)
+          : undefined
+      }
+    >
       <span className={styles.stepLabel}>{t('simple.steps')}</span>
       {Array.from({ length: MAX_STEP }, (_, i) => i + 1).map((n) => (
         <button

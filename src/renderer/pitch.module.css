@@ -578,9 +578,22 @@
   opacity: 1 !important;
 }
 
-.ghostToken:hover circle {
-  stroke: var(--st-accent, #2563eb);
+/*
+ * Hover halo — a ring OUTSIDE the piece, in that piece's own colour.
+ *
+ * This used to be a stroke ON the ghost's circle, and accent-blue: on a blue team the ring matched
+ * the fill and the cue vanished exactly where it was needed, and on a red team it said the wrong
+ * thing (user 2026-08-22: 파란색은 파란 하이라이팅, 빨간색은 빨간, 공은 흰색). Live tokens had no
+ * hover feedback at all — `Token` declared a `hovered` prop and never read it. Outside the piece
+ * the colour always has grass to sit on, and a dark rim keeps it readable on any stripe.
+ */
+.hoverHalo {
+  fill: none;
+  stroke: var(--st-entity, #fff);
   stroke-width: 0.3;
+  opacity: 0.95;
+  pointer-events: none;
+  filter: drop-shadow(0 0 0.45px rgba(0, 0, 0, 0.55));
 }
 
 .ghostToken circle {
@@ -704,12 +717,14 @@
   pointer-events: none;
 }
 
+/* The picker edits ONE movement, so its current chip carries that entity's identity — accent blue
+   on a red team's step picker said nothing about whose step it was (user 2026-08-22). */
 .stepPickerItemActive circle {
-  fill: var(--st-accent, #0a7aff);
+  fill: var(--st-entity-chip, var(--st-accent, #0a7aff));
 }
 
 .stepPickerItemActive text {
-  fill: #fff;
+  fill: var(--st-entity-ink, #fff);
 }
 
 .tokenShadow {

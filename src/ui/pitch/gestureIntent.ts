@@ -32,6 +32,13 @@ export interface PointerContext {
   liveTokenNearGhost: boolean
   /** An unbroken Shift zigzag chain is in progress. */
   chainActive: boolean
+  /**
+   * Exactly one entity is selected. With a subject already chosen, Alt+click on grass needs no
+   * separate "arm" click — the selection IS the arming (user 2026-08-22: 엔티티가 선택되어 있다는
+   * 가정 하에 도착점만 찍으면 되는 거 아냐?). And with nothing selected the press was inert anyway,
+   * so this costs no existing behaviour.
+   */
+  soloSelection: boolean
 }
 
 export type PointerIntent =
@@ -40,6 +47,7 @@ export type PointerIntent =
   | 'adjust-ghost-end' // plain drag on a ghost: fine-tune that movement's end
   | 'draw-chain' // draw key held after a draw: next zigzag leg from the last end
   | 'draw-from-token' // Alt+drag on a live token: movement from its original spot
+  | 'draw-to-point' // Alt+press on grass with ONE entity selected: straight path to here
   | 'press-token' // plain press on a live token: select / move (group aware)
   | 'press-token-additive' // Ctrl+press on a token: ADD to the selection (click toggles, drag moves all)
   | 'bend-path' // drag on a path line: ALWAYS bend its curvature (C-01)
@@ -65,8 +73,9 @@ export function resolvePointerIntent(
   if (hit.token && left)
     return mods.draw ? 'draw-from-token' : mods.ctrl ? 'press-token-additive' : 'press-token'
   if (!hit.token && !hit.segment && hit.insidePitch && (left || mods.button === 2)) {
-    if (!mods.ctrl) return left ? 'marquee' : 'none'
-    return left ? 'add-home-player' : 'add-away-player'
+    if (mods.ctrl) return left ? 'add-home-player' : 'add-away-player'
+    if (left && mods.draw && ctx.soloSelection) return 'draw-to-point'
+    return left ? 'marquee' : 'none'
   }
   return 'none'
 }

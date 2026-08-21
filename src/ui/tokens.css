@@ -28,6 +28,9 @@
   --st-team-b: #e03e3e;
   --st-ball: #ffffff;
   --st-ball-path: #ffffff;
+  /* The ball on a FILLED control. White is its colour on grass, but a white chip on a light panel
+     has no edge — so a control that belongs to the ball goes dark with white type. */
+  --st-ball-chip: #1d1d1f;
 
   /* Spacing — fine at the small end, coarse at the top (IBM Carbon's shape, not a pure 8pt grid).
      A strict 8-multiple scale bloats a dense professional tool: Apple's own desktop control
