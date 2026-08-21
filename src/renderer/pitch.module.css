@@ -482,6 +482,22 @@
   stroke-width: 0.18;
 }
 
+/* Carry-vs-detach boundary while dragging a held ball (user 2026-08-21). Inside it the ball
+   orbits its holder; crossing it takes the ball away. Drawn only during that drag. */
+.carryRing {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 0.2;
+  stroke-dasharray: 0.7 0.6;
+}
+
+.carryRingOut {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 0.16;
+  stroke-dasharray: 0.4 0.9;
+}
+
 .stepBadge {
   cursor: pointer;
   opacity: 0.35;

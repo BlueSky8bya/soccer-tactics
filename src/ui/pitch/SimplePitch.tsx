@@ -95,6 +95,13 @@ const ERASER_CURSOR =
 const DRAG_THRESHOLD_PX = 4
 /** Window for the second press of a slingshot double-click (shorter than the re-click cycle). */
 const DOUBLE_CLICK_MS = 350
+/**
+ * Held-ball drag has two meanings and one gesture: inside the ring the ball ORBITS its holder
+ * (pick the carry side), past it the ball comes AWAY. Hysteresis — leave at 3.4m, return at
+ * 2.9m — so a hand resting on the boundary does not flicker between the two.
+ */
+const CARRY_DETACH_M = 3.4
+const CARRY_REATTACH_M = 2.9
 
 type Gesture =
   | {
@@ -118,6 +125,8 @@ type Gesture =
       ballOrigin?: Vec2
       /** Recent drag samples (ball only) — release velocity for the fling (PLAN 2026-08-21). */
       samples?: { t: number; x: number; y: number }[]
+      /** Held ball pulled clear of its holder's carry ring (hysteresis, see CARRY_DETACH_M). */
+      detached?: boolean
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2; additive: boolean }
   | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[]; minStep?: number }
@@ -226,6 +235,8 @@ export function SimplePitch() {
   const lastBallPressRef = useRef<{ at: number; x: number; y: number } | null>(null)
   /** Live slingshot aim, mirrored for rendering (pull back → fly forward). */
   const [slingAim, setSlingAim] = useState<{ from: Vec2; to: Vec2 } | null>(null)
+  /** Carry/detach boundary drawn while dragging a held ball. */
+  const [carryRing, setCarryRing] = useState<{ at: Vec2; detached: boolean } | null>(null)
   const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
   const flingDoneRef = useRef<(() => void) | null>(null)
   const flingKeyRef = useRef(0)
@@ -490,6 +501,7 @@ export function SimplePitch() {
     gesture.current = null
     setPressedId(null)
     setDropTargetId(null)
+    setCarryRing(null)
     const svg = svgRef.current
     if (!g) return
     if (svg && svg.hasPointerCapture(g.pointerId)) svg.releasePointerCapture(g.pointerId)
@@ -1353,19 +1365,28 @@ export function SimplePitch() {
     }
     // Ball alone: absolute move; the drop decides holder/loose in endGesture.
     // Near its HOLDER the drag ORBITS the carry ring (user 2026-08-21 사진2): pick the side
-    // without disturbing the pass shape; pull farther than 3.4m to actually take the ball away.
+    // without disturbing the pass shape. The two meanings — orbit vs take the ball away — read as
+    // one gesture unless the boundary is visible, so the drag now DRAWS the detach ring and holds
+    // its state with hysteresis (user 2026-08-21: 기능이 동일한데 어떻게 하면 좋을까).
     const holderId0 = doc.ball.initialHolderId
     const holderHome0 = holderId0 ? doc.players.find((pl) => pl.id === holderId0)?.home : undefined
-    if (holderHome0 && Math.hypot(raw.x - holderHome0.x, raw.y - holderHome0.y) <= 3.4) {
-      const off = carryOffset({ x: raw.x - holderHome0.x, y: raw.y - holderHome0.y })
-      raw = { x: holderHome0.x + off.x, y: holderHome0.y + off.y }
+    // Velocity is sampled from the FREE pointer path, never the ring-snapped one: orbiting sweeps
+    // the snapped point around the holder fast enough to read as a throw on release.
+    g.samples = g.samples ?? []
+    g.samples.push({ t: e.timeStamp, x: raw.x, y: raw.y })
+    if (g.samples.length > 12) g.samples.shift()
+    if (holderHome0) {
+      const dist = Math.hypot(raw.x - holderHome0.x, raw.y - holderHome0.y)
+      if (!g.detached && dist > CARRY_DETACH_M) g.detached = true
+      else if (g.detached && dist < CARRY_REATTACH_M) g.detached = false
+      setCarryRing({ at: holderHome0, detached: !!g.detached })
+      if (!g.detached) {
+        const off = carryOffset({ x: raw.x - holderHome0.x, y: raw.y - holderHome0.y })
+        raw = { x: holderHome0.x + off.x, y: holderHome0.y + off.y }
+      }
     }
     const origin = g.group.get(g.id) ?? g.home
     const delta = { x: raw.x - origin.x, y: raw.y - origin.y }
-    // velocity window for the fling (keep the last ~10 samples)
-    g.samples = g.samples ?? []
-    g.samples.push({ t: e.timeStamp, x: raw.x, y: raw.y })
-    if (g.samples.length > 10) g.samples.shift()
     // who would RECEIVE the ball if dropped here (attach range) — light them up
     const over = doc.players
       .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - raw.x, pl.home.y - raw.y) }))
@@ -2043,6 +2064,17 @@ export function SimplePitch() {
           when possession pinned the ball's render away from the pointer, and a held ball no longer
           drags at all (user 2026-08-21: 흰색 안내선 안 나오게). A loose ball follows the cursor, so
           there was never a gap to draw. */}
+      {carryRing && (
+        /* The boundary between "orbit the holder" and "take the ball away", drawn only while a
+           held ball is being dragged. Solid-ish while carrying, faded once the ball is clear. */
+        <circle
+          cx={carryRing.at.x}
+          cy={carryRing.at.y}
+          r={CARRY_DETACH_M}
+          className={carryRing.detached ? styles.carryRingOut : styles.carryRing}
+          aria-hidden="true"
+        />
+      )}
       {slingAim && (
         <g className={styles.slingAim} aria-hidden="true">
           <line

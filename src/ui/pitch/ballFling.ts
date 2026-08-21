@@ -32,25 +32,48 @@ export interface FlingSample {
   y: number
 }
 
+/** Sampling window for the release estimate. */
+export const FLING_WINDOW_MS = 110
 /**
- * Release velocity from the drag's recent samples (~last 110ms) — px-noise robust.
- * Returns null when the data cannot support an estimate.
+ * A throw is a SWEEP, not a twitch. Without a distance floor, nudging a ball 1.5m in 100ms reads
+ * as 15 m/s and launched it across the pitch (user 2026-08-21: 조금 움직였는데도 공이 급발진).
+ */
+export const FLING_MIN_TRAVEL_M = 2.5
+
+/**
+ * Release velocity from the drag's recent samples. Direction comes from the window's net
+ * displacement (stable); speed is the MEDIAN of the per-step speeds, so one glitched frame — the
+ * pointer briefly reporting far from where the hand is — cannot decide the throw. Returns null
+ * when the gesture was a placement rather than a throw.
  */
 export function flingVelocity(samples: readonly FlingSample[], releaseT: number): Vec2 | null {
-  if (samples.length < 2) return null
+  if (samples.length < 3) return null
   const last = samples[samples.length - 1]!
   // held still before letting go → deliberate placement, never a throw
   if (releaseT - last.t > FLING_STALE_MS) return null
-  let first = samples[0]!
-  for (const s of samples) {
-    if (last.t - s.t <= 110) {
-      first = s
-      break
-    }
-  }
+  const win = samples.filter((s) => last.t - s.t <= FLING_WINDOW_MS)
+  if (win.length < 3) return null
+  const first = win[0]!
   const dt = (last.t - first.t) / 1000
   if (dt <= 0.005) return null
-  return { x: (last.x - first.x) / dt, y: (last.y - first.y) / dt }
+  const dx = last.x - first.x
+  const dy = last.y - first.y
+  const travel = Math.hypot(dx, dy)
+  if (travel < FLING_MIN_TRAVEL_M) return null
+  const speeds: number[] = []
+  for (let i = 1; i < win.length; i++) {
+    const step = (win[i]!.t - win[i - 1]!.t) / 1000
+    if (step > 0.001)
+      speeds.push(Math.hypot(win[i]!.x - win[i - 1]!.x, win[i]!.y - win[i - 1]!.y) / step)
+  }
+  if (speeds.length === 0) return null
+  speeds.sort((a, b) => a - b)
+  // LOWER median: a glitched frame corrupts two steps (the jump out and the jump back), so the
+  // plain middle of an even count can still land on one of them.
+  const median = speeds[Math.floor((speeds.length - 1) / 2)]!
+  // …and never outrun what the hand actually covered, which bounds a spike at either end.
+  const speed = Math.min(median, (travel / dt) * 1.5)
+  return { x: (dx / travel) * speed, y: (dy / travel) * speed }
 }
 
 export interface FlingPoint {

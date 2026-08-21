@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  FLING_MIN_TRAVEL_M,
   FLING_STOP_SPEED,
   SLING_MAX_SPEED,
   SLING_MIN_PULL_M,
@@ -18,16 +19,44 @@ describe('ball fling physics (pure, deterministic)', () => {
   it('estimates release velocity from the recent sample window', () => {
     const samples = [
       { t: 0, x: 0, y: 0 },
-      { t: 50, x: 0.5, y: 0 },
-      { t: 100, x: 1.0, y: 0 },
+      { t: 50, x: 2, y: 0 },
+      { t: 100, x: 4, y: 0 },
     ]
     const v = flingVelocity(samples, 110)
     expect(v).not.toBeNull()
-    expect(v!.x).toBeCloseTo(10, 5) // 1m over 100ms
+    expect(v!.x).toBeCloseTo(40, 5) // 2m per 50ms
     expect(v!.y).toBeCloseTo(0, 5)
     expect(flingVelocity([{ t: 0, x: 0, y: 0 }], 10)).toBeNull()
     // resting before release = placement, not a throw
     expect(flingVelocity(samples, 400)).toBeNull()
+  })
+
+  it('a short twitch is a PLACEMENT however quick it was', () => {
+    // the reported bug: nudging the ball ~1.5m fast read as 15 m/s and launched it
+    const twitch = [
+      { t: 0, x: 0, y: 0 },
+      { t: 50, x: 0.75, y: 0 },
+      { t: 100, x: 1.5, y: 0 },
+    ]
+    expect(flingVelocity(twitch, 105)).toBeNull()
+    // just past the floor it becomes a throw again
+    const sweep = twitch.map((s) => ({ ...s, x: s.x * ((FLING_MIN_TRAVEL_M + 0.5) / 1.5) }))
+    expect(flingVelocity(sweep, 105)).not.toBeNull()
+  })
+
+  it('one glitched frame cannot decide the throw', () => {
+    const clean = [
+      { t: 0, x: 0, y: 0 },
+      { t: 20, x: 1, y: 0 },
+      { t: 40, x: 2, y: 0 },
+      { t: 60, x: 3, y: 0 },
+      { t: 80, x: 4, y: 0 },
+    ]
+    const glitched = clean.map((s, i) => (i === 2 ? { ...s, x: 30 } : s))
+    const a = flingVelocity(clean, 85)!
+    const b = flingVelocity(glitched, 85)!
+    // the median rejects the spike: the estimate stays in the same ballpark, not 10x it
+    expect(Math.hypot(b.x, b.y)).toBeLessThan(Math.hypot(a.x, a.y) * 2)
   })
 
   it('rolls forward, decelerates and stops inside the time cap', () => {
