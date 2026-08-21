@@ -1712,17 +1712,59 @@
   bottom: calc(100% + 4px);
 }
 
+/* Full-width heading rows and the two-column body they sit above. */
+.selectPopWide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px 4px;
+  width: 322px;
+  /* the whole position set has to be visible at once — scrolling a 24-item code list is what made
+     it unreadable in the first place */
+  max-height: min(72vh, 540px);
+}
+
+.selectHeadRow {
+  grid-column: 1 / -1;
+}
+
+.selectCellHalf {
+  min-width: 0;
+}
+
 .selectGroup {
   font-size: 10.5px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: var(--st-text-3);
-  padding: 7px 8px 3px 26px;
+  padding: 9px 4px 4px;
+  margin-top: 3px;
+  border-top: 1px solid var(--st-border);
 }
 
-.selectGroup:first-child {
+.selectPop > li:first-child .selectGroup {
+  margin-top: 0;
   padding-top: 3px;
+  border-top: 0;
+}
+
+/* The gloss carries the meaning; the code is the handle. Both on one line keeps 24 positions on
+   one screen — a scrolling column of bare codes is what made this unreadable. */
+.selectItemLabel {
+  font-weight: 600;
+  flex: none;
+}
+
+.selectItemSub {
+  color: var(--st-text-3);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.selectItemOn .selectItemSub {
+  color: inherit;
+  opacity: 0.75;
 }
 
 .selectPlaceholder {
@@ -1744,13 +1786,14 @@
   background: transparent;
   border-radius: var(--st-radius-s);
   width: 100%;
-  height: 28px;
-  padding: 0 10px 0 4px;
+  height: 27px;
+  padding: 0 4px 0 9px;
   display: flex;
-  align-items: center;
-  gap: 2px;
+  align-items: baseline;
+  gap: 6px;
   cursor: pointer;
   white-space: nowrap;
+  text-align: left;
 }
 
 .selectItem:hover {
@@ -1764,10 +1807,11 @@
 }
 
 .selectCheck {
-  width: 16px;
+  width: 12px;
   text-align: center;
   font-size: 11px;
   flex: none;
+  margin-left: auto;
 }
 
 /* ---------- player card (selected player editor) ---------- */

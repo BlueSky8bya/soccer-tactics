@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-08-22 (세션 18, 불변식 B1 확립 — 공 발사점 고질 결함 종결) (직전: 세션 17, PLAN-012 디자인 대개편 M1~M4)
+Last Updated: 2026-08-22 (세션 18, 불변식 B1 + 조작/디자인 대개편 + Alt 클릭 경로·GIF 품질) (직전: 세션 17, PLAN-012 디자인 대개편 M1~M4)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 

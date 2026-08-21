@@ -59,7 +59,11 @@ export function AppShell() {
       const p2 = (n: number) => String(n).padStart(2, '0')
       const stamp = `${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}_${p2(now.getHours())}${p2(now.getMinutes())}`
       downloadBlob(blob, `${variants?.activeId ?? 'A'}안_${stamp}.gif`)
-      ui.flashToast(t('gif.done'))
+      // The encoder picks its own resolution to fit the size budget, so SAY which one it landed on
+      // — otherwise "why is this one softer than the last one" has no answer.
+      const head = new Uint8Array(await blob.slice(0, 10).arrayBuffer())
+      const w = head[6]! | (head[7]! << 8)
+      ui.flashToast(t('gif.done', { w, mb: (blob.size / 1024 / 1024).toFixed(1) }))
     } catch {
       ui.flashToast(t('gif.fail'))
     } finally {

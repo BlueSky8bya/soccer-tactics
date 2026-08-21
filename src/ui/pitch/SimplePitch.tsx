@@ -23,6 +23,7 @@ import {
   bendMoveWaypointInDraft,
   relayoutStepsInDraft,
   resolvePassReceiverInDraft,
+  shiftJunctionAnchorsInDraft,
   stepOf,
   lastBallStep,
 } from '@/editor/stepCommands'
@@ -107,6 +108,19 @@ const DOUBLE_CLICK_MS = 350
  * (pick the carry side), past it the ball comes AWAY. Hysteresis — leave at 3.4m, return at
  * 2.9m — so a hand resting on the boundary does not flicker between the two.
  */
+/**
+ * A press that travels less than this is a CLICK, not a stroke. ~0.8m is about 7 screen px on a
+ * 1440px board — under the hand tremor that a deliberate drag always exceeds.
+ */
+const strokeLength = (pts: readonly Vec2[]): number => {
+  let d = 0
+  for (let i = 1; i < pts.length; i++)
+    d += Math.hypot(pts[i]!.x - pts[i - 1]!.x, pts[i]!.y - pts[i - 1]!.y)
+  return d
+}
+const CLICK_SLOP_M = 0.8
+/** Alt+clicking back on the armed anchor disarms it. */
+const AIM_CANCEL_M = 2.2
 const CARRY_DETACH_M = 3.4
 const CARRY_REATTACH_M = 2.9
 
@@ -137,6 +151,8 @@ type Gesture =
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2; additive: boolean }
   | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[]; minStep?: number }
+  /** Second half of a click-to-click path: the endpoint is wherever this pointer is released. */
+  | { type: 'aim'; pointerId: number; to: Vec2 }
   | {
       type: 'bend'
       segmentId: Id
@@ -255,6 +271,16 @@ export function SimplePitch() {
    */
   const [detachPos, setDetachPos] = useState<Vec2 | null>(null)
   const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
+  /**
+   * Click-to-click path authoring (user 2026-08-22). Alt+CLICK a subject to arm it, Alt+CLICK
+   * again to land a straight movement there; bend it afterwards by dragging the line. Alt+DRAG
+   * still draws freehand — this is the pointer-only route beside it, not a replacement.
+   */
+  const [aim, setAim] = useState<{ entityId: Id; from: Vec2; minStep?: number } | null>(null)
+  const [aimTo, setAimTo] = useState<Vec2 | null>(null)
+  /** endGesture runs from a ref and must not close over a stale `aim`. */
+  const aimRef = useRef(aim)
+  aimRef.current = aim
   /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
   const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
   const flingDoneRef = useRef<(() => void) | null>(null)
@@ -640,7 +666,28 @@ export function SimplePitch() {
     if (g.type === 'draw') {
       st.setPathDraft(null)
       setSnapPos(null)
-      if (commit) finishDraw(g.entityId, g.points, g.minStep)
+      if (!commit) return
+      // A press that never travelled is a CLICK: arm this subject instead of discarding the
+      // gesture. Drawing then costs two clicks rather than one steered stroke — which is the whole
+      // point when the line has to cross other tokens (user 2026-08-22), and it is also the
+      // drag-free authoring route WCAG 2.5.7 asks for.
+      if (strokeLength(g.points) < CLICK_SLOP_M) {
+        setAim({ entityId: g.entityId, from: g.points[0]!, minStep: g.minStep })
+        setAimTo(null)
+        ui.flashToast(t('simple.aimArmed'))
+        return
+      }
+      setAim(null)
+      finishDraw(g.entityId, g.points, g.minStep)
+      return
+    }
+
+    if (g.type === 'aim') {
+      const a = aimRef.current
+      setAim(null)
+      setAimTo(null)
+      if (!commit || !a) return
+      finishDraw(a.entityId, [a.from, g.to], a.minStep)
       return
     }
 
@@ -849,9 +896,17 @@ export function SimplePitch() {
   // Esc cancels any gesture. It does NOT leave draw mode (user 2026-08-21: D alone toggles).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && gesture.current) {
+      if (e.key !== 'Escape') return
+      if (gesture.current) {
         e.preventDefault()
         endGestureRef.current(false)
+        return
+      }
+      // an armed click-to-click aim is a live gesture too, even with no pointer down
+      if (aimRef.current) {
+        e.preventDefault()
+        setAim(null)
+        setAimTo(null)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -963,6 +1018,24 @@ export function SimplePitch() {
         gesture.current = { type: 'annot-erase', pointerId: e.pointerId, began: false }
         eraseAt(pt)
       }
+      svg.setPointerCapture(e.pointerId)
+      return
+    }
+
+    // Armed by a previous Alt+click: THIS press lands the endpoint, wherever it is and whatever
+    // sits under it. Pressing the anchor again disarms — an armed state must always be escapable.
+    if (aim && !e.altKey) {
+      setAim(null)
+      setAimTo(null)
+    }
+    if (aim && e.altKey && e.button === 0) {
+      if (Math.hypot(pt.x - aim.from.x, pt.y - aim.from.y) <= AIM_CANCEL_M) {
+        setAim(null)
+        setAimTo(null)
+        return
+      }
+      gesture.current = { type: 'aim', pointerId: e.pointerId, to: pt }
+      setAimTo(pt)
       svg.setPointerCapture(e.pointerId)
       return
     }
@@ -1230,7 +1303,14 @@ export function SimplePitch() {
   const onPointerMove = (e: RPointerEvent<SVGSVGElement>) => {
     const g = gesture.current
     if (!g || g.pointerId !== e.pointerId) {
-      if (!g) updateHoverRef.current(e)
+      if (!g) {
+        // armed but not yet pressed: the rubber band follows the cursor so the aim is visible
+        if (aimRef.current) {
+          const sv = svgRef.current
+          if (sv) setAimTo(clampToPitch(clientToPitch(sv, e.clientX, e.clientY), doc.pitch))
+        }
+        updateHoverRef.current(e)
+      }
       return
     }
     const svg = svgRef.current
@@ -1339,6 +1419,19 @@ export function SimplePitch() {
       return
     }
 
+    if (g.type === 'aim') {
+      // same snapping as a stroke's release, so landing "on" a target is equally unambiguous
+      let p = clampToPitch(pt, doc.pitch)
+      const t2 = aimRef.current ? nearestSnapTarget(p, aimRef.current.entityId) : null
+      if (t2) {
+        p = t2
+        setSnapPos(t2)
+      } else setSnapPos(null)
+      g.to = p
+      setAimTo(p)
+      return
+    }
+
     if (g.type === 'draw') {
       let p = clampToPitch(pt, doc.pitch)
       // Connection feedback: near a player (now) or any future spot (ghost) → snap + highlight,
@@ -1368,25 +1461,45 @@ export function SimplePitch() {
     g.lastPt = pt
     let raw = clampToPitch({ x: pt.x + g.grab.x, y: pt.y + g.grab.y }, doc.pitch)
     if (g.group.size > 1 || g.id !== doc.ball.id) {
-      // Player drags (single or marquee group): translate homes AND whole authored paths in
-      // parallel — curves keep their exact shape (user 2026-08-20: 과도하게 꺾임 해결). The ball
-      // anchors owned by each moved player (incoming pass end / outgoing pass origin) follow too.
+      /*
+       * TWO meanings, told apart by the SIZE of the selection (user 2026-08-22):
+       *
+       *  · a GROUP (marquee / Ctrl-picked) relocates as a unit — homes and whole authored paths
+       *    translate in parallel so every curve keeps its exact shape. This is what the 2026-08-20
+       *    report ("곡선 경로를 가진 선수를 옮기면 경로가 과도하게 꺾임", CHG-065 ②) asked for, and
+       *    it stays the behaviour for group moves.
+       *  · ONE token moves that ONE anchor. Dragging a player's starting spot used to drag their
+       *    entire future with it, which made "put this player five metres wider" impossible without
+       *    redrawing the run. It is now the exact mirror of dragging a ghost — that adjusts the END
+       *    of a movement, this adjusts its START — so both ends of a run are editable the same way.
+       *
+       * Anything anchored AT the old spot follows (the run that starts there, the pass launched
+       * from there); everything downstream stays put, which is the point.
+       */
       const prev = g.prevRaw ?? g.group.get(g.id) ?? g.home
       const inc = { x: raw.x - prev.x, y: raw.y - prev.y }
+      const rigid = g.group.size > 1
       g.prevRaw = raw
       core.update((d) => {
         const doc2 = d as TacticDocument
         const ballInGroup = g.group.has(doc2.ball.id)
         for (const [id] of g.group) {
-          if (id === doc2.ball.id)
+          if (id === doc2.ball.id) {
             doc2.ball.home = { x: doc2.ball.home.x + inc.x, y: doc2.ball.home.y + inc.y }
-          else {
-            const pl = doc2.players.find((x) => x.id === id)
-            if (pl) pl.home = { x: pl.home.x + inc.x, y: pl.home.y + inc.y }
+            if (rigid) shiftEntityPathsInDraft(doc2, id, inc)
+            continue
           }
-          shiftEntityPathsInDraft(doc2, id, inc)
-          // future-ball anchors of this player (skip when the ball track itself is in the group)
-          if (id !== doc2.ball.id && !ballInGroup) shiftBallAnchorsForPlayerInDraft(doc2, id, inc)
+          const pl = doc2.players.find((x) => x.id === id)
+          const from = pl ? { ...pl.home } : null
+          if (pl) pl.home = { x: pl.home.x + inc.x, y: pl.home.y + inc.y }
+          if (rigid) {
+            shiftEntityPathsInDraft(doc2, id, inc)
+            // future-ball anchors of this player (skip when the ball track itself is in the group)
+            if (!ballInGroup) shiftBallAnchorsForPlayerInDraft(doc2, id, inc)
+          } else if (from) {
+            // only what was pinned to the OLD starting spot comes along
+            shiftJunctionAnchorsInDraft(doc2, id, '', from, inc)
+          }
         }
         // The resting held ball keeps its chosen side of the dragged holder.
         if (g.ballOrigin && !ballInGroup)
@@ -2113,6 +2226,21 @@ export function SimplePitch() {
           className={carryRing.detached ? styles.carryRingOut : styles.carryRing}
           aria-hidden="true"
         />
+      )}
+      {aim && (
+        <g className={styles.aimGuide} aria-hidden="true">
+          {aimTo && (
+            <line
+              x1={aim.from.x}
+              y1={aim.from.y}
+              x2={aimTo.x}
+              y2={aimTo.y}
+              className={styles.aimLine}
+            />
+          )}
+          <circle cx={aim.from.x} cy={aim.from.y} r={1.15} className={styles.aimAnchor} />
+          {aimTo && <circle cx={aimTo.x} cy={aimTo.y} r={0.8} className={styles.aimTip} />}
+        </g>
       )}
       {slingAim && (
         <g className={styles.slingAim} aria-hidden="true">

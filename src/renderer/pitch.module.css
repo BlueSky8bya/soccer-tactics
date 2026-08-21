@@ -472,6 +472,48 @@
 /* The aim guide belongs to the BALL, and the ball is neutral — the accent blue read as a team
    colour on a pitch where blue is a team (user 2026-08-22). White with a dark rim carries on both
    the grass stripes and the surround. */
+/* Click-to-click path aim (ADR-0009 v16). Reads as an intention, not as ink: dashed, accent-tinted
+   so it can never be mistaken for an authored path, and it animates so an ARMED state is obvious
+   even when the cursor is still. */
+.aimLine {
+  stroke: var(--st-accent);
+  stroke-width: 0.26;
+  stroke-dasharray: 1.4 0.9;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.aimAnchor {
+  fill: none;
+  stroke: var(--st-accent);
+  stroke-width: 0.28;
+  stroke-dasharray: 0.7 0.5;
+}
+
+.aimTip {
+  fill: var(--st-accent);
+  stroke: #fff;
+  stroke-width: 0.16;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .aimGuide .aimAnchor {
+    animation: aimPulse 1.6s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+}
+
+@keyframes aimPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .slingAimLine {
   stroke: rgba(255, 255, 255, 0.92);
   stroke-width: 0.28;

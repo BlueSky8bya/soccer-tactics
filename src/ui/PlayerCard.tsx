@@ -5,13 +5,54 @@ import { SelectMenu } from './SelectMenu'
 import { t } from './i18n'
 import styles from './shell.module.css'
 
-const ROLE_GROUPS: { group: string; roles: string[] }[] = [
-  { group: 'GK', roles: ['GK'] },
-  { group: '수비', roles: ['DF', 'CB', 'LCB', 'RCB', 'LB', 'RB', 'LWB', 'RWB', 'SW'] },
-  { group: '미드필더', roles: ['MF', 'DM', 'CDM', 'CM', 'AM', 'CAM', 'LM', 'RM'] },
-  { group: '공격', roles: ['FW', 'ST', 'CF', 'SS', 'LW', 'RW'] },
+/**
+ * Positions, with a plain-language gloss on every one. The menu used to be a scrolling column of
+ * bare codes whose first row repeated its own group name ("GK" under "GK") — nothing in it could
+ * be read at a glance (user 2026-08-22: 가독성이 너무 없어). The gloss is the readable part; the
+ * code stays because that is what goes on the token.
+ */
+const ROLE_GROUPS: { group: string; roles: [string, string][] }[] = [
+  { group: '골키퍼', roles: [['GK', '골키퍼']] },
+  {
+    group: '수비',
+    roles: [
+      ['DF', '수비수'],
+      ['CB', '센터백'],
+      ['LCB', '좌 센터백'],
+      ['RCB', '우 센터백'],
+      ['LB', '좌 풀백'],
+      ['RB', '우 풀백'],
+      ['LWB', '좌 윙백'],
+      ['RWB', '우 윙백'],
+      ['SW', '스위퍼'],
+    ],
+  },
+  {
+    group: '미드필더',
+    roles: [
+      ['MF', '미드필더'],
+      ['DM', '수비형'],
+      ['CDM', '중앙 수비형'],
+      ['CM', '중앙'],
+      ['AM', '공격형'],
+      ['CAM', '중앙 공격형'],
+      ['LM', '좌 미드필더'],
+      ['RM', '우 미드필더'],
+    ],
+  },
+  {
+    group: '공격',
+    roles: [
+      ['FW', '공격수'],
+      ['ST', '스트라이커'],
+      ['CF', '센터 포워드'],
+      ['SS', '섀도 스트라이커'],
+      ['LW', '좌 윙어'],
+      ['RW', '우 윙어'],
+    ],
+  },
 ]
-const ALL_ROLES = ROLE_GROUPS.flatMap((g) => g.roles)
+const ALL_ROLES = ROLE_GROUPS.flatMap((g) => g.roles.map(([code]) => code))
 
 /**
  * Compact editor for the selected player (number / name / position).
@@ -61,12 +102,15 @@ export function PlayerCard() {
           value={player.role ?? ''}
           ariaLabel={t('player.role')}
           placeholder="—"
+          columns={2}
           options={[
-            { id: '', label: '—' },
+            { id: '', label: '—', sub: t('player.roleNone') },
             ...(player.role && !ALL_ROLES.includes(player.role)
               ? [{ id: player.role, group: t('player.role') }]
               : []),
-            ...ROLE_GROUPS.flatMap((g) => g.roles.map((r) => ({ id: r, group: g.group }))),
+            ...ROLE_GROUPS.flatMap((g) =>
+              g.roles.map(([code, name]) => ({ id: code, sub: name, group: g.group })),
+            ),
           ]}
           onChange={(v) => setPlayerRole(core, player.id, v)}
         />

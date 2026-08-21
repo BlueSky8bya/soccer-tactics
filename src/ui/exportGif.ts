@@ -13,13 +13,36 @@ import { penSegments } from '@/ui/pitch/inking'
 import { VISUAL } from '@/renderer/visualDefaults'
 
 export interface GifOptions {
-  /** Tactical seconds per real second in the GIF (time compression). */
+  /** Tactical seconds per real second in the GIF (1 = real time). */
   speed?: number
   fps?: number
   /** Output pixel width (height follows the pitch ratio). */
   width?: number
+  /** Size ceiling. The encoder steps DOWN the quality tiers until it fits. */
+  maxBytes?: number
   onProgress?: (done: number, total: number) => void
 }
+
+/**
+ * Quality tiers, best first. The old fixed 640px / 12fps / 2× export produced ~0.5–1MB files that
+ * were both soft and visibly stuttery (user 2026-08-22), while the target upload limit is 10MB —
+ * two orders of magnitude of headroom left unused. Rather than pick a bigger fixed setting and
+ * hope, the encoder starts at the top and drops a tier whenever the file it is building projects
+ * over budget, so a short play gets the full 1280p/25fps and a long one degrades on its own.
+ *
+ * Every rate divides 100 exactly. A GIF frame delay is stored in CENTISECONDS, so a rate that does
+ * not — 12fps is 83.3ms, written as 8cs = 80ms — plays back at a different speed than the one it
+ * was sampled at, and unevenly. The old export was pinned at "12fps" and actually ran at 12.5.
+ */
+export const GIF_TIERS = [
+  { width: 1280, fps: 25 }, // 4 cs
+  { width: 1024, fps: 20 }, // 5 cs
+  { width: 800, fps: 12.5 }, // 8 cs
+  { width: 640, fps: 10 }, // 10 cs
+] as const
+
+/** 9.5MB — under a 10MB limit with room for the multipart overhead of an upload form. */
+export const GIF_MAX_BYTES = 9.5 * 1024 * 1024
 
 const GRASS = VISUAL.pitchGrass
 const GRASS_ALT = VISUAL.pitchGrassAlt
@@ -222,40 +245,98 @@ export function sampleTimes(duration: number, fps: number, speed: number): numbe
   return out
 }
 
+/**
+ * ONE palette for the whole GIF, built from frames spread across the play.
+ *
+ * Quantising every frame separately writes a 768-byte local colour table per frame AND lets the
+ * palette drift, so flat grass shimmers between frames — the "choppy" look is partly this, not
+ * just the frame rate. A palette sampled at low resolution is just as good (colour statistics do
+ * not need pixels) and costs a fraction of the time.
+ */
+function globalPalette(
+  doc: TacticDocument,
+  compiled: ReturnType<typeof compile>,
+  times: readonly number[],
+): number[][] {
+  const m = pitchMarkings(doc.pitch)
+  const w = 320
+  const k = w / (m.length + GIF_PAD_M * 2)
+  const h = Math.max(1, Math.round((m.width + GIF_PAD_M * 2) * k))
+  const c = document.createElement('canvas')
+  c.width = w
+  c.height = h
+  const cx = c.getContext('2d', { willReadFrequently: true })
+  if (!cx) return []
+  const picks = [0, 0.25, 0.5, 0.75, 1].map(
+    (f) => times[Math.min(times.length - 1, Math.round(f * (times.length - 1)))]!,
+  )
+  const merged = new Uint8Array(w * h * 4 * picks.length)
+  picks.forEach((t, i) => {
+    drawFrame(cx, doc, compiled, t, k)
+    merged.set(cx.getImageData(0, 0, w, h).data, i * w * h * 4)
+  })
+  return quantize(merged, 256, { format: 'rgb565' })
+}
+
 export async function exportGif(doc: TacticDocument, opts: GifOptions = {}): Promise<Blob> {
-  const { speed = 2, fps = 12, width = 640, onProgress } = opts
+  const { speed = 1, maxBytes = GIF_MAX_BYTES, onProgress } = opts
   const compiled = compile(doc)
   // real end of the play, not the engine's 5s empty-board padding
   let lastEnd = 0
   for (const t of Object.values(compiled.segmentTimes)) if (t.end > lastEnd) lastEnd = t.end
   const duration = Math.max(0.1, lastEnd)
   const m = pitchMarkings(doc.pitch)
-  const k = width / (m.length + GIF_PAD_M * 2)
-  const height = Math.round((m.width + GIF_PAD_M * 2) * k)
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) throw new Error('canvas 2d unavailable')
 
-  const times = sampleTimes(duration, fps, speed)
-  const gif = GIFEncoder()
-  const delay = Math.round(1000 / fps)
-  for (let i = 0; i < times.length; i++) {
-    drawFrame(ctx, doc, compiled, times[i]!, k)
-    const { data } = ctx.getImageData(0, 0, width, height)
-    const palette = quantize(data, 256)
-    const index = applyPalette(data, palette)
-    gif.writeFrame(index, width, height, { palette, delay })
-    onProgress?.(i + 1, times.length)
-    // keep the UI thread breathing on long plays
-    if (i % 8 === 7) await new Promise((r) => setTimeout(r, 0))
+  // An explicit width/fps pins the export to exactly that; otherwise walk the tiers down.
+  const tiers =
+    opts.width || opts.fps ? [{ width: opts.width ?? 1280, fps: opts.fps ?? 25 }] : [...GIF_TIERS]
+
+  let last: Blob | null = null
+  for (let tier = 0; tier < tiers.length; tier++) {
+    const { width, fps } = tiers[tier]!
+    const k = width / (m.length + GIF_PAD_M * 2)
+    const height = Math.round((m.width + GIF_PAD_M * 2) * k)
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (!ctx) throw new Error('canvas 2d unavailable')
+
+    const times = sampleTimes(duration, fps, speed)
+    const palette = globalPalette(doc, compiled, times)
+    const gif = GIFEncoder()
+    const delay = Math.round(1000 / fps)
+    let overBudget = false
+    for (let i = 0; i < times.length; i++) {
+      drawFrame(ctx, doc, compiled, times[i]!, k)
+      const { data } = ctx.getImageData(0, 0, width, height)
+      const index = applyPalette(data, palette, 'rgb565')
+      // palette on the FIRST frame only → one global colour table, no per-frame drift
+      gif.writeFrame(index, width, height, i === 0 ? { palette, delay, repeat: 0 } : { delay })
+      onProgress?.(i + 1, times.length)
+      // Project the finished size from what is on disk so far and bail early rather than spend a
+      // minute encoding something that will not fit.
+      if (i >= 5 && tier < tiers.length - 1) {
+        const projected = (gif.bytesView().length / (i + 1)) * times.length
+        if (projected > maxBytes) {
+          overBudget = true
+          break
+        }
+      }
+      // keep the UI thread breathing on long plays
+      if (i % 8 === 7) await new Promise((r) => setTimeout(r, 0))
+    }
+    if (overBudget) continue
+    gif.finish()
+    const view = gif.bytesView()
+    const copy = new Uint8Array(view.length)
+    copy.set(view)
+    last = new Blob([copy], { type: 'image/gif' })
+    // The projection is an estimate; if the finished file still overshoots, take the next tier.
+    if (last.size <= maxBytes || tier === tiers.length - 1) return last
   }
-  gif.finish()
-  const view = gif.bytesView()
-  const copy = new Uint8Array(view.length)
-  copy.set(view)
-  return new Blob([copy], { type: 'image/gif' })
+  if (!last) throw new Error('gif encode produced nothing')
+  return last
 }
 
 /** Trigger a browser download for the encoded GIF. */

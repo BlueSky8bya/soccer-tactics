@@ -6,6 +6,8 @@ export interface SelectOption {
   label?: string
   /** Optional heading this option belongs under; consecutive options share one heading. */
   group?: string
+  /** Plain-language gloss shown beside the label — a code list is not a readable menu. */
+  sub?: string
 }
 
 /**
@@ -26,6 +28,12 @@ export function SelectMenu(p: {
   ariaLabel: string
   /** Shown on the trigger when `value` matches no option (e.g. "role not set"). */
   placeholder?: string
+  /**
+   * Lay the options out in N columns. A one-per-line list of 24 position codes scrolls, repeats
+   * its own group name as its first row, and says nothing a coach can read at a glance
+   * (user 2026-08-22: 가독성이 너무 없어). Two columns fit the whole set without scrolling.
+   */
+  columns?: 1 | 2
 }) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -35,7 +43,9 @@ export function SelectMenu(p: {
   const popRef = useRef<HTMLUListElement>(null)
 
   const current = p.options.findIndex((o) => o.id === p.value)
-  const label = current >= 0 ? (p.options[current]!.label ?? p.options[current]!.id) : p.placeholder
+  const chosen = current >= 0 ? p.options[current]! : undefined
+  const label = chosen ? (chosen.label ?? chosen.id) : p.placeholder
+  const cols = p.columns ?? 1
 
   useEffect(() => {
     if (!open) return
@@ -56,7 +66,7 @@ export function SelectMenu(p: {
     const pop = popRef.current
     if (!btn || !pop) return
     const r = btn.getBoundingClientRect()
-    const need = Math.min(pop.scrollHeight + 8, 272)
+    const need = Math.min(pop.scrollHeight + 8, 420)
     setFlipUp(window.innerHeight - r.bottom < need && r.top > need)
   }, [open])
 
@@ -146,37 +156,51 @@ export function SelectMenu(p: {
       </button>
       {open && (
         <ul
-          className={`${styles.selectPop} ${flipUp ? styles.selectPopUp : ''}`}
+          className={`${styles.selectPop} ${flipUp ? styles.selectPopUp : ''} ${
+            cols === 2 ? styles.selectPopWide : ''
+          }`}
           ref={popRef}
           role="listbox"
           aria-label={p.ariaLabel}
         >
-          {p.options.map((o, i) => (
-            <li key={o.id || `__${i}`}>
-              {o.group && o.group !== p.options[i - 1]?.group && (
-                <div className={styles.selectGroup} role="presentation">
-                  {o.group}
-                </div>
-              )}
-              <button
-                type="button"
-                role="option"
-                tabIndex={-1}
-                data-active={i === active}
-                aria-selected={o.id === p.value}
-                className={`${styles.selectItem} ${o.id === p.value ? styles.selectItemOn : ''} ${
-                  i === active ? styles.selectItemActive : ''
-                }`}
-                onPointerEnter={() => setActive(i)}
-                onClick={() => commit(o.id)}
+          {p.options.flatMap((o, i) => {
+            const heading = o.group && o.group !== p.options[i - 1]?.group ? o.group : null
+            const rows = []
+            // A heading is its own full-width row, so the columns underneath stay aligned and a
+            // one-item group never reads as its own first option (the old list showed "GK" twice).
+            if (heading)
+              rows.push(
+                <li key={`h-${heading}`} className={styles.selectHeadRow} role="presentation">
+                  <div className={styles.selectGroup}>{heading}</div>
+                </li>,
+              )
+            rows.push(
+              <li
+                key={o.id || `__${i}`}
+                className={cols === 2 && o.group ? styles.selectCellHalf : styles.selectHeadRow}
               >
-                <span className={styles.selectCheck} aria-hidden="true">
-                  {o.id === p.value ? '✓' : ''}
-                </span>
-                {o.label ?? o.id}
-              </button>
-            </li>
-          ))}
+                <button
+                  type="button"
+                  role="option"
+                  tabIndex={-1}
+                  data-active={i === active}
+                  aria-selected={o.id === p.value}
+                  className={`${styles.selectItem} ${o.id === p.value ? styles.selectItemOn : ''} ${
+                    i === active ? styles.selectItemActive : ''
+                  }`}
+                  onPointerEnter={() => setActive(i)}
+                  onClick={() => commit(o.id)}
+                >
+                  <span className={styles.selectItemLabel}>{o.label ?? o.id}</span>
+                  {o.sub && <span className={styles.selectItemSub}>{o.sub}</span>}
+                  <span className={styles.selectCheck} aria-hidden="true">
+                    {o.id === p.value ? '✓' : ''}
+                  </span>
+                </button>
+              </li>,
+            )
+            return rows
+          })}
         </ul>
       )}
     </div>
