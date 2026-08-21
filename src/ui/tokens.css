@@ -77,6 +77,18 @@
   --st-motion-base: var(--st-motion-transition);
   --st-motion-slow: var(--st-motion-settle);
 
+  /* Spring easings — generated from SPRINGS in src/ui/motion/spring.ts and locked by
+     springCss.test.ts, so a CSS transition and a JS SpringAnimator settle identically (overshoot
+     included). Use the matching --st-spring-*-ms duration; a shorter one truncates the bounce. */
+  --st-spring-press-ms: 262ms;
+  --st-spring-press: linear(0, 0.0928, 0.2554, 0.4211, 0.5645, 0.6794, 0.7675, 0.8331, 0.8811, 0.9158, 0.9406, 0.9582, 0.9707, 0.9795, 0.9856, 0.99, 0.993, 0.9951, 0.9966, 0.9976, 1);
+  --st-spring-pickup-ms: 242ms;
+  --st-spring-pickup: linear(0, 0.0582, 0.1744, 0.31, 0.4434, 0.5635, 0.6656, 0.7492, 0.8154, 0.8667, 0.9054, 0.9342, 0.9551, 0.9701, 0.9806, 0.9878, 0.9926, 0.9958, 0.9979, 0.9991, 1);
+  --st-spring-drop-ms: 446ms;
+  --st-spring-drop: linear(0, 0.0723, 0.2238, 0.3996, 0.5673, 0.7101, 0.8223, 0.9044, 0.9602, 0.9952, 1.0146, 1.0233, 1.0252, 1.0231, 1.0192, 1.0148, 1.0106, 1.0071, 1.0043, 1.0023, 1);
+  --st-spring-overlay-ms: 317ms;
+  --st-spring-overlay: linear(0, 0.0519, 0.1599, 0.2888, 0.4181, 0.5368, 0.6397, 0.7254, 0.7946, 0.8492, 0.8912, 0.923, 0.9466, 0.9638, 0.9761, 0.9847, 0.9906, 0.9946, 0.9972, 0.9988, 1);
+
   /* Hit targets (ADR-0006 D3) */
   --st-hit-token: 28px;
   --st-hit-handle: 16px;

@@ -96,9 +96,11 @@
   gap: 6px;
   cursor: pointer;
   white-space: nowrap;
+  /* Colour is a plain fade; the TRANSFORM rides the real press spring, so releasing a control
+     springs back with the same curve the pitch tokens use rather than a bezier approximation. */
   transition:
     background-color var(--st-motion-fast) var(--st-ease-out),
-    transform var(--st-motion-fast) var(--st-ease-out),
+    transform var(--st-spring-press-ms) var(--st-spring-press),
     opacity var(--st-motion-fast);
 }
 
@@ -106,8 +108,13 @@
   background: var(--st-surface-2);
 }
 
+/* Press goes DOWN fast and flat — the acknowledgement has to beat the eye (~100ms); the spring is
+   for the release, where the overshoot reads as physical. */
 .btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.96);
+  transition:
+    background-color var(--st-motion-instant) var(--st-ease-out),
+    transform var(--st-motion-instant) var(--st-ease-out);
 }
 
 .btn:disabled {
@@ -793,10 +800,10 @@
 
 .tourCut {
   transition:
-    x var(--st-motion-transition) var(--st-ease-standard),
-    y var(--st-motion-transition) var(--st-ease-standard),
-    width var(--st-motion-transition) var(--st-ease-standard),
-    height var(--st-motion-transition) var(--st-ease-standard);
+    x var(--st-spring-overlay-ms) var(--st-spring-overlay),
+    y var(--st-spring-overlay-ms) var(--st-spring-overlay),
+    width var(--st-spring-overlay-ms) var(--st-spring-overlay),
+    height var(--st-spring-overlay-ms) var(--st-spring-overlay);
 }
 
 .tourRing {
@@ -807,10 +814,10 @@
     0 0 0 4px color-mix(in srgb, var(--st-accent) 28%, transparent),
     0 0 24px color-mix(in srgb, var(--st-accent) 45%, transparent);
   transition:
-    left var(--st-motion-transition) var(--st-ease-standard),
-    top var(--st-motion-transition) var(--st-ease-standard),
-    width var(--st-motion-transition) var(--st-ease-standard),
-    height var(--st-motion-transition) var(--st-ease-standard);
+    left var(--st-spring-overlay-ms) var(--st-spring-overlay),
+    top var(--st-spring-overlay-ms) var(--st-spring-overlay),
+    width var(--st-spring-overlay-ms) var(--st-spring-overlay),
+    height var(--st-spring-overlay-ms) var(--st-spring-overlay);
   animation: tourPulse 1.6s ease-in-out infinite;
 }
 
@@ -847,8 +854,8 @@
   border: 1px solid var(--st-border);
   box-shadow: var(--st-shadow-3, var(--st-shadow-2));
   transition:
-    left var(--st-motion-transition) var(--st-ease-standard),
-    top var(--st-motion-transition) var(--st-ease-standard);
+    left var(--st-spring-overlay-ms) var(--st-spring-overlay),
+    top var(--st-spring-overlay-ms) var(--st-spring-overlay);
 }
 
 .tourCardDone {

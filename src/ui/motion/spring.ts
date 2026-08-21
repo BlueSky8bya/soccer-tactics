@@ -93,6 +93,56 @@ export function simulate(
   return out
 }
 
+/**
+ * Residual motion below this is invisible on screen — a 0.5% overshoot on a 44px control is a fifth
+ * of a pixel. The animator's own 0.001 epsilon is right for correctness but would stretch a 180ms
+ * press into a 340ms CSS transition chasing a tail nobody can see.
+ */
+export const PERCEPTUAL_EPS = 0.005
+
+/**
+ * Settle time of a spring: when it stops moving, not the nominal `duration`. A bouncy spring rings
+ * past its duration, so a CSS transition told to run for `duration` would cut the bounce off.
+ */
+export function springSettleTime(config: SpringConfig, eps = PERCEPTUAL_EPS): number {
+  const params = springParams(config)
+  const dt = 1 / 480
+  let s: SpringState = { value: 0, velocity: 0 }
+  for (let t = dt; t <= 5; t += dt) {
+    s = stepSpring(s, 1, dt, params)
+    if (isSettled(s, 1, eps, eps * 10)) return t
+  }
+  return 5
+}
+
+/**
+ * CSS `linear()` easing that reproduces this spring, so a CSS transition and a JS SpringAnimator
+ * settle identically — overshoot included. CSS cubic-beziers cannot express a bounce (their output
+ * is monotonic in practice for our purposes), which is why springy CSS normally has to fake it
+ * with keyframes; `linear()` just samples the real curve.
+ *
+ * Pair it with `springSettleTime(config)` as the transition duration — the samples are spread over
+ * that window, so a shorter duration would compress the whole motion.
+ */
+export function springLinearEasing(config: SpringConfig, steps = 28): string {
+  const params = springParams(config)
+  const settle = springSettleTime(config)
+  const dt = 1 / 480
+  const pts: number[] = [0]
+  let s: SpringState = { value: 0, velocity: 0 }
+  let t = 0
+  for (let i = 1; i <= steps; i++) {
+    const until = (settle * i) / steps
+    while (t < until) {
+      const h = Math.min(dt, until - t)
+      s = stepSpring(s, 1, h, params)
+      t += h
+    }
+    pts.push(i === steps ? 1 : s.value)
+  }
+  return `linear(${pts.map((v) => Math.round(v * 10000) / 10000).join(', ')})`
+}
+
 type Frame = (cb: (now: number) => void) => number
 type Cancel = (h: number) => void
 
