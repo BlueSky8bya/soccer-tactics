@@ -89,13 +89,13 @@ export const ANIM_BINDINGS: Binding[] = [
   { label: 'Alt+드래그', hint: '선수는 이동 경로, 공은 패스', compact: true, cue: 'alt' },
   {
     label: 'Alt+클릭',
-    hint: '고른 대상이 클릭한 지점까지 직선으로 — 중간에 뭐가 있든 상관없음 (휘는 건 나중에 선을 당겨서)',
+    hint: '고른 대상이 클릭한 곳까지 직선으로 — 잔디·선수·흐린 토큰 어디든 (휘는 건 나중에 선을 당겨서)',
     compact: true,
     cue: 'alt',
   },
   {
     label: '흐린 토큰 Alt+드래그·클릭',
-    hint: '그 위치에서 이어서 그리기',
+    hint: '아무것도 안 골랐을 때 — 그 시점에서 이어서 그리기',
     compact: true,
     cue: 'alt',
   },

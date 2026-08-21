@@ -703,10 +703,11 @@ export function SimplePitch() {
        * Deciding it here — at release, where a click and a drag are finally distinguishable —
        * leaves Alt+DRAG on a token drawing that token's own path exactly as before.
        *
-       * Naming a TOKEN as the subject is just selecting it, and `startDraw` already did that. There
-       * is no second "armed" state to enter and no second rule to learn (user 2026-08-22: 단축키
-       * 최대한 줄이는 방향으로) — the guide appears because Alt is down over a selection. A GHOST
-       * still arms, because a ghost names a MOMENT and selection can only name an entity.
+       * ONE rule: a click LANDS for whoever is standing, whatever is under it — grass, a token, or
+       * a ghost. Only when nobody stands does the click NAME a subject, and naming a token is just
+       * selecting it, which `startDraw` already did (user 2026-08-22: 단축키 최대한 줄이는 방향으로).
+       * A GHOST is the single thing selection cannot name, because it is a MOMENT rather than an
+       * entity, so that is the one case that still holds its own state.
        */
       if (strokeLength(g.points) < CLICK_SLOP_M) {
         const subject = g.landFor
@@ -1240,12 +1241,15 @@ export function SimplePitch() {
         // start attaches to the holder's PAST position (user bug 2026-08-20). Force step >=
         // (source movement's step + 1); the chip only raises it further.
         const minStep = Math.min(MAX_STEP, ghostTop!.step + 1)
+        // A ghost is a fine DESTINATION too — passing to where a player WILL be is a through ball,
+        // not an edge case (user 2026-08-22). So it carries the standing subject like any other
+        // press; the ghost only NAMES a subject when there is no other one to land for.
         startDraw(
           ghostTop!.entityId,
           e.pointerId,
           { x: ghostTop!.pos.x, y: ghostTop!.pos.y },
           minStep,
-          undefined,
+          subjectAtPress() ?? undefined,
           true,
         )
         return

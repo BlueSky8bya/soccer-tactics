@@ -1701,3 +1701,26 @@ Validation: typecheck/lint/build/harness PASS, 235 tests PASS.
   **고스트 클릭은 여전히 무장**하며 Esc로 해제, Alt+드래그는 불변.
 - 무회귀: passland 5/5, orbit 2/2, identity 10/10, colors 8/8, homeanchor 4/4, overhaul 15/15,
   fling 3/3, cues 9/9, panelbtns 5/5.
+
+### CHG-20260822-147 — FIX — 고스트(미래 위치)로 스루패스가 안 되던 문제
+
+Problem (사용자 2026-08-22, 스크린샷): 2번 선수가 초기 위치에서 들고 있는 공을, 1단계 진행 후의
+**1번 선수 고스트**에게 패스하려고 공 선택 → 고스트 Alt+클릭 했더니 패스가 안 그려지고 그 고스트에서
+안내 점선이 나왔다.
+
+Root cause: CHG-146(v21)에서 "고스트는 항상 무장"을 예외로 뒀다. 예외를 잘못 그은 것 —
+**미래 위치로 보내는 패스는 스루패스이고 본론이다.**
+
+Change: ADR-0009 Amendment v22. 규칙을 한 문장으로 축소 — **주어가 서 있으면 클릭은 도착점이다(잔디·
+선수·고스트 무엇 위든), 아무도 없을 때만 주어를 지목한다.** 고스트는 *지목하는 방법*만 다르다(시점이라
+선택으로 표현 불가). 착지 시 단계는 올리지 않는다 — 스루패스는 같은 단계에 달리는 선수와 함께 나가고
+도착 동기화는 relayout §4가 담당한다.
+
+Validation: typecheck/lint/build/harness PASS, 235 tests PASS.
+
+- Playwright `throughball.cjs` 8/8 — 1단계 런을 그린 뒤 공 선택 → 그 런의 끝 고스트 Alt+클릭 →
+  **공 트랙에 travel 생성, 도착점 (61.7, 13.2) = 런의 미래 위치, receiver `#1`, step 1**,
+  고스트는 무장되지 않았고 러너에게 여분의 런 0개. **아무것도 선택 안 했을 때는 고스트 클릭이 여전히
+  무장**한다.
+- 무회귀: aimclick 9/9, passland 5/5, orbit 2/2, identity 10/10, colors 8/8, homeanchor 4/4,
+  overhaul 15/15, fling 3/3, cues 9/9, panelbtns 5/5.
