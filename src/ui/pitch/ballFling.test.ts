@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BALL_TRAVEL_MIN_M,
   FLING_STOP_SPEED,
   SLING_MAX_SPEED,
   SLING_MIN_PULL_M,
   SLING_REACH,
-  ballTravelPoints,
   flingReach,
   flingSpeedForReach,
   flingVelocity,
@@ -104,51 +102,6 @@ describe('ball fling physics (pure, deterministic)', () => {
     // spin data monotonic
     for (let i = 1; i < a.points.length; i++)
       expect(a.points[i]!.d).toBeGreaterThanOrEqual(a.points[i - 1]!.d)
-  })
-})
-
-describe('ballTravelPoints — a dropped ball crosses ground instead of teleporting', () => {
-  const from = { x: 10, y: 10 }
-  const to = { x: 40, y: 25 }
-
-  it('starts at the ball and lands exactly on the target', () => {
-    const pts = ballTravelPoints(from, to)
-    expect(pts[0]).toMatchObject({ x: from.x, y: from.y, t: 0 })
-    const last = pts[pts.length - 1]!
-    expect(last.x).toBeCloseTo(to.x, 6)
-    expect(last.y).toBeCloseTo(to.y, 6)
-  })
-
-  it('eases OUT: the first half covers more ground than the second', () => {
-    const pts = ballTravelPoints(from, to)
-    const mid = pts[Math.floor(pts.length / 2)]!
-    const total = Math.hypot(to.x - from.x, to.y - from.y)
-    expect(Math.hypot(mid.x - from.x, mid.y - from.y)).toBeGreaterThan(total / 2)
-  })
-
-  it('time and rolled distance advance monotonically (the roll driver needs both)', () => {
-    const pts = ballTravelPoints(from, to)
-    for (let i = 1; i < pts.length; i++) {
-      expect(pts[i]!.t).toBeGreaterThan(pts[i - 1]!.t)
-      expect(pts[i]!.d).toBeGreaterThanOrEqual(pts[i - 1]!.d)
-    }
-  })
-
-  it('is deterministic, and a zero-length move is a single frame', () => {
-    expect(ballTravelPoints(from, to)).toEqual(ballTravelPoints(from, to))
-    expect(ballTravelPoints(from, { ...from })).toHaveLength(1)
-  })
-
-  it('longer trips take longer, but the duration stays bounded', () => {
-    const near = ballTravelPoints(from, { x: 14, y: 10 })
-    const far = ballTravelPoints(from, { x: 100, y: 60 })
-    const end = (p: ReturnType<typeof ballTravelPoints>) => p[p.length - 1]!.t
-    expect(end(far)).toBeGreaterThan(end(near))
-    expect(end(far)).toBeLessThanOrEqual(1.4)
-  })
-
-  it('the threshold sits above the attach radius so snaps keep their settle spring', () => {
-    expect(BALL_TRAVEL_MIN_M).toBeGreaterThan(2.7)
   })
 })
 

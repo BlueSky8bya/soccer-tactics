@@ -78,44 +78,6 @@ export interface FlingResult {
   }
 }
 
-/** Pass-like travel speed (m/s) for a released ball that has open ground to cross. */
-export const BALL_TRAVEL_SPEED = 15
-/**
- * Below this the release is a nudge or an attach snap — the settle spring already covers it.
- * Above ATTACH_RADIUS_M (2.7) so snapping to a holder keeps its existing pop.
- */
-export const BALL_TRAVEL_MIN_M = 3
-
-/**
- * Straight travel from where the ball is DRAWN to where it ends up, eased out so it leaves fast
- * and settles into the target the way a pass arrives. Dropping a held ball across the pitch used
- * to teleport it: possession pins the render to the holder, so the commit moved it in one frame
- * (user 2026-08-21: 순간이동 되거든 … 슛이나 패스처럼). Same FlingPoint shape as `simulateFling`,
- * so the existing roll driver replays it unchanged. Pure and deterministic.
- */
-export function ballTravelPoints(
-  from: Vec2,
-  to: Vec2,
-  speed: number = BALL_TRAVEL_SPEED,
-): FlingPoint[] {
-  const dist = Math.hypot(to.x - from.x, to.y - from.y)
-  if (!(dist > 0)) return [{ x: from.x, y: from.y, t: 0, d: 0 }]
-  const duration = Math.max(0.12, Math.min(1.4, dist / Math.max(1, speed)))
-  const steps = Math.max(2, Math.round(duration / DT))
-  const pts: FlingPoint[] = []
-  for (let i = 0; i <= steps; i++) {
-    const u = i / steps
-    const e = 1 - Math.pow(1 - u, 3)
-    pts.push({
-      x: from.x + (to.x - from.x) * e,
-      y: from.y + (to.y - from.y) * e,
-      t: u * duration,
-      d: dist * e,
-    })
-  }
-  return pts
-}
-
 /**
  * Ground covered by a launch of `v0` on open grass, from the same two-phase drag the simulation
  * integrates: carry above the transition speed, grass below it. Closed form, so the aim and the

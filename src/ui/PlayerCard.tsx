@@ -1,6 +1,4 @@
 import { setPlayerLabel, setPlayerNumber, setPlayerRole } from '@/editor/commands'
-import { moveBallStartInDraft } from '@/editor/segmentCommands'
-import type { TacticDocument } from '@/domain/types'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
@@ -26,7 +24,6 @@ export function PlayerCard() {
   const player = selection.length === 1 ? doc.players.find((p) => p.id === selection[0]) : undefined
   if (!player) return null
   const team = doc.teams.find((tm) => tm.id === player.teamId)
-  const holdsBall = doc.ball.initialHolderId === player.id
   return (
     <div className={styles.playerCard} role="group" aria-label={t('player.card')}>
       <span className={styles.teamDot} style={{ background: team?.color }} />
@@ -75,22 +72,6 @@ export function PlayerCard() {
           ))}
         </select>
       </label>
-      {holdsBall && (
-        /* A held ball ignores drags now, so this is the way to set it loose again. */
-        <button
-          type="button"
-          className={styles.btn}
-          onClick={() => {
-            const at = { x: player.home.x + 3.4, y: player.home.y }
-            core.transaction('Release ball', (d) => {
-              moveBallStartInDraft(d as TacticDocument, at, null)
-            })
-          }}
-          title={t('minibar.release')}
-        >
-          ● {t('minibar.release')}
-        </button>
-      )}
       <button
         type="button"
         className={styles.btn}

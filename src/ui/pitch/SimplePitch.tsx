@@ -29,11 +29,9 @@ import {
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
 import {
-  BALL_TRAVEL_MIN_M,
   FLING_MIN_SPEED,
   SLING_MAX_SPEED,
   type GoalGeom,
-  ballTravelPoints,
   flingVelocity,
   simulateFling,
   slingAimEnd,
@@ -709,22 +707,10 @@ export function SimplePitch() {
           ui.flashToast(t('ball.attached', { n: near.p.number }))
         }
       }
-      // Held ball dropped across the pitch: possession pinned the RENDER to the holder while the
-      // drag moved the document, so committing used to teleport it. Travel the gap instead
-      // (user 2026-08-21: 순간이동 … 슛이나 패스처럼). Attach snaps stay under the threshold and
-      // keep their settle spring.
-      const drawnFrom = resolved.ball.pos
-      const gap = Math.hypot(drawnFrom.x - settled.x, drawnFrom.y - settled.y)
-      if (!fling && gap >= BALL_TRAVEL_MIN_M) {
-        netFxQueueRef.current = []
-        flingDoneRef.current = () => {
-          if (near) settleAndAttach()
-        }
-        setFlingAnim({
-          points: ballTravelPoints(drawnFrom, settled),
-          key: (flingKeyRef.current += 1),
-        })
-      } else if (fling && fling.duration > 0.05) {
+      // A dropped ball SNAPS to where it was put — no travel animation across the gap
+      // (user 2026-08-21: 순간이동 되게 하면 되잖아). Only a thrown ball is animated, because
+      // there the roll IS the gesture's meaning.
+      if (fling && fling.duration > 0.05) {
         // roll the visual along the simulated path; settle/attach feedback fires on arrival
         netFxQueueRef.current = fling.goal
           ? fling.goal.impacts.map((imp) => ({
@@ -968,19 +954,6 @@ export function SimplePitch() {
             startClient: { x: e.clientX, y: e.clientY },
           }
           svg.setPointerCapture(e.pointerId)
-          return
-        }
-      }
-      // A ball a player owns is INERT to dragging: no white guide, no movement (user 2026-08-21:
-      // 흰색 안내선 안 나오게 하고 움직이지도 않게 … 경로 선정할 때 너무 엇갈린다). It belongs to
-      // that player's timeline, so a stray grab while aiming a run used to drag it out and streak
-      // a guide across the board. Selecting it still works, Alt+drag still authors a pass, and the
-      // holder's card offers 공 놓기 to set it loose again.
-      if (entityId === doc.ball.id && e.button === 0) {
-        const heldNow =
-          resolved.ball.holderId ?? (ui.playback.t === 0 ? doc.ball.initialHolderId : undefined)
-        if (heldNow) {
-          st.select(additive ? [...st.selection, entityId] : [entityId])
           return
         }
       }
