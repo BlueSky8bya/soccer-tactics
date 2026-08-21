@@ -1161,4 +1161,9 @@ Coach Paint, Hudl, GoArmy Edge), 축구 시각화·video feedback·decision trai
 PLAN-010 Proposed를 ACTIVE_PLAN으로 등록. 권장 순서는 Phase/설명 → timed cue → Trigger Link →
 overlay → Playbook/Variant → player learning → delivery. 3D/VR·tracking·AI·realtime collab은 보류.
 Validation: 문서 변경만. `npm run harness:verify` PASS(0 warnings). 코드 게이트는 NOT RUN(코드 변경 없음).
+### CHG-20260821-123 — FEATURE — 예시 전술 2→8종 + 사이드바 원클릭 로드·자동 재생
+
+Problem: SCENARIOS 프리셋(A/B)이 테스트에서만 쓰이고 UI 진입점이 없음('menu.examples' 키 미사용). 첫 방문자가 "무엇을 만들 수 있는지"를 보려면 직접 저작해야 했음.
+Change: `src/presets/scenarios.ts`에 6종 추가(세 번째 선수 움직임, 오버랩 vs 언더랩, 4-3-3 후방 빌드업, 전방 압박 트리거, 수비→공격 전환, 컷백 마무리) — 각각 4~9 선수, 이벤트 트리거 체인, 주석 포함 완결 문서. ActionsPanel(왼쪽 사이드바) 하단에 '예시 전술' 카드: 클릭 = replaceDocument(단일 undo) + `playWindow('all', 0, playableEnd(compile(doc)))`로 즉시 재생. i18n 3키 추가. 사용자 후보 중 '코너킥 니어포스트'만 보류(세트피스, 후속 후보).
+Validation: typecheck/lint/test 172/build/harness PASS. examples probe(신규): 8버튼 렌더 → 각 클릭 → 재생 시작 → 자연 종료(held-result) → 콘솔 에러 0, 스크린샷 검수 — ALL PASS.
 
