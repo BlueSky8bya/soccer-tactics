@@ -237,6 +237,13 @@ export function SimplePitch() {
   const [slingAim, setSlingAim] = useState<{ from: Vec2; to: Vec2 } | null>(null)
   /** Carry/detach boundary drawn while dragging a held ball. */
   const [carryRing, setCarryRing] = useState<{ at: Vec2; detached: boolean } | null>(null)
+  /**
+   * Where to DRAW the ball while it is being pulled off its holder. Crossing the ring means
+   * "take it from him", so the ball leaves his feet on the spot instead of staying pinned there
+   * until the drop (user 2026-08-22: 점선을 넘는 순간 잔디 위에 공을 렌더). Possession itself is
+   * left alone mid-drag — clearing it would orphan the pass chain — so this is render-only.
+   */
+  const [detachPos, setDetachPos] = useState<Vec2 | null>(null)
   const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
   const flingDoneRef = useRef<(() => void) | null>(null)
   const flingKeyRef = useRef(0)
@@ -502,6 +509,7 @@ export function SimplePitch() {
     setPressedId(null)
     setDropTargetId(null)
     setCarryRing(null)
+    setDetachPos(null)
     const svg = svgRef.current
     if (!g) return
     if (svg && svg.hasPointerCapture(g.pointerId)) svg.releasePointerCapture(g.pointerId)
@@ -1380,7 +1388,9 @@ export function SimplePitch() {
       if (!g.detached && dist > CARRY_DETACH_M) g.detached = true
       else if (g.detached && dist < CARRY_REATTACH_M) g.detached = false
       setCarryRing({ at: holderHome0, detached: !!g.detached })
-      if (!g.detached) {
+      if (g.detached) setDetachPos(raw)
+      else {
+        setDetachPos(null)
         const off = carryOffset({ x: raw.x - holderHome0.x, y: raw.y - holderHome0.y })
         raw = { x: holderHome0.x + off.x, y: holderHome0.y + off.y }
       }
@@ -1982,15 +1992,18 @@ export function SimplePitch() {
       <AnimatedToken
         id={doc.ball.id}
         kind="ball"
-        pos={flingPos?.pos ?? resolved.ball.pos}
+        pos={flingPos?.pos ?? detachPos ?? resolved.ball.pos}
         height={resolved.ball.height}
         spin={flingPos ? flingPos.spin : resolved.ball.spin}
         ballStatus={
-          resolved.ball.status === 'travel' && ui.playback.t === 0 && !isPlaying
-            ? 'possessed'
-            : resolved.ball.status
+          detachPos
+            ? 'loose'
+            : resolved.ball.status === 'travel' && ui.playback.t === 0 && !isPlaying
+              ? 'possessed'
+              : resolved.ball.status
         }
         holderColor={(() => {
+          if (detachPos) return undefined // off his feet the moment the ring is crossed
           const hid =
             resolved.ball.holderId ??
             (ui.playback.t === 0 && !isPlaying ? doc.ball.initialHolderId : undefined)

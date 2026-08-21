@@ -1365,3 +1365,16 @@ Playwright `carry.cjs` 12/12 PASS — 링 r=3.4 표시, 4방향 궤도가 캐리
 Note: 소유 공을 링 밖으로 끄는 동안 렌더는 홀더에 고정돼 착지 예정 위치가 보이지 않는다(CHG-132에서
 사용자가 흰 안내선 제거를 요구한 결과). 분리 링이 "떨어진다"는 사실은 알려 주지만 위치는 아니다.
 
+### CHG-20260822-135 — UX — 분리 링을 넘으면 공을 잔디 위에 렌더 (CHG-134 트레이드오프 해소)
+
+Problem (사용자 2026-08-22): 링을 넘어 끌면 '공을 뺏는' 의도인데 렌더는 홀더 발밑에 고정돼, 어디에
+놓일지 보이지 않았다(CHG-134에서 알려진 트레이드오프로 남겨 둔 부분).
+Change: `detachPos` 상태 추가 — `detached`인 동안 공의 렌더 위치를 드래그 지점으로 override하고
+`ballStatus`를 `loose`, `holderColor`를 `undefined`로 바꿔 **발에서 떨어져 잔디 위에** 그려지게 한다.
+fling 재생이 쓰던 것과 같은 render-override 지점(`flingPos ?? detachPos ?? resolved`). 문서상
+possession은 드래그 중 그대로 둔다 — 중간에 지우면 패스 체인이 끊기는 기존 회귀가 있어서, 실제
+보유/해제는 드롭 커밋이 결정한다. 링 안으로 복귀하면 override가 풀려 다시 캐리 링에 붙는다.
+Validation: typecheck/lint/build/harness PASS, 200 tests PASS. Playwright `carry.cjs` 15/15 PASS —
+링 안에서는 발밑 2.00m 유지, 링 통과 후 **렌더 좌표 (56.0,30.0) = 커서**·홀더로부터 16.5m,
+드롭 후 loose, 링 소거. 스크린샷으로 잔디 위 렌더 육안 확인. 콘솔 에러 0.
+
