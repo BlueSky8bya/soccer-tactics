@@ -156,7 +156,15 @@ type Gesture =
       detached?: boolean
     }
   | { type: 'marquee'; pointerId: number; a: Vec2; b: Vec2; additive: boolean }
-  | { type: 'draw'; entityId: Id; pointerId: number; points: Vec2[]; minStep?: number }
+  | {
+      type: 'draw'
+      entityId: Id
+      pointerId: number
+      points: Vec2[]
+      minStep?: number
+      /** Subject captured at PRESS: if this turns out to be a click, its path lands here. */
+      landFor?: { entityId: Id; from: Vec2; minStep?: number }
+    }
   /** Landing a click-to-click path: the endpoint is wherever this pointer is released. */
   | { type: 'aim'; pointerId: number; entityId: Id; from: Vec2; minStep?: number; to: Vec2 }
   | {
@@ -289,6 +297,11 @@ export function SimplePitch() {
   aimRef.current = aim
   /** Alt held with ONE entity selected: the same guide, without an arming click. */
   const quickAimRef = useRef(false)
+  /**
+   * The subject a click would land a path FOR, when the selection alone names it. Read from a ref
+   * because endGesture runs outside the render that computed it.
+   */
+  const quickAimSubjectRef = useRef<{ entityId: Id; from: Vec2; minStep?: number } | null>(null)
   /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
   const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
   const flingDoneRef = useRef<(() => void) | null>(null)
@@ -675,11 +688,27 @@ export function SimplePitch() {
       st.setPathDraft(null)
       setSnapPos(null)
       if (!commit) return
-      // A press that never travelled is a CLICK: arm this subject instead of discarding the
-      // gesture. Drawing then costs two clicks rather than one steered stroke — which is the whole
-      // point when the line has to cross other tokens (user 2026-08-22), and it is also the
-      // drag-free authoring route WCAG 2.5.7 asks for.
+      /*
+       * A press that never travelled is a CLICK, and a click means one of two things:
+       *
+       *  · a subject is already armed → this is the DESTINATION, whatever is under it.
+       *  · nothing is armed → this press names the subject.
+       *
+       * Landing on a token is not an edge case, it is the main case: a pass ends ON a player. The
+       * intent resolver reads a token press as "draw from this token" before it ever sees the
+       * armed state, so aiming the ball at its receiver re-armed the RECEIVER instead and tore the
+       * ball's chain in half (user 2026-08-22: 시작점으로 다시 눌리면서 공 이동경로가 끊기잖아).
+       * Deciding it here — at release, where a click and a drag are finally distinguishable —
+       * leaves Alt+DRAG on a token drawing that token's own path exactly as before.
+       */
       if (strokeLength(g.points) < CLICK_SLOP_M) {
+        const subject = g.landFor
+        if (subject && subject.entityId !== g.entityId) {
+          setAim(null)
+          setAimTo(null)
+          finishDraw(subject.entityId, [subject.from, g.points[0]!], subject.minStep)
+          return
+        }
         setAim({ entityId: g.entityId, from: g.points[0]!, minStep: g.minStep })
         setAimTo(null)
         ui.flashToast(t('simple.aimArmed'))
@@ -948,14 +977,33 @@ export function SimplePitch() {
     return best
   }
 
-  const startDraw = (entityId: Id, pointerId: number, startPos: Vec2, minStep?: number) => {
+  /**
+   * Who a CLICK here would draw for, read BEFORE the press changes anything. `startDraw` selects
+   * the pressed entity on pointerdown, so by release the previous subject is gone — it has to be
+   * captured now or not at all.
+   */
+  const subjectAtPress = (): { entityId: Id; from: Vec2; minStep?: number } | null => {
+    const armed = aimRef.current
+    if (armed) return armed
+    const sel = useUiStore.getState().selection
+    if (sel.length !== 1) return null
+    return { entityId: sel[0]!, from: lastKnownPosition(core.getDocument(), sel[0]!) }
+  }
+
+  const startDraw = (
+    entityId: Id,
+    pointerId: number,
+    startPos: Vec2,
+    minStep?: number,
+    landFor?: { entityId: Id; from: Vec2; minStep?: number },
+  ) => {
     const st = useUiStore.getState()
     st.returnToAuthoringStart()
     st.select([entityId])
     // start acknowledgement: the subject pops once so the ink clearly belongs to it (M4)
     pulseKey.current++
     setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
-    gesture.current = { type: 'draw', entityId, pointerId, points: [startPos], minStep }
+    gesture.current = { type: 'draw', entityId, pointerId, points: [startPos], minStep, landFor }
     st.setPathDraft({ entityId, points: [startPos] })
     svgRef.current?.setPointerCapture(pointerId)
   }
@@ -1274,12 +1322,19 @@ export function SimplePitch() {
         return
       }
       case 'draw-from-token': {
-        // Alt+drag on the token = draw a movement from its ORIGINAL spot.
+        /*
+         * Alt+DRAG on a token draws that token's own movement — unchanged. Alt+CLICK on it is the
+         * other half of an aim: a pass has to be able to END on a player, and reading this press as
+         * "draw from here" instead re-armed the receiver and left the ball's chain in two pieces
+         * (user 2026-08-22). Which one it was is only knowable at release, so the standing subject
+         * rides along and `endGesture` decides. A GHOST is left out on purpose: naming a future
+         * start is the only thing clicking one can mean.
+         */
         st.returnToAuthoringStart()
         const entityId = tokenEntityId!
         const startPos =
           entityId === doc.ball.id ? resolved.ball.pos : (resolved.players[entityId]?.pos ?? pt)
-        startDraw(entityId, e.pointerId, startPos)
+        startDraw(entityId, e.pointerId, startPos, undefined, subjectAtPress() ?? undefined)
         return
       }
       case 'press-token':
@@ -1577,10 +1632,24 @@ export function SimplePitch() {
       .sort((a, b) => a.dist - b.dist)[0]
     setDropTargetId((prev) => (prev === (over?.id ?? null) ? prev : (over?.id ?? null)))
     core.update((d) => {
-      setEntityHome(d as TacticDocument, g.id, { x: origin.x + delta.x, y: origin.y + delta.y })
-      // NOTE: initialHolderId is NOT touched mid-drag — the commit (moveBallStartInDraft)
-      // decides holder/loose. Deleting it here orphaned the possession chain and made passes
-      // launch from t=0 (user 2026-08-21: 5단계 공이 초기 위치에서 발사).
+      const doc2 = d as TacticDocument
+      if (holderId0 && holderHome0 && !g.detached) {
+        /*
+         * ORBITING a held ball: what changes is the carry SIDE, and that lives on the possession,
+         * not on `ball.home`. Writing only the home moved nothing on screen the moment a pass
+         * existed — from then on an explicit `possessed.offset` governs the render and the home is
+         * ignored, so the ball sat still until the drag crossed the ring and the detach override
+         * took over (user 2026-08-22: 원형 점선 바깥으로 나가니까 그제서야 움직여). This is the
+         * same call the drop already makes, so the live preview and the committed result are the
+         * same code rather than two that have to agree.
+         */
+        moveBallStartInDraft(doc2, raw, holderId0)
+        return
+      }
+      setEntityHome(doc2, g.id, { x: origin.x + delta.x, y: origin.y + delta.y })
+      // NOTE: initialHolderId is NOT touched mid-drag while DETACHED — the commit
+      // (moveBallStartInDraft) decides holder/loose. Deleting it here orphaned the possession
+      // chain and made passes launch from t=0 (user 2026-08-21: 5단계 공이 초기 위치에서 발사).
     })
     st.setDrag({ id: g.id, grab: g.grab, raw, guides: [], snapped: false })
   }
@@ -1767,6 +1836,7 @@ export function SimplePitch() {
       ? { entityId: ui.selection[0]!, from: lastKnownPosition(doc, ui.selection[0]!) }
       : null
   quickAimRef.current = !!quickAim
+  quickAimSubjectRef.current = quickAim
   const attachedStart = deriveAttachedPathStart(doc, compiled, ui.selectedSegmentId)
 
   // A-05a rest hierarchy: paths outside the CURRENT step recede (0.55) but stay readable.

@@ -1648,3 +1648,34 @@ Validation: typecheck/lint/build/harness PASS, **235 tests PASS**(신규 7).
   칩과 같은 `rgb(29,29,31)`, 정지 상태에서 켜진 행 0개, Ctrl 홀드 시 Ctrl 3행, Alt 홀드 시 Alt 4행,
   재생 중 Space 2행, **Ctrl 연타 6회에 한 번도 켜지지 않음**.
 - 무회귀: identity 10/10, colors 6/6, aimclick 7/7, homeanchor 4/4, overhaul 15/15, fling 3/3.
+
+### CHG-20260822-145 — FIX — 캐리 궤도가 멈춰 있던 문제 · Alt+클릭 도착점이 시작점으로 읽히던 문제
+
+Problem (사용자 2026-08-22): (1) 점선 원 안에서 공을 끌면 커서를 따라 안 움직이고 원 밖으로 나가야
+움직인다, 전에는 됐다 (2) 공을 누르고 Alt+다음 패스할 선수를 클릭하면 시작점 지정으로 읽혀 공 경로가
+끊긴다 — 구조부터 고쳐 달라.
+
+Root cause (1): 궤도 드래그가 `doc.ball.home`만 갱신했다. 패스가 하나라도 있으면 명시적
+`possessed.offset`이 렌더를 지배하고 home은 무시된다 → 화면상 정지. 세그먼트가 없을 때만
+`initialOffset()`이 home에서 파생돼 돌아갔고, 그래서 "전에는 됐다"가 맞는 말이었다.
+실측: 패스 없음 4.00m 이동 / 패스 있음 **0.00m**.
+
+Root cause (2): `resolvePointerIntent`가 토큰 press를 `draw-from-token`으로 **무장된 주어보다 먼저**
+읽는다. 클릭/드래그 구분은 release에서만 가능한데 `startDraw`는 pointerdown에서 선택을 바꿔버려,
+release 시점엔 이전 주어가 이미 사라져 있다(첫 구현이 아무 일도 안 한 이유).
+
+Change: ADR-0009 Amendment v20 (a~b). 요지 — 궤도 중에는 **드롭이 부르는 그 함수**
+(`moveBallStartInDraft`)를 그대로 호출해 미리보기와 확정이 같은 코드가 되게 한다(detach 중에는 호출
+안 함) / press 시점의 서 있는 주어를 draw 제스처에 실어 보내고 release에서 "착지냐 무장이냐"를 판단,
+Alt+드래그는 불변, **고스트는 항상 무장**(클릭이 가질 수 있는 뜻이 하나뿐이라).
+
+Validation: typecheck/lint/build/harness PASS, **235 tests PASS**.
+
+- Playwright `orbit.cjs` 2/2 — 패스 없는 상태 4.00m, **패스 있는 상태 0.00m → 3.95m**.
+- Playwright `passland.cjs` 5/5 — 공 선택 후 수신자 Alt+클릭이 **공 트랙에 travel을 만들고**
+  receiver를 `#2`로 지정, 도착점이 그 선수 위(4m 이내), 수신자에게 엉뚱한 run 0개.
+- 무회귀: aimclick 6/6, identity 10/10, colors 6/6, homeanchor 4/4, overhaul 15/15, fling 3/3,
+  cues 9/9.
+- **미해결(재현 실패)**: "왼쪽 패널 버튼 3개가 안 눌린다" — 신규 `panelbtns.cjs`가 히트테스트까지
+  포함해 3개 버튼을 모두 검증했고 **전부 통과**했다(새 세션, 그리고 Ctrl/Alt/Shift 홀드·재생·Alt를
+  누른 채 클릭한 뒤에도). 다음 turn에 정확한 선행 조작을 받아야 원인을 좁힐 수 있다.
