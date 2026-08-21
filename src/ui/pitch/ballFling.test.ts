@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { FLING_STOP_SPEED, flingVelocity, simulateFling } from './ballFling'
+import {
+  BALL_TRAVEL_MIN_M,
+  FLING_MAX_SPEED,
+  FLING_MIN_SPEED,
+  FLING_STOP_SPEED,
+  SLING_MIN_PULL_M,
+  ballTravelPoints,
+  flingVelocity,
+  simulateFling,
+  slingVelocity,
+} from './ballFling'
 
 const PITCH = { length: 105, width: 68 }
 
@@ -93,3 +103,84 @@ describe('ball fling physics (pure, deterministic)', () => {
       expect(a.points[i]!.d).toBeGreaterThanOrEqual(a.points[i - 1]!.d)
   })
 })
+
+describe('ballTravelPoints — a dropped ball crosses ground instead of teleporting', () => {
+  const from = { x: 10, y: 10 }
+  const to = { x: 40, y: 25 }
+
+  it('starts at the ball and lands exactly on the target', () => {
+    const pts = ballTravelPoints(from, to)
+    expect(pts[0]).toMatchObject({ x: from.x, y: from.y, t: 0 })
+    const last = pts[pts.length - 1]!
+    expect(last.x).toBeCloseTo(to.x, 6)
+    expect(last.y).toBeCloseTo(to.y, 6)
+  })
+
+  it('eases OUT: the first half covers more ground than the second', () => {
+    const pts = ballTravelPoints(from, to)
+    const mid = pts[Math.floor(pts.length / 2)]!
+    const total = Math.hypot(to.x - from.x, to.y - from.y)
+    expect(Math.hypot(mid.x - from.x, mid.y - from.y)).toBeGreaterThan(total / 2)
+  })
+
+  it('time and rolled distance advance monotonically (the roll driver needs both)', () => {
+    const pts = ballTravelPoints(from, to)
+    for (let i = 1; i < pts.length; i++) {
+      expect(pts[i]!.t).toBeGreaterThan(pts[i - 1]!.t)
+      expect(pts[i]!.d).toBeGreaterThanOrEqual(pts[i - 1]!.d)
+    }
+  })
+
+  it('is deterministic, and a zero-length move is a single frame', () => {
+    expect(ballTravelPoints(from, to)).toEqual(ballTravelPoints(from, to))
+    expect(ballTravelPoints(from, { ...from })).toHaveLength(1)
+  })
+
+  it('longer trips take longer, but the duration stays bounded', () => {
+    const near = ballTravelPoints(from, { x: 14, y: 10 })
+    const far = ballTravelPoints(from, { x: 100, y: 60 })
+    const end = (p: ReturnType<typeof ballTravelPoints>) => p[p.length - 1]!.t
+    expect(end(far)).toBeGreaterThan(end(near))
+    expect(end(far)).toBeLessThanOrEqual(1.4)
+  })
+
+  it('the threshold sits above the attach radius so snaps keep their settle spring', () => {
+    expect(BALL_TRAVEL_MIN_M).toBeGreaterThan(2.7)
+  })
+})
+
+describe('slingVelocity — pull back, launch the other way', () => {
+  const ball = { x: 50, y: 34 }
+
+  it('launches OPPOSITE the pull', () => {
+    const v = slingVelocity(ball, { x: 40, y: 34 })! // pulled left
+    expect(v.x).toBeGreaterThan(0) // flies right
+    expect(v.y).toBeCloseTo(0, 6)
+    const up = slingVelocity(ball, { x: 50, y: 44 })! // pulled down
+    expect(up.y).toBeLessThan(0) // flies up
+  })
+
+  it('a pull too short to aim yields nothing', () => {
+    expect(slingVelocity(ball, { x: ball.x + SLING_MIN_PULL_M / 2, y: ball.y })).toBeNull()
+    expect(slingVelocity(ball, ball)).toBeNull()
+  })
+
+  it('pulling farther throws harder, inside the same envelope a flick uses', () => {
+    const soft = slingVelocity(ball, { x: 48, y: 34 })!
+    const hard = slingVelocity(ball, { x: 30, y: 34 })!
+    const speed = (v: { x: number; y: number }) => Math.hypot(v.x, v.y)
+    expect(speed(hard)).toBeGreaterThan(speed(soft))
+    expect(speed(soft)).toBeGreaterThanOrEqual(FLING_MIN_SPEED)
+    expect(speed(hard)).toBeLessThanOrEqual(FLING_MAX_SPEED)
+  })
+
+  it('a huge pull still lands on the pitch', () => {
+    const v = slingVelocity(ball, { x: 0, y: 0 })!
+    const r = simulateFling(ball, v, PITCH)
+    expect(r.final.x).toBeGreaterThanOrEqual(0)
+    expect(r.final.x).toBeLessThanOrEqual(PITCH.length)
+    expect(r.final.y).toBeGreaterThanOrEqual(0)
+    expect(r.final.y).toBeLessThanOrEqual(PITCH.width)
+  })
+})
+

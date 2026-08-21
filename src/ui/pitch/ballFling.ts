@@ -78,6 +78,62 @@ export interface FlingResult {
   }
 }
 
+/** Pass-like travel speed (m/s) for a released ball that has open ground to cross. */
+export const BALL_TRAVEL_SPEED = 15
+/**
+ * Below this the release is a nudge or an attach snap — the settle spring already covers it.
+ * Above ATTACH_RADIUS_M (2.7) so snapping to a holder keeps its existing pop.
+ */
+export const BALL_TRAVEL_MIN_M = 3
+
+/**
+ * Straight travel from where the ball is DRAWN to where it ends up, eased out so it leaves fast
+ * and settles into the target the way a pass arrives. Dropping a held ball across the pitch used
+ * to teleport it: possession pins the render to the holder, so the commit moved it in one frame
+ * (user 2026-08-21: 순간이동 되거든 … 슛이나 패스처럼). Same FlingPoint shape as `simulateFling`,
+ * so the existing roll driver replays it unchanged. Pure and deterministic.
+ */
+export function ballTravelPoints(
+  from: Vec2,
+  to: Vec2,
+  speed: number = BALL_TRAVEL_SPEED,
+): FlingPoint[] {
+  const dist = Math.hypot(to.x - from.x, to.y - from.y)
+  if (!(dist > 0)) return [{ x: from.x, y: from.y, t: 0, d: 0 }]
+  const duration = Math.max(0.12, Math.min(1.4, dist / Math.max(1, speed)))
+  const steps = Math.max(2, Math.round(duration / DT))
+  const pts: FlingPoint[] = []
+  for (let i = 0; i <= steps; i++) {
+    const u = i / steps
+    const e = 1 - Math.pow(1 - u, 3)
+    pts.push({
+      x: from.x + (to.x - from.x) * e,
+      y: from.y + (to.y - from.y) * e,
+      t: u * duration,
+      d: dist * e,
+    })
+  }
+  return pts
+}
+
+/**
+ * Slingshot pull (user 2026-08-21): dragging BACK from a loose ball aims it the opposite way.
+ * `SLING_GAIN` turns pull metres into launch speed; the result is clamped to the same envelope a
+ * hand-thrown fling uses, so a pull can never do something a throw cannot.
+ */
+export const SLING_GAIN = 4.5
+export const SLING_MIN_PULL_M = 0.8
+
+/** Launch velocity for a pull of `pullFrom` → `pullTo`; null when the pull is too short to aim. */
+export function slingVelocity(ballAt: Vec2, pointerAt: Vec2): Vec2 | null {
+  const bx = ballAt.x - pointerAt.x
+  const by = ballAt.y - pointerAt.y
+  const pull = Math.hypot(bx, by)
+  if (pull < SLING_MIN_PULL_M) return null
+  const speed = Math.min(FLING_MAX_SPEED, Math.max(FLING_MIN_SPEED, pull * SLING_GAIN))
+  return { x: (bx / pull) * speed, y: (by / pull) * speed }
+}
+
 export interface GoalGeom {
   /** Goal mouth top/bottom (y, metres) and net depth behind the goal line. */
   top: number

@@ -1228,3 +1228,23 @@ Validation: typecheck/lint/build/harness PASS, 182 tests PASS(안내 행 노출 
 Playwright `hint.cjs` 5/5 PASS(사이드 가이드·`?` 오버레이 양쪽에서 `Space 꾹`·`3배속` 확인,
 평문 Space 행은 재생/일시정지만), `boost.cjs` 8/8 PASS 유지. 콘솔 에러 0.
 
+### CHG-20260821-127 — UX — 공 선택 하이라이트 흰색 · 연속 이동 · 슬링샷 조준
+
+Problem (사용자 2026-08-21, 3건): (1) 공 선택 하이라이트가 검정이라 흰색인 선수와 어색. (2) 선수가
+소유한 공을 드래그해 놓으면 점선만 늘어나다 **순간이동**. (3) 느슨한 공을 정밀하게 날릴 방법이
+빠른 스와이프(flick)뿐.
+Change: (1) `.ball.ballSelected { stroke: #fff }` — `.ball`이 파일 뒤라 특이도 한정 필요.
+(2) `ballTravelPoints(from,to)` 신설(순수·ease-out·FlingPoint 호환) → 커밋 시 **그려진 위치**와
+최종 위치의 간극이 `BALL_TRAVEL_MIN_M`(3m, ATTACH_RADIUS 2.7 초과) 이상이면 기존 roll driver로
+연속 재생. 스냅은 기존 스프링 유지, 문서 결과 불변. (3) 신규 `sling` 제스처 — 느슨한 공 더블클릭
+(350ms)+드래그로 당긴 반대 방향 조준, 조준선 끝은 `simulateFling` 결과라 실제 착지점과 동일.
+`slingVelocity`는 flick과 같은 속도 봉투로 clamp. flick/슬링 커밋을 `launchBall`로 통합.
+안내에 '공 더블클릭+드래그' 항목 추가.
+Validation: typecheck/lint/build/harness PASS, 192 tests PASS(ballFling 유닛 +10:
+travel 시작·도착·ease-out·단조성·결정성·상한, sling 반대방향·최소당김·속도봉투·경기장 내 착지).
+Playwright `ballux.cjs` 9/9 PASS — 선택 stroke `rgb(255,255,255)`, 릴리스 70ms 뒤 공이 중간
+지점(38.0,31.5)에 있고 최종 (75.0,20.0) 도달(순간이동 아님), 조준선 x2=48.2와 실제 착지 x=48.2
+일치, 릴리스 후 조준선 해제. 콘솔 에러 0.
+Note: 최초 구현에서 `launchBall`이 열린 트랜잭션 없이 `core.update`를 호출해 'update() without
+begin()'으로 발사가 무시됐다 — 프로브가 잡았고 슬링 릴리스에 `core.begin('Sling ball')` 추가로 해결.
+

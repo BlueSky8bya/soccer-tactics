@@ -28,7 +28,21 @@ import {
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
-import { FLING_MIN_SPEED, flingVelocity, simulateFling } from './ballFling'
+import {
+  BALL_TRAVEL_MIN_M,
+  FLING_MIN_SPEED,
+  type GoalGeom,
+  ballTravelPoints,
+  flingVelocity,
+  simulateFling,
+  slingVelocity,
+} from './ballFling'
+
+/** Goal mouth + net depth for every ball simulation — the aim preview and the commit must agree. */
+function goalGeomFor(pitch: { width: number }): GoalGeom {
+  const gw = 7.32 / 2
+  return { top: pitch.width / 2 - gw, bot: pitch.width / 2 + gw, depth: 2 }
+}
 import type { FlingPoint } from './ballFling'
 import type { PickSegment } from './pickTarget'
 import { addFreehand } from '@/editor/moreCommands'
@@ -79,6 +93,8 @@ const ERASER_CURSOR =
   '%3C/svg%3E") 12 12, crosshair'
 
 const DRAG_THRESHOLD_PX = 4
+/** Window for the second press of a slingshot double-click (shorter than the re-click cycle). */
+const DOUBLE_CLICK_MS = 350
 
 type Gesture =
   | {
@@ -119,6 +135,19 @@ type Gesture =
       team: 'home' | 'away'
       pointerId: number
       at: Vec2
+      startClient: { x: number; y: number }
+    }
+  /**
+   * Slingshot aim on a LOOSE ball (user 2026-08-21): a double-click that keeps dragging pulls
+   * BACK, and the ball launches the opposite way. A flick throws where the hand went; this aims
+   * where the hand came from, so a precise long ball no longer needs a fast swipe.
+   */
+  | {
+      type: 'sling'
+      pointerId: number
+      ballAt: Vec2
+      pointer: Vec2
+      started: boolean
       startClient: { x: number; y: number }
     }
   /** Freehand annotation stroke (PLAN-008): pen collects points + VIC pressure factors. */
@@ -193,6 +222,10 @@ export function SimplePitch() {
   const [ballDrop, setBallDrop] = useState<{ from: Vec2; key: number } | null>(null)
   /** Fling roll animation (UI-only): trajectory from the pure sim; doc already holds the END. */
   const [flingAnim, setFlingAnim] = useState<{ points: FlingPoint[]; key: number } | null>(null)
+  /** Last plain press on the ball — the first half of a slingshot double-click. */
+  const lastBallPressRef = useRef<{ at: number; x: number; y: number } | null>(null)
+  /** Live slingshot aim, mirrored for rendering (pull back → fly forward). */
+  const [slingAim, setSlingAim] = useState<{ from: Vec2; to: Vec2 } | null>(null)
   const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
   const flingDoneRef = useRef<(() => void) | null>(null)
   const flingKeyRef = useRef(0)
@@ -412,6 +445,46 @@ export function SimplePitch() {
     }
   }
 
+  /**
+   * Commit a simulated ball flight. Only the RESTING spot reaches the document (the roll itself is
+   * interface motion, ADR-0006 D1); the trajectory is then replayed with net FX, and a landing
+   * inside a player's attach range hands them the ball. Shared by the flick and the slingshot so
+   * both aim, land and attach by exactly the same rules.
+   */
+  const launchBall = (sim: ReturnType<typeof simulateFling>) => {
+    const d = core.getDocument()
+    const at = sim.final
+    const near = d.players
+      .map((p) => ({ p, dist: Math.hypot(p.home.x - at.x, p.home.y - at.y) }))
+      .filter((x) => x.dist <= ATTACH_RADIUS_M)
+      .sort((a, b) => a.dist - b.dist)[0]
+    core.update((dd) => moveBallStartInDraft(dd as TacticDocument, at, near?.p.id ?? null))
+    core.commit()
+    const done = () => {
+      if (!near) return
+      pulseKey.current++
+      setPulses((prev) => ({
+        ...prev,
+        [near.p.id]: pulseKey.current,
+        [d.ball.id]: pulseKey.current,
+      }))
+      setAttachFx({ id: near.p.id, key: pulseKey.current })
+      ui.flashToast(t('ball.attached', { n: near.p.number }))
+    }
+    netFxQueueRef.current = sim.goal
+      ? sim.goal.impacts.map((imp) => ({
+          t: imp.t,
+          pos: imp.pos,
+          normal: imp.normal,
+          speed: imp.speed,
+        }))
+      : []
+    if (sim.duration > 0.05) {
+      flingDoneRef.current = done
+      setFlingAnim({ points: sim.points, key: (flingKeyRef.current += 1) })
+    } else done()
+  }
+
   const endGestureImpl = (commit: boolean) => {
     const g = gesture.current
     gesture.current = null
@@ -521,6 +594,17 @@ export function SimplePitch() {
       return
     }
 
+    if (g.type === 'sling') {
+      setSlingAim(null)
+      const v = commit && g.started ? slingVelocity(g.ballAt, g.pointer) : null
+      if (!v) return // too short a pull to aim, or cancelled — the ball never moved
+      // The aim mutates nothing, so the transaction opens here (a drag-thrown ball already has
+      // one open from its drag) — one undo step for the whole throw.
+      core.begin('Sling ball')
+      launchBall(simulateFling(g.ballAt, v, doc.pitch, goalGeomFor(doc.pitch)))
+      return
+    }
+
     if (g.type === 'draw') {
       st.setPathDraft(null)
       setSnapPos(null)
@@ -621,7 +705,22 @@ export function SimplePitch() {
           ui.flashToast(t('ball.attached', { n: near.p.number }))
         }
       }
-      if (fling && fling.duration > 0.05) {
+      // Held ball dropped across the pitch: possession pinned the RENDER to the holder while the
+      // drag moved the document, so committing used to teleport it. Travel the gap instead
+      // (user 2026-08-21: 순간이동 … 슛이나 패스처럼). Attach snaps stay under the threshold and
+      // keep their settle spring.
+      const drawnFrom = resolved.ball.pos
+      const gap = Math.hypot(drawnFrom.x - settled.x, drawnFrom.y - settled.y)
+      if (!fling && gap >= BALL_TRAVEL_MIN_M) {
+        netFxQueueRef.current = []
+        flingDoneRef.current = () => {
+          if (near) settleAndAttach()
+        }
+        setFlingAnim({
+          points: ballTravelPoints(drawnFrom, settled),
+          key: (flingKeyRef.current += 1),
+        })
+      } else if (fling && fling.duration > 0.05) {
         // roll the visual along the simulated path; settle/attach feedback fires on arrival
         netFxQueueRef.current = fling.goal
           ? fling.goal.impacts.map((imp) => ({
@@ -841,6 +940,33 @@ export function SimplePitch() {
 
     const pressToken = (entityId: Id, additive = false) => {
       st.returnToAuthoringStart()
+      // Second click on a LOOSE ball, still within the double-click window → slingshot aim.
+      // A held ball is excluded: there the drag means "take it off the player" (user 2026-08-21).
+      if (entityId === doc.ball.id && e.button === 0) {
+        const prev = lastBallPressRef.current
+        const now = performance.now()
+        const isDouble =
+          prev !== null &&
+          now - prev.at <= DOUBLE_CLICK_MS &&
+          Math.hypot(e.clientX - prev.x, e.clientY - prev.y) <= 8
+        lastBallPressRef.current = { at: now, x: e.clientX, y: e.clientY }
+        const heldBy =
+          resolved.ball.holderId ?? (ui.playback.t === 0 ? doc.ball.initialHolderId : undefined)
+        if (isDouble && !heldBy) {
+          lastBallPressRef.current = null // a sling consumes the pair; no cycling, no triple
+          st.select([entityId])
+          gesture.current = {
+            type: 'sling',
+            pointerId: e.pointerId,
+            ballAt: { ...resolved.ball.pos },
+            pointer: pt,
+            started: false,
+            startClient: { x: e.clientX, y: e.clientY },
+          }
+          svg.setPointerCapture(e.pointerId)
+          return
+        }
+      }
       const wasSelected = st.selection.includes(entityId)
       // Ctrl+press ADDS to the selection (user 2026-08-20); a plain press on a non-member replaces
       // it; grabbing a member keeps the multi-selection (group drag).
@@ -1164,6 +1290,22 @@ export function SimplePitch() {
     if (g.type === 'add') {
       const moved = Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y)
       if (moved > DRAG_THRESHOLD_PX * 2) gesture.current = null // a drag on grass is not an add
+      return
+    }
+
+    if (g.type === 'sling') {
+      g.pointer = pt
+      if (!g.started && Math.hypot(e.clientX - g.startClient.x, e.clientY - g.startClient.y) > DRAG_THRESHOLD_PX)
+        g.started = true
+      if (!g.started) return
+      // The guide ends where the ball will actually STOP: same sim as the release, so the dashed
+      // line is a promise rather than a direction hint.
+      const v = slingVelocity(g.ballAt, pt)
+      setSlingAim(
+        v
+          ? { from: g.ballAt, to: simulateFling(g.ballAt, v, doc.pitch, goalGeomFor(doc.pitch)).final }
+          : null,
+      )
       return
     }
 
@@ -1924,6 +2066,18 @@ export function SimplePitch() {
             <circle cx={drag.raw.x} cy={drag.raw.y} r={1.0} className={styles.ballGhostDot} />
           </g>
         )}
+      {slingAim && (
+        <g className={styles.slingAim} aria-hidden="true">
+          <line
+            x1={slingAim.from.x}
+            y1={slingAim.from.y}
+            x2={slingAim.to.x}
+            y2={slingAim.to.y}
+            className={styles.slingAimLine}
+          />
+          <circle cx={slingAim.to.x} cy={slingAim.to.y} r={1.0} className={styles.slingAimDot} />
+        </g>
+      )}
       {attachFx &&
         (() => {
           const hp = resolved.players[attachFx.id]?.pos
