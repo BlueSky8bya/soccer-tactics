@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   BALL_TRAVEL_MIN_M,
-  FLING_MAX_SPEED,
-  FLING_MIN_SPEED,
   FLING_STOP_SPEED,
+  SLING_MAX_SPEED,
   SLING_MIN_PULL_M,
+  SLING_REACH,
   ballTravelPoints,
+  flingReach,
+  flingSpeedForReach,
   flingVelocity,
   simulateFling,
   slingAimEnd,
@@ -166,13 +168,19 @@ describe('slingVelocity — pull back, launch the other way', () => {
     expect(slingVelocity(ball, ball)).toBeNull()
   })
 
-  it('pulling farther throws harder, inside the same envelope a flick uses', () => {
+  it('pulling farther throws harder, up to the sling ceiling', () => {
     const soft = slingVelocity(ball, { x: 48, y: 34 })!
     const hard = slingVelocity(ball, { x: 30, y: 34 })!
     const speed = (v: { x: number; y: number }) => Math.hypot(v.x, v.y)
     expect(speed(hard)).toBeGreaterThan(speed(soft))
-    expect(speed(soft)).toBeGreaterThanOrEqual(FLING_MIN_SPEED)
-    expect(speed(hard)).toBeLessThanOrEqual(FLING_MAX_SPEED)
+    expect(speed(hard)).toBeLessThanOrEqual(SLING_MAX_SPEED)
+  })
+
+  it('reach is proportional to the pull, so aim stays predictable at every length', () => {
+    for (const pull of [1, 3, 8, 15, 25]) {
+      const v = slingVelocity(ball, { x: ball.x + pull, y: ball.y })!
+      expect(flingReach(Math.hypot(v.x, v.y))).toBeCloseTo(pull * SLING_REACH, 4)
+    }
   })
 
   it('a huge pull still lands on the pitch', () => {
@@ -233,6 +241,55 @@ describe('slingAimEnd — the line is POWER, not the landing spot', () => {
     expect(r.goal).toBeDefined()
     expect(r.goal!.side).toBe('right')
     expect(r.goal!.impacts.length).toBeGreaterThan(0)
+  })
+})
+
+describe('sling reach model — the ball must never land short of its own aim line', () => {
+  const ball = { x: 52, y: 34 }
+
+  it('flingReach and flingSpeedForReach are inverses across both drag phases', () => {
+    for (const d of [0.5, 3, 3.28, 10, 40, 90]) {
+      expect(flingReach(flingSpeedForReach(d))).toBeCloseTo(d, 4)
+    }
+  })
+
+  it('travel beats the aim line even at LONG pulls (the reported bug)', () => {
+    // a 40m pull used to saturate the 40 m/s flick cap, whose reach is only ~26m, so the ball
+    // stopped short of its own line. Measured as ground covered: past the tip the ball can
+    // rebound off a boundary, which moves where it RESTS but not how far it ran.
+    for (const pull of [2, 10, 26, 40, 60]) {
+      const pointer = { x: ball.x + pull, y: ball.y }
+      const tip = slingAimEnd(ball, pointer, PITCH)
+      const line = Math.hypot(tip.x - ball.x, tip.y - ball.y)
+      const v = slingVelocity(ball, pointer)!
+      const flown = simulateFling(ball, v, PITCH, undefined, SLING_MAX_SPEED)
+      expect(flown.points[flown.points.length - 1]!.d).toBeGreaterThan(line)
+    }
+  })
+
+  it('with open ground ahead it RESTS past the tip, not short of it', () => {
+    const from = { x: 8, y: 34 }
+    for (const pull of [3, 8, 15, 25]) {
+      const pointer = { x: from.x - pull, y: from.y } // pull left => flies right, 97m of room
+      const tip = slingAimEnd(from, pointer, PITCH)
+      const line = Math.hypot(tip.x - from.x, tip.y - from.y)
+      const v = slingVelocity(from, pointer)!
+      const flown = simulateFling(from, v, PITCH, undefined, SLING_MAX_SPEED)
+      expect(Math.hypot(flown.final.x - from.x, flown.final.y - from.y)).toBeGreaterThan(line)
+    }
+  })
+
+  it('short pulls are responsive rather than bottoming out on a speed floor', () => {
+    const tiny = slingVelocity(ball, { x: ball.x + 1, y: ball.y })!
+    const small = slingVelocity(ball, { x: ball.x + 2, y: ball.y })!
+    expect(Math.hypot(small.x, small.y)).toBeGreaterThan(Math.hypot(tiny.x, tiny.y) + 1)
+  })
+
+  it('a hand flick keeps its own, lower ceiling', () => {
+    const wild = simulateFling(ball, { x: 500, y: 0 }, PITCH)
+    const slung = simulateFling(ball, { x: 500, y: 0 }, PITCH, undefined, SLING_MAX_SPEED)
+    const reach = (r: ReturnType<typeof simulateFling>) => r.points[r.points.length - 1]!.d
+    expect(reach(slung)).toBeGreaterThan(reach(wild))
   })
 })
 

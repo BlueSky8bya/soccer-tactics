@@ -31,6 +31,7 @@ import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } 
 import {
   BALL_TRAVEL_MIN_M,
   FLING_MIN_SPEED,
+  SLING_MAX_SPEED,
   type GoalGeom,
   ballTravelPoints,
   flingVelocity,
@@ -602,7 +603,9 @@ export function SimplePitch() {
       // The aim mutates nothing, so the transaction opens here (a drag-thrown ball already has
       // one open from its drag) — one undo step for the whole throw.
       core.begin('Sling ball')
-      launchBall(simulateFling(g.ballAt, v, doc.pitch, goalGeomFor(doc.pitch)))
+      launchBall(
+        simulateFling(g.ballAt, v, doc.pitch, goalGeomFor(doc.pitch), SLING_MAX_SPEED),
+      )
       return
     }
 
@@ -942,7 +945,7 @@ export function SimplePitch() {
     const pressToken = (entityId: Id, additive = false) => {
       st.returnToAuthoringStart()
       // Second click on a LOOSE ball, still within the double-click window → slingshot aim.
-      // A held ball is excluded: there the drag means "take it off the player" (user 2026-08-21).
+      // A held ball never slings — see the inert-drag rule just below.
       if (entityId === doc.ball.id && e.button === 0) {
         const prev = lastBallPressRef.current
         const now = performance.now()
@@ -965,6 +968,19 @@ export function SimplePitch() {
             startClient: { x: e.clientX, y: e.clientY },
           }
           svg.setPointerCapture(e.pointerId)
+          return
+        }
+      }
+      // A ball a player owns is INERT to dragging: no white guide, no movement (user 2026-08-21:
+      // 흰색 안내선 안 나오게 하고 움직이지도 않게 … 경로 선정할 때 너무 엇갈린다). It belongs to
+      // that player's timeline, so a stray grab while aiming a run used to drag it out and streak
+      // a guide across the board. Selecting it still works, Alt+drag still authors a pass, and the
+      // holder's card offers 공 놓기 to set it loose again.
+      if (entityId === doc.ball.id && e.button === 0) {
+        const heldNow =
+          resolved.ball.holderId ?? (ui.playback.t === 0 ? doc.ball.initialHolderId : undefined)
+        if (heldNow) {
+          st.select(additive ? [...st.selection, entityId] : [entityId])
           return
         }
       }
@@ -2050,20 +2066,10 @@ export function SimplePitch() {
           </g>
         ))}
       </g>
-      {drag &&
-        drag.id === doc.ball.id &&
-        Math.hypot(drag.raw.x - resolved.ball.pos.x, drag.raw.y - resolved.ball.pos.y) > 0.6 && (
-          <g className={styles.ballGhost} aria-hidden="true">
-            <line
-              x1={resolved.ball.pos.x}
-              y1={resolved.ball.pos.y}
-              x2={drag.raw.x}
-              y2={drag.raw.y}
-              className={styles.ballGhostLine}
-            />
-            <circle cx={drag.raw.x} cy={drag.raw.y} r={1.0} className={styles.ballGhostDot} />
-          </g>
-        )}
+      {/* The white drag guide is gone with the gesture that produced it: it only ever appeared
+          when possession pinned the ball's render away from the pointer, and a held ball no longer
+          drags at all (user 2026-08-21: 흰색 안내선 안 나오게). A loose ball follows the cursor, so
+          there was never a gap to draw. */}
       {slingAim && (
         <g className={styles.slingAim} aria-hidden="true">
           <line

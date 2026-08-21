@@ -117,12 +117,38 @@ export function ballTravelPoints(
 }
 
 /**
- * Slingshot pull (user 2026-08-21): dragging BACK from a loose ball aims it the opposite way.
- * `SLING_GAIN` turns pull metres into launch speed; the result is clamped to the same envelope a
- * hand-thrown fling uses, so a pull can never do something a throw cannot.
+ * Ground covered by a launch of `v0` on open grass, from the same two-phase drag the simulation
+ * integrates: carry above the transition speed, grass below it. Closed form, so the aim and the
+ * sim agree without running 120Hz steps.
  */
-export const SLING_GAIN = 4.5
+export function flingReach(v0: number): number {
+  if (v0 <= FLING_STOP_SPEED) return 0
+  const tail = (FLING_TRANSITION_SPEED - FLING_STOP_SPEED) / FLING_ROLL_K
+  if (v0 <= FLING_TRANSITION_SPEED) return (v0 - FLING_STOP_SPEED) / FLING_ROLL_K
+  return (v0 - FLING_TRANSITION_SPEED) / FLING_FLIGHT_K + tail
+}
+
+/** Inverse of `flingReach`: the launch speed that covers `d` metres. */
+export function flingSpeedForReach(d: number): number {
+  const tail = (FLING_TRANSITION_SPEED - FLING_STOP_SPEED) / FLING_ROLL_K
+  if (d <= 0) return 0
+  if (d <= tail) return FLING_STOP_SPEED + d * FLING_ROLL_K
+  return FLING_TRANSITION_SPEED + (d - tail) * FLING_FLIGHT_K
+}
+
+/**
+ * Slingshot pull (user 2026-08-21): dragging BACK from a loose ball aims it the opposite way.
+ *
+ * The pull sets the REACH, not the launch speed, and the speed is solved from it. Mapping pull to
+ * speed directly meant a long pull saturated at `FLING_MAX_SPEED`, whose reach is only ~26m, so
+ * past that the ball landed SHORT of its own aim line (user: 점선 길이보다 덜 나가는 문제 …
+ * 더 예민하게). Now reach is `SLING_REACH ×` the pull at every length, which also makes small
+ * pulls responsive instead of bottoming out on a speed floor.
+ */
+export const SLING_REACH = 2.8
 export const SLING_MIN_PULL_M = 0.8
+/** A slung ball may launch far harder than a hand flick; bounces keep it on the pitch. */
+export const SLING_MAX_SPEED = 120
 
 /**
  * Where the aim line ENDS. It mirrors the pull, so its length is the POWER behind the throw, not
@@ -156,7 +182,7 @@ export function slingVelocity(ballAt: Vec2, pointerAt: Vec2): Vec2 | null {
   const by = ballAt.y - pointerAt.y
   const pull = Math.hypot(bx, by)
   if (pull < SLING_MIN_PULL_M) return null
-  const speed = Math.min(FLING_MAX_SPEED, Math.max(FLING_MIN_SPEED, pull * SLING_GAIN))
+  const speed = Math.min(SLING_MAX_SPEED, flingSpeedForReach(pull * SLING_REACH))
   return { x: (bx / pull) * speed, y: (by / pull) * speed }
 }
 
@@ -178,11 +204,13 @@ export function simulateFling(
   v0: Vec2,
   pitch: { length: number; width: number },
   goal?: GoalGeom,
+  /** Speed ceiling. A hand flick keeps the wild-swipe cap; a slingshot aims far harder. */
+  maxSpeed: number = FLING_MAX_SPEED,
 ): FlingResult {
   const L = pitch.length
   const W = pitch.width
   const speed0 = Math.hypot(v0.x, v0.y)
-  const s = speed0 > FLING_MAX_SPEED ? FLING_MAX_SPEED / speed0 : 1
+  const s = speed0 > maxSpeed ? maxSpeed / speed0 : 1
   const p = { x: p0.x, y: p0.y }
   const v = { x: v0.x * s, y: v0.y * s }
   const points: FlingPoint[] = [{ x: p.x, y: p.y, t: 0, d: 0 }]

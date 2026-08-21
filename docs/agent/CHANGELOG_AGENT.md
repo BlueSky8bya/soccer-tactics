@@ -1312,3 +1312,23 @@ Validation: typecheck/lint/build/harness PASS, 198 tests PASS. Playwright `playc
 — 왼쪽 카드 순서 팀 구성|정리|**재생**, 두 행의 라벨·문구 정확 일치, 왼쪽 열 세로 오버플로 없음,
 오른쪽 조작법에 Space 부재·제스처 9행 유지, **어떤 힌트도 카드 경계를 넘지 않음**. 콘솔 에러 0.
 
+### CHG-20260821-132 — UX/FIX — 소유된 공 드래그 무효화 + 슬링 도달거리 모델
+
+Problem (사용자 2026-08-21): (1) 슬링으로 던진 공이 **점선보다 덜 나감**, 더 예민했으면. (2) 선수가
+소유한 공을 드래그하면 흰 안내선이 뜨고 공이 움직여 경로 저작과 엇갈림.
+Change: (1) 원인은 당김→**속도** 선형 매핑 + `simulateFling`의 40 m/s 상한 — 그 상한의 도달거리가
+~26.6m라 26m 넘게 당기면 필연적으로 조준선보다 짧았다. `flingReach`/`flingSpeedForReach`(2상 drag
+폐형식·역함수)를 추가하고 `slingVelocity`가 `SLING_REACH(2.8) × 당김`을 도달거리로 역산하게 바꿈.
+`simulateFling(maxSpeed)` 인자 추가 — 슬링만 `SLING_MAX_SPEED(120)`, flick은 40 유지.
+(2) 소유 중인 공의 plain drag는 **선택만** 하고 제스처를 시작하지 않는다. Alt+드래그(패스)는 불변.
+흰 안내선(`ballGhost`)은 possession 고정 시에만 나타나던 것이라 죽은 코드가 되어 제거.
+드래그로 공을 뗄 수 없어지므로 홀더 `PlayerCard`에 **공 놓기** 버튼 추가(미사용이던
+`minibar.release` 키 활용) — 없으면 초기 보유자를 바꿀 방법이 사라진다.
+Validation: typecheck/lint/build/harness PASS, 204 tests PASS(유닛 +6: reach/speed 역함수 왕복,
+긴 당김 2~60m 전 구간에서 이동거리 > 조준선, 개활지에서는 정지점도 조준선 밖, 짧은 당김 반응성,
+flick은 낮은 상한 유지, 당김 비례 reach). Playwright `heldball.cjs` 10/10 PASS — 소유 공 드래그 시
+안내선 없음·좌표 불변·소유 유지, 공 놓기 후 loose, 느슨한 공은 22.1m 정상 드래그,
+8m 당김 → 조준선 8.0m·실제 22.5m. 콘솔 에러 0.
+Note: 최초 테스트가 '이동거리'를 최종 변위로 재서 40m 당김(경계 반사 후 되튐)에서 실패했다.
+벽을 넘을 수는 없으므로 경로 길이와 변위를 분리해 각각 단언하도록 고쳤다.
+
