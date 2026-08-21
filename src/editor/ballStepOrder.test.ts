@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyDocument } from '@/domain'
-import type { TacticDocument } from '@/domain/types'
+import type { Id, TacticDocument } from '@/domain/types'
 import { compile } from '@/engine/compile'
 import { stateAt } from '@/engine/stateAt'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
 import { makePath, moveBallStartInDraft } from './segmentCommands'
-import { addStepPass, addStepRun } from './stepCommands'
+import { addStepPass as addStepPassRaw, addStepRun as addStepRunRaw } from './stepCommands'
+
+/** These commands refuse past step 9; every case here stays well inside, so assert non-null once. */
+const addStepRun = (...a: Parameters<typeof addStepRunRaw>): Id => addStepRunRaw(...a)!
+const addStepPass = (...a: Parameters<typeof addStepPassRaw>): Id => addStepPassRaw(...a)!
+
 
 function filled() {
   const core = new EditorCore(

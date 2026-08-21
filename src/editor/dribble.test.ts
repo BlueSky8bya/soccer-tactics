@@ -5,8 +5,12 @@ import { DRIBBLE_AHEAD_M, stateAt } from '@/engine/stateAt'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
 import { makePath, moveBallStartInDraft } from './segmentCommands'
-import { addStepRun } from './stepCommands'
-import type { TacticDocument } from '@/domain/types'
+import { addStepRun as addStepRunRaw } from './stepCommands'
+import type { Id, TacticDocument } from '@/domain/types'
+
+/** These commands refuse past step 9; every case here stays well inside, so assert non-null once. */
+const addStepRun = (...a: Parameters<typeof addStepRunRaw>): Id => addStepRunRaw(...a)!
+
 
 describe('dribbling carries the ball AHEAD of the run (user 2026-08-21)', () => {
   it('mid-run the possessed ball leads the holder along the heading; at rest it sits beside', () => {

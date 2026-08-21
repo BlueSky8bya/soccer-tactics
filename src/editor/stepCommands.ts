@@ -30,6 +30,9 @@ import {
 
 export const MAX_STEP = 9
 
+/** Quantise a stored metre value to 0.1 mm — enough to kill float drift, invisible on a pitch. */
+const q = (v: number): number => Math.round(v * 10000) / 10000
+
 export function stepOf(seg: { step?: number }): number {
   const n = seg.step ?? 1
   return Math.max(1, Math.min(MAX_STEP, Math.round(n)))
@@ -79,6 +82,39 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
       })
     }
     break
+  }
+
+  /*
+   * 1b) PLAYER CHAINS. A player's movements are one chain that starts at their token: the first
+   *     leaves from home, and every later one leaves from where the previous arrived.
+   *
+   *     Delete a leg — or drag the token away — and the following leg is left starting in mid-air,
+   *     so the player TELEPORTS to it the instant it fires, dragging the ball they were carrying
+   *     with them (tactic fuzz seed 1013: 14.58 m in one frame, from a run whose own first leg had
+   *     been deleted). Only the START is moved; the destination the user drew is never touched.
+   */
+  for (const track of scene.timeline.tracks) {
+    if (track.entityKind !== 'player') continue
+    const home = draft.players.find((p) => p.id === track.entityId)?.home
+    if (!home) continue
+    const chain = track.segments
+      .filter((s) => 'path' in s && !s.id.startsWith(GEN_PREFIX))
+      .sort((a, b) => stepOf(a as { step?: number }) - stepOf(b as { step?: number }))
+    let from: Vec2 = home
+    for (const s of chain) {
+      if (!('path' in s)) continue
+      const wps = s.path.waypoints
+      const first = wps[0]
+      if (!first) continue
+      const inc = { x: from.x - first.p.x, y: from.y - first.p.y }
+      if (Math.hypot(inc.x, inc.y) > 1e-4) {
+        first.p = { x: from.x, y: from.y }
+        if (first.handleIn) first.handleIn = { x: first.handleIn.x + inc.x, y: first.handleIn.y + inc.y }
+        if (first.handleOut)
+          first.handleOut = { x: first.handleOut.x + inc.x, y: first.handleOut.y + inc.y }
+      }
+      from = wps[wps.length - 1]!.p
+    }
   }
 
   // 2) STEP GRAPH → timing. Same step = same start AND same end (user 2026-08-20 최종 확정).
@@ -136,8 +172,6 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     }
   }
 
-  deriveTimings()
-
   // 3) BALL ANCHORS (invariant B1 — ADR-0010 D7). Both ends of every pass are DERIVED from the
   //    one carry resolver, never composed here as `pos + offset`:
   //      · arrival  — where the ball comes to rest on the receiver
@@ -145,10 +179,17 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
   //    They are computed together, from ONE compile, because each depends on the other through the
   //    clock: an arrival moves the path, the path length moves the step timings, and the timings
   //    move every launch instant. Snapping them in sequence left the first one stale (fuzz seeds
-  //    169/415/448/572). Iterate to a fixed point instead; four passes is far past what any real
-  //    document needs, and a document that will not settle keeps its last anchors rather than
-  //    spinning.
-  for (let round = 0; round < 4; round++) {
+  //    169/415/448/572). Iterate to a fixed point instead.
+  //
+  //    EVERY ROUND STARTS FROM THE SAME BASELINE. Timings are re-derived at the TOP of the round,
+  //    so a round is a pure function of the current geometry and nothing carries over from the last
+  //    one. Deriving once up front and re-deriving only at the bottom left the loop able to exit
+  //    right after `syncThroughBall` had stretched a duration — a stretch that the next call to
+  //    this same function would then reset and recompute, so the document was not a fixed point of
+  //    its own pipeline (tactic fuzz seeds 1002/1003/1007/1008/…: durations and triggers moved on a
+  //    second, no-op relayout). Byte-idempotence is the contract, and the loop has to end ON it.
+  for (let round = 0; round < 8; round++) {
+    deriveTimings()
     syncThroughBall()
     const cm = compile(draft)
     let moved = false
@@ -184,14 +225,30 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
               shift(last, to)
               moved = true
             }
-            // the standing offset has to agree with the anchor we just placed
-            if (held) hold.offset = { x: to.x - rp.pos.x, y: to.y - rp.pos.y }
+            // The standing offset has to agree with the anchor we just placed. QUANTISED: writing
+            // the raw difference fed itself back through `heldBallPos` and drifted by ~1e-15 every
+            // single call, so the document never became byte-stable (tactic fuzz seed 1020). A
+            // tenth of a millimetre is far below anything the pitch can show.
+            if (held) hold.offset = { x: q(to.x - rp.pos.x), y: q(to.y - rp.pos.y) }
           }
         }
 
-        // origin: wherever the ball IS when this travel fires
-        if (first && seg.trigger.type === 'at') {
-          const launch = stateAt(cm, draft, seg.trigger.t).ball.pos
+        /*
+         * Origin: wherever the ball IS when this travel fires — from the COMPILED clock, sampled a
+         * hair before it fires.
+         *
+         * Two separate mistakes lived in this one line. Asked exactly AT the launch instant,
+         * `stateAt` can already have handed the ball to this very travel, so it answers with the
+         * travel's own first waypoint and the check compares the anchor against itself — a no-op
+         * that let a pass keep an origin 51 m from the ball. And `trigger.t` is only the step's
+         * NOMINAL start: a through ball stretched past its step window pushes the next pass later,
+         * and compile serialises them because one ball cannot fly two passes at once. Pinning to
+         * the nominal time anchored the pass to where the ball was MID-FLIGHT on the previous one,
+         * 19 m from where it actually leaves (tactic fuzz seed 1011). The compiled schedule is the
+         * only clock the playback obeys, so it is the only clock the anchors may read.
+         */
+        if (first && times && Number.isFinite(times.start)) {
+          const launch = stateAt(cm, draft, Math.max(0, times.start - 1e-3)).ball.pos
           if (Math.hypot(launch.x - first.p.x, launch.y - first.p.y) > 0.25) {
             shift(first, launch)
             moved = true
@@ -200,10 +257,7 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
       }
     }
     if (!moved) break
-    // path lengths changed → step timings, and with them every arrival and launch instant
-    deriveTimings()
   }
-  syncThroughBall()
 
   // 5) Ball possessions with an absolute time: keep them at/before the pass they precede.
   for (const track of scene.timeline.tracks) {
@@ -223,14 +277,23 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
   }
 }
 
-/** Player run drawn in simple mode: one undo step (create + step + relayout). */
+/**
+ * Player run drawn in simple mode: one undo step (create + step + relayout).
+ *
+ * Returns null when the entity has no step left. The bump below can land past MAX_STEP, and
+ * `stepOf` used to CLAMP it back to 9 — which quietly put two of one player's runs on step 9, the
+ * exact contradiction the bump exists to prevent (tactic fuzz). Nothing is created instead, and the
+ * caller says why.
+ */
 export function addStepRun(
   core: EditorCore,
   playerId: Id,
   waypoints: Waypoint[],
   step: number,
-): Id {
+): Id | null {
   const id = newId('seg')
+  const track0 = findTrack(core.getDocument(), playerId)
+  if (Math.max(step, lastAuthoredStep(track0) + 1) > MAX_STEP) return null
   core.transaction('Add run', (d) => {
     const doc = d as TacticDocument
     const track = ensureTrack(doc, playerId, 'player')
@@ -349,8 +412,13 @@ export function addStepPass(
     /** The ball was grabbed at a NAMED moment: `step` is exact, and the rest of its chain goes. */
     exactStep?: boolean
   },
-): Id {
+): Id | null {
   const id = newId('seg')
+  // Same ceiling as a run: past step 9 there is nowhere left to put the pass, and clamping would
+  // stack two of the ball's travels on one step (tactic fuzz).
+  if (!opts?.exactStep && Math.max(step, lastBallMovedStep(core.getDocument()) + 1) > MAX_STEP)
+    return null
+  if (opts?.exactStep && step > MAX_STEP) return null
   core.transaction('Add pass', (d) => {
     const doc = d as TacticDocument
     const track = ensureTrack(doc, doc.ball.id, 'ball')
@@ -592,15 +660,44 @@ export function shiftJunctionAnchorsInDraft(
   }
 }
 
-/** Change a movement's step (badge click / number key on selection). */
-export function setSegmentStep(core: EditorCore, segmentId: Id, step: number): void {
+/**
+ * The steps an entity's movement may legally take: strictly between its neighbours in the chain.
+ *
+ * One entity's movements are a CHAIN — each starts where the last one ended — so their order is
+ * baked into their geometry, and their steps must rise with it. Two of them on one step would put
+ * that entity in two places at once, and swapping two of them would tear the chain open at the
+ * joint. So retiming a movement can widen or narrow its gap to its neighbours and nothing else.
+ * Returns null when the neighbours leave no room at all.
+ */
+export function stepRangeFor(doc: TacticDocument, segmentId: Id): { lo: number; hi: number } | null {
+  const f = findSegment(doc, segmentId)
+  if (!f || !('path' in f.segment)) return null
+  const chain = f.track.segments
+    .filter((s) => 'path' in s && !s.id.startsWith(GEN_PREFIX))
+    .sort((a, b) => stepOf(a as { step?: number }) - stepOf(b as { step?: number }))
+  const i = chain.findIndex((s) => s.id === segmentId)
+  if (i < 0) return null
+  const lo = i > 0 ? stepOf(chain[i - 1] as { step?: number }) + 1 : 1
+  const hi = i < chain.length - 1 ? stepOf(chain[i + 1] as { step?: number }) - 1 : MAX_STEP
+  return lo > hi ? null : { lo, hi }
+}
+
+/**
+ * Change a movement's step (badge click / number key on selection). Clamped into the window its
+ * chain neighbours leave — see `stepRangeFor`. Returns the step it actually landed on.
+ */
+export function setSegmentStep(core: EditorCore, segmentId: Id, step: number): number | null {
+  const range = stepRangeFor(core.getDocument(), segmentId)
+  if (!range) return null
+  const landed = Math.max(range.lo, Math.min(range.hi, stepOf({ step })))
   core.transaction('Set step', (d) => {
     const doc = d as TacticDocument
     const f = findSegment(doc, segmentId)
     if (!f || !('path' in f.segment)) return
-    f.segment.step = stepOf({ step })
+    f.segment.step = landed
     relayoutStepsInDraft(doc)
   })
+  return landed
 }
 
 /** Authored (non-generated) path segment ids matching `pred` — the partial-clear unit (M2). */

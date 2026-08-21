@@ -2,15 +2,20 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { createEmptyDocument } from '@/domain'
+import type { Id } from '@/domain/types'
 import { EditorCore } from '@/editor/editorCore'
 import { EditorProvider } from '@/editor/EditorContext'
 import { applyFormation, seedDefaultTeams } from '@/editor/commands'
-import { addStepRun } from '@/editor/stepCommands'
+import { addStepRun as addStepRunRaw } from '@/editor/stepCommands'
 import { makePath } from '@/editor/segmentCommands'
 import { useUiStore } from '@/editor/uiStore'
 import { AppShell } from '../AppShell'
 import { hasSeenTour, markTourSeen, resetTourSeen } from './tourStorage'
 import { MINI_TOUR_STEPS, TOUR_STEPS, nextPendingStep } from './tourSteps'
+
+/** These commands refuse past step 9; every case here stays well inside, so assert non-null once. */
+const addStepRun = (...a: Parameters<typeof addStepRunRaw>): Id => addStepRunRaw(...a)!
+
 
 beforeAll(() => {
   if (!window.matchMedia) {

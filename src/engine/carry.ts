@@ -14,7 +14,7 @@
  * compile nor stateAt creates an import cycle.
  */
 import type { Vec2 } from '@/domain/types'
-import { headingAtDistance, type PathLUT } from './path'
+import { pointAtDistance, type PathLUT } from './path'
 
 /** Dribbling: the ball rides AHEAD of the run (a touch in front of the feet), not on the hip. */
 export const DRIBBLE_AHEAD_M = 1.9
@@ -41,10 +41,34 @@ export function aheadVec(heading: number): Vec2 {
   return { x: Math.cos(heading) * DRIBBLE_AHEAD_M, y: Math.sin(heading) * DRIBBLE_AHEAD_M }
 }
 
+/**
+ * Where the ball rides during a run: out front along the ground the player has ACTUALLY covered
+ * over the last DRIBBLE_RAMP_S, not along the instantaneous tangent.
+ *
+ * On a straight or gently curving run the two are the same vector — 0.35 s at running pace covers
+ * 3.5 m, well past the 1.9 m carry — so ordinary dribbling is untouched. They differ exactly where
+ * the tangent stops being a physical quantity. At a HAIRPIN the tangent reverses between one frame
+ * and the next, and a ball held 1.9 m out front snapped ~3.8 m across its holder in 20 ms (tactic
+ * fuzz seed 21: 3.71 m at t=0.62 s, on a run whose waypoints double back). The covered chord
+ * instead shortens toward the feet as the player turns and grows out again on the way out —
+ * continuous by construction, and what a player actually does with the ball when they turn.
+ */
+export function carryVecAt(m: CarryMove, t: number): Vec2 {
+  const dur = Math.max(1e-6, m.end - m.start)
+  const sAt = (tt: number) => Math.max(0, Math.min(1, (tt - m.start) / dur)) * m.lut.length
+  const now = pointAtDistance(m.lut, sAt(t))
+  const back = pointAtDistance(m.lut, sAt(t - DRIBBLE_RAMP_S))
+  const d = { x: now.x - back.x, y: now.y - back.y }
+  const len = Math.hypot(d.x, d.y)
+  if (len < 1e-6) return { x: 0, y: 0 }
+  const k = Math.min(DRIBBLE_AHEAD_M, len) / len
+  return { x: d.x * k, y: d.y * k }
+}
+
 /** Carry vector AT a move's end: the pinned junction side when set, else out front. */
 export function endCarryVec(m: CarryMove): Vec2 {
   if (m.carryEnd) return m.carryEnd
-  return aheadVec(headingAtDistance(m.lut, m.lut.length))
+  return carryVecAt(m, m.end)
 }
 
 /**
@@ -67,8 +91,7 @@ export function carryAheadFor(moves: readonly CarryMove[], t: number): CarryAhea
   if (active) {
     const lt = t - active.start
     const dur = Math.max(1e-6, active.end - active.start)
-    const s = Math.max(0, Math.min(1, lt / dur)) * active.lut.length
-    let vec = aheadVec(headingAtDistance(active.lut, s))
+    let vec = carryVecAt(active, t)
     // junction-local pin: near THIS run's end, blend the front carry toward carryEnd
     if (active.carryEnd) {
       const w = Math.max(0, Math.min(1, (DRIBBLE_RAMP_S - (dur - lt)) / DRIBBLE_RAMP_S))

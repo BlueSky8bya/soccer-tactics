@@ -131,7 +131,18 @@ export function addMoveSegment(
  */
 export function passerFor(doc: TacticDocument, track: Track, hint: Id | undefined): Id | undefined {
   const last = track.segments[track.segments.length - 1]
-  if (last?.kind === 'possessed') return last.holderId
+  if (!last) return hint ?? doc.ball.initialHolderId
+  if (last.kind === 'possessed') return last.holderId
+  /*
+   * The ball's LAST MOVEMENT decides who has it now. A pass that found a receiver hands it over; a
+   * pass that found nobody leaves the ball lying on the grass, and grass has no holder.
+   *
+   * Falling back to the original holder there inserted a possession by a player standing metres
+   * from the ball, so the next pass launched out of THEM and the ball teleported off the end of the
+   * loose one — 8.4 m and 18.4 m in one frame (tactic fuzz seeds 8/22). The hint is only an opening
+   * guess, and it has no standing once the ball has actually moved.
+   */
+  if (last.kind === 'travel') return last.receiverId
   return hint ?? doc.ball.initialHolderId
 }
 

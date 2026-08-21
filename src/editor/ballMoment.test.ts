@@ -19,12 +19,17 @@ import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
 import { makePath, moveBallStartInDraft } from './segmentCommands'
 import {
-  addStepPass,
-  addStepRun,
+  addStepPass as addStepPassRaw,
+  addStepRun as addStepRunRaw,
   ballMovesFromStep,
   stepOf,
   truncateBallFromStepInDraft,
 } from './stepCommands'
+
+/** These commands refuse past step 9; every case here stays well inside, so assert non-null once. */
+const addStepRun = (...a: Parameters<typeof addStepRunRaw>): Id => addStepRunRaw(...a)!
+const addStepPass = (...a: Parameters<typeof addStepPassRaw>): Id => addStepPassRaw(...a)!
+
 
 function filled() {
   const core = new EditorCore(

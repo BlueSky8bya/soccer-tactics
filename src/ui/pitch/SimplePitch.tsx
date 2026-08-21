@@ -496,11 +496,19 @@ export function SimplePitch() {
       ui.flashToast(t('simple.stepLimit'))
       return
     }
-    if (entityId === doc.ball.id)
-      addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId, {
-        exactStep: atStep !== undefined,
-      })
-    else addStepRun(core, entityId, waypoints, step)
+    // The command bumps the step again for the ENTITY's own chain (a player's fourth run cannot
+    // share a step with its third), and that bump can land past 9 even when the number here did
+    // not. It refuses rather than clamping — clamping stacked two movements on step 9.
+    const made =
+      entityId === doc.ball.id
+        ? addStepPass(core, waypoints, step, resolved.ball.holderId ?? doc.ball.initialHolderId, {
+            exactStep: atStep !== undefined,
+          })
+        : addStepRun(core, entityId, waypoints, step)
+    if (!made) {
+      ui.flashToast(t('simple.stepLimit'))
+      return
+    }
     // commit confirmation: subject pops again as the arrow lands (M4)
     pulseKey.current++
     setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
@@ -580,7 +588,15 @@ export function SimplePitch() {
       .map((p) => ({ p, dist: Math.hypot(p.home.x - at.x, p.home.y - at.y) }))
       .filter((x) => x.dist <= ATTACH_RADIUS_M)
       .sort((a, b) => a.dist - b.dist)[0]
-    core.update((dd) => moveBallStartInDraft(dd as TacticDocument, at, near?.p.id ?? null))
+    core.update((dd) => {
+      const d2 = dd as TacticDocument
+      moveBallStartInDraft(d2, at, near?.p.id ?? null)
+      // Moving the ball's START retargets the opening possession and the first pass's origin, so
+      // every launch instant downstream shifts with it. Committing without the pipeline left the
+      // document in a state the pipeline itself would still change (tactic fuzz: a relayout it had
+      // never had would re-insert the opening possession) — ADR-0010 Q4 says commands END here.
+      relayoutStepsInDraft(d2)
+    })
     core.commit()
     const done = () => {
       if (!near) return
@@ -859,7 +875,11 @@ export function SimplePitch() {
         .map((p) => ({ p, dist: Math.hypot(p.home.x - at.x, p.home.y - at.y) }))
         .filter((x) => x.dist <= ATTACH_RADIUS_M) // one semantic constant (ADR-0010 D5)
         .sort((a, b) => a.dist - b.dist)[0]
-      core.update((dd) => moveBallStartInDraft(dd as TacticDocument, at, near?.p.id ?? null))
+      core.update((dd) => {
+        const d2 = dd as TacticDocument
+        moveBallStartInDraft(d2, at, near?.p.id ?? null)
+        relayoutStepsInDraft(d2) // see launchBall: the drop must settle the whole chain
+      })
       core.commit()
       // The ball may have snapped to a holder: animate the last few pixels (document is already final).
       const settled = core.getDocument().ball.home

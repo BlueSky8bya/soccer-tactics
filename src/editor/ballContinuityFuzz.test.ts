@@ -4,10 +4,15 @@ import type { Id, TacticDocument, Vec2 } from '@/domain/types'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
 import { makePath, moveBallStartInDraft } from './segmentCommands'
-import { addStepPass, addStepRun, MAX_STEP } from './stepCommands'
+import { addStepPass as addStepPassRaw, addStepRun as addStepRunRaw, MAX_STEP } from './stepCommands'
 import { compile } from '@/engine/compile'
 import { stateAt } from '@/engine/stateAt'
 import { describeJump, maxBallJump } from '@/engine/ballContinuity'
+
+/** These commands refuse past step 9; every case here stays well inside, so assert non-null once. */
+const addStepRun = (...a: Parameters<typeof addStepRunRaw>): Id => addStepRunRaw(...a)!
+const addStepPass = (...a: Parameters<typeof addStepPassRaw>): Id => addStepPassRaw(...a)!
+
 
 /**
  * Invariant B1, fuzzed over AUTHORING ORDER.

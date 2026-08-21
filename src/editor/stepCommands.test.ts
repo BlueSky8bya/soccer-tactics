@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyDocument } from '@/domain'
-import type { TacticDocument } from '@/domain/types'
+import type { Id, TacticDocument } from '@/domain/types'
 import { carryOffset, compile } from '@/engine/compile'
 import { applyFormations, seedDefaultTeams } from './commands'
 import { EditorCore } from './editorCore'
@@ -12,8 +12,8 @@ import {
   moveTravelEndInDraft,
 } from './segmentCommands'
 import {
-  addStepPass,
-  addStepRun,
+  addStepPass as addStepPassRaw,
+  addStepRun as addStepRunRaw,
   BEND_GRAB_RADIUS_M,
   bendGrabWaypointInDraft,
   bendMoveWaypointInDraft,
@@ -27,6 +27,11 @@ import {
   stepStart,
   stepWindow,
 } from './stepCommands'
+
+/** These commands refuse past step 9; every case here stays well inside, so assert non-null once. */
+const addStepRun = (...a: Parameters<typeof addStepRunRaw>): Id => addStepRunRaw(...a)!
+const addStepPass = (...a: Parameters<typeof addStepPassRaw>): Id => addStepPassRaw(...a)!
+
 
 function filled() {
   const core = new EditorCore(
