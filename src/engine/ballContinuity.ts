@@ -64,14 +64,23 @@ function topBallSpeed(compiled: CompiledTimeline, doc: TacticDocument): number {
     if (dur > 1e-6) travel = Math.max(travel, seg.schedule.lut.length / dur)
   }
   let runner = 0
+  /**
+   * The carry blend finishes inside its own run (see `carryAheadFor`), so a run SHORTER than the
+   * ramp swings the ball proportionally faster. The budget has to know the shortest run in the
+   * document or it flags that legitimate swing as a tear.
+   */
+  let shortest = DRIBBLE_RAMP_S
   for (const p of doc.players) {
     for (const seg of compiled.tracks[p.id]?.segments ?? []) {
       if (seg.kind !== 'move') continue
       const dur = seg.end - seg.start
-      if (dur > 1e-6) runner = Math.max(runner, seg.schedule.lut.length / dur)
+      if (dur > 1e-6) {
+        runner = Math.max(runner, seg.schedule.lut.length / dur)
+        shortest = Math.min(shortest, dur)
+      }
     }
   }
-  return Math.max(travel, runner + CARRY_SWING_M / DRIBBLE_RAMP_S)
+  return Math.max(travel, runner + CARRY_SWING_M / Math.max(0.05, shortest))
 }
 
 /**

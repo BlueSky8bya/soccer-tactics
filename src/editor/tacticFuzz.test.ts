@@ -24,6 +24,8 @@ const BUDGET_MS = 1_800_000
  */
 const SHORT = Number(process.env.ST_FUZZ_SHORT ?? 300)
 const LONG = Number(process.env.ST_FUZZ_LONG ?? 60)
+/** Slide the whole campaign onto fresh seeds — a soak can run in observable slices. */
+const SEED0 = Number(process.env.ST_FUZZ_SEED0 ?? 0)
 
 function report(f: Failure): string {
   return f.why + INDENT + f.log.join(INDENT)
@@ -34,7 +36,7 @@ describe('tactic fuzz — every operation, random order, result invariants', () 
     `${SHORT} short sessions stay consistent`,
     () => {
       const bad: string[] = []
-      for (let seed = 1; seed <= SHORT && bad.length < 3; seed++) {
+      for (let seed = SEED0 + 1; seed <= SEED0 + SHORT && bad.length < 3; seed++) {
         const f = session(seed, 12)
         if (f) bad.push(report(f))
       }
@@ -47,7 +49,7 @@ describe('tactic fuzz — every operation, random order, result invariants', () 
     `${LONG} long sessions stay consistent`,
     () => {
       const bad: string[] = []
-      for (let seed = 100_001; seed <= 100_000 + LONG && bad.length < 3; seed++) {
+      for (let seed = 100_001 + SEED0; seed <= 100_000 + SEED0 + LONG && bad.length < 3; seed++) {
         const f = session(seed, 40)
         if (f) bad.push(report(f))
       }

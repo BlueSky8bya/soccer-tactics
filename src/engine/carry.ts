@@ -88,10 +88,19 @@ export function carryAheadFor(moves: readonly CarryMove[], t: number): CarryAhea
   if (active) {
     const lt = t - active.start
     const dur = Math.max(1e-6, active.end - active.start)
+    /*
+     * THE RAMP HAS TO FINISH INSIDE THE RUN. Standing after a run puts the ball at that run's
+     * end-carry — a fully blended vector — so if the blend were still half-done when the run
+     * stopped, the ball would snap the rest of the way in a single frame. A run shorter than
+     * DRIBBLE_RAMP_S did exactly that (tactic fuzz seeds 3051/5955/100584: 0.84–0.98 m in 20 ms on
+     * runs of 0.2–0.3 s). Blending over the run's own length instead is continuous by construction,
+     * and identical for any run longer than the ramp — which is every run a person draws.
+     */
+    const ramp = Math.min(DRIBBLE_RAMP_S, dur)
     let vec = carryVecAt(active, t)
     // junction-local pin: near THIS run's end, blend the front carry toward carryEnd
     if (active.carryEnd) {
-      const w = Math.max(0, Math.min(1, (DRIBBLE_RAMP_S - (dur - lt)) / DRIBBLE_RAMP_S))
+      const w = Math.max(0, Math.min(1, (ramp - (dur - lt)) / ramp))
       vec = {
         x: vec.x * (1 - w) + active.carryEnd.x * w,
         y: vec.y * (1 - w) + active.carryEnd.y * w,
@@ -101,7 +110,7 @@ export function carryAheadFor(moves: readonly CarryMove[], t: number): CarryAhea
     // and blends to the new vector — a chained run passes through the junction, it never jumps.
     return {
       vec,
-      ramp: Math.max(0, Math.min(1, lt / DRIBBLE_RAMP_S)),
+      ramp: Math.max(0, Math.min(1, lt / ramp)),
       ...(prev ? { from: endCarryVec(prev), prevEnd: prev.end } : {}),
     }
   }
