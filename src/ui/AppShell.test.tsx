@@ -32,25 +32,27 @@ beforeAll(() => {
       disconnect() {}
     }
   }
-  if (!window.requestAnimationFrame) {
-    window.requestAnimationFrame = (cb) =>
-      setTimeout(() => cb(performance.now()), 16) as unknown as number
-    window.cancelAnimationFrame = (h) => clearTimeout(h)
+  // Vitest's jsdom runs with pretendToBeVisual, so a REAL-timer rAF exists here. Under full-suite
+  // CPU load those 16ms timers fire during `await act(...)` and the playback controller finishes
+  // short ranges (an empty board plays out in 0.2s) before the assertion runs — `playing` flips
+  // back to false and the failure moves between tests (G0, PLAN-014). No test in this file needs
+  // frames to fire, so swallow them: schedule into a queue that nothing ever pumps.
+  const rafQueue = new Map<number, FrameRequestCallback>()
+  let rafId = 0
+  window.requestAnimationFrame = (cb) => {
+    rafQueue.set(++rafId, cb)
+    return rafId
+  }
+  window.cancelAnimationFrame = (h) => {
+    rafQueue.delete(h)
   }
 })
 
 afterEach(() => {
   cleanup()
-  useUiStore.setState({
-    selection: [],
-    selectedSegmentId: null,
-    drag: null,
-    hover: null,
-    currentStep: 1,
-    tour: { active: false, step: 0, set: 'main' as const },
-    playback: { t: 0, playing: false, speed: NORMAL_SPEED, loop: false },
-    hasPlayed: false,
-  })
+  // Full reset: the old field list forgot playScope/rangeStart/rangeEnd/completion/boostFactor,
+  // so a finished playback in one test leaked 'held-result' into the next (G0, PLAN-014).
+  useUiStore.setState(useUiStore.getInitialState(), true)
 })
 
 function setup() {
