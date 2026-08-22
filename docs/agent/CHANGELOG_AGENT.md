@@ -2508,3 +2508,63 @@ SELF_RECEIVE_MIN_M(3.5m, RECEIVE_RADIUS와 동일) 넘게 벗어나 있으면 �
 
 Validation: typecheck/lint/build/harness PASS, 291 tests(신규 selfPass 2 — 받는 경우/안 받는 경우
 양쪽 계약), 프로브 14종 PASS(신규 selfpass·selfpass2·selfpass3 포함), marathon 450제스처 0실패.
+
+## CHG-20260823-185 — G0: AppShell 전량-실행 flake를 시계에서 종결 (PLAN-014)
+
+Problem: `npm test` 전량 실행에서만 AppShell playback assertion이 실행마다 다른 위치(:186/:296/:359)로
+실패. 단독 실행은 항상 초록이라 "고쳤다"가 반복될 수 있는 구조.
+
+Change: 원인은 assertion이 아니라 시계 — vitest jsdom은 pretendToBeVisual이라 실-타이머 rAF가 존재하고,
+suite 부하 중 `await act` 동안 발화해 빈 보드의 0.2s 재생 범위(`playableEnd` 하한)를 완주시키면
+`holdResult`가 `playing`을 되돌린다. 여기에 afterEach 부분 리셋(playScope/rangeEnd/completion/
+boostFactor 누락)이 겹침. 수리는 테스트 전용: 아무도 펌프하지 않는 rAF 삼킴 큐 + `getInitialState`
+전체 리셋. production 무변경.
+
+Files: src/ui/AppShell.test.tsx
+
+Validation: AppShell 단독 ×3, 전량 ×3, `--maxWorkers=1` ×1 전부 PASS. (commit 73cbb00)
+
+## CHG-20260823-186 — M1: I1~I10 mutation-kill 감사 — detector 지형을 핀으로 고정 (PLAN-014)
+
+Problem: 퍼즈 불변식 10개가 "건강한 문서만 봐서 초록"인지 실제 detector인지 증거가 없었다.
+
+Change: `invariantMutation.test.ts` 신규 — 불변식 계열마다 최소 mutant를 주입하고 누가 잡는지 핀.
+결과 SURVIVED 0: I1/I2/I3/I4/I5/I6/I9/I10은 자기 detector가 KILL, 내부 NaN·1m tear·dead receiver는
+I9(relayout self-heal+멱등)가 광역 2차 방어선으로 검출, I7은 I5에 구조적으로 가려짐(2차 울타리),
+I8은 문서 mutation으로 도달 불가(predicate 단위 검증). Findings P2 4건: I2 내부 waypoint 미검사,
+B1 전역 예산 마스킹, validator receiverId 생존성 미검사, 중복 segment id는 compile 크래시.
+
+Files: src/editor/invariantMutation.test.ts, docs/agent/plans/evidence/PLAN-014-M1-mutation-report.md
+
+Validation: 17/17 PASS, tacticFuzz 기본 campaign PASS. (commit 00afee8)
+
+## CHG-20260823-187 — M2: junction authority graph + core parity 전 junction Δ=0 (PLAN-014)
+
+Problem: D1 1안("여러 입력, 공용 resolver 하나")이 실제 구조인지, 같은 junction의 좌표 권위가
+다시 여러 벌이 됐는지 증거가 없었다.
+
+Change: `junctionParity.test.ts` 신규 — 커맨드로 지은 6 fixture(첫 패스/달린 수신자/through-target/
+수신측 핀/릴레이/삭제·재저작·저장 왕복)에서 authored 끝점 vs compile·stateAt 결과를 파이프라인
+자신의 앵커 임계 0.25m로 검증: 전 junction Δ=0.0000, relayout 0.07~0.58ms, 추가 적용 0회.
+R12-E 확인: receiver 정확-동률은 players 배열 순서로 결정(특성화 핀). 정적 그래프: resolver 1개
+(heldBallPos, 6 callsite), 우회 조립 0, 커밋 문서의 relayout 우회 0(드래그 중간 상태는
+inTransaction 가드로 autosave 제외). Findings P2 2건: import는 relayout하지 않음(외부 문서 첫 편집
+시 의미 변경), receiver tie 순서 의존. D1 권고: 1안 유지.
+
+Files: src/editor/junctionParity.test.ts, docs/agent/plans/evidence/PLAN-014-M2-junction-graph.md
+
+Validation: 8/8 PASS. (commit 9cfebde)
+
+## CHG-20260823-188 — M3: Phase 1 판정 Core Closure Supported + 문서 정합화 (PLAN-014)
+
+Problem: 판정·증거·문서 상태의 연결.
+
+Change: gate ledger 전부 초록(전량 ×3 + serial, 46 files/316 tests) → **Core Closure Supported**
+(core document/engine/editor 한정 — UI/브라우저/UX는 DG-BROWSER 결정 전 NOT VERIFIED).
+미해결 P0/P1 0, Findings 6건 전부 P2. CURRENT_STATE·ACTIVE_PLAN·canonical plan 상태 갱신,
+2026-08-22 브라우저 결과를 HISTORICAL로 표기, handoff 작성.
+
+Files: docs/agent/plans/evidence/PLAN-014-M3-final-report.md, docs/agent/CURRENT_STATE.md,
+docs/agent/plans/ACTIVE_PLAN.md, docs/agent/handoffs/2026-08-23_0724_plan-014-phase1-audit.md
+
+Validation: typecheck/lint/test/build/harness 전부 PASS. (commit ecfd7cf)
