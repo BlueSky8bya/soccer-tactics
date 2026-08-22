@@ -23,9 +23,13 @@ export const BALL_OFFSET: Vec2 = { x: 1.75, y: 1.15 } // possessed ball just cle
 /** Carry ring — where a held ball may rest around its holder (ADR-0010 D5, one source). */
 export const CARRY_RING_MIN_M = 2.0
 export const CARRY_RING_MAX_M = 2.6
-/** Drop-commit / attach radius: ring max + float headroom, so a ball released exactly ON the
- *  ring ALWAYS attaches (the 2.6-vs-2.6 float equality bug of CHG-105 can never return). */
-export const ATTACH_RADIUS_M = CARRY_RING_MAX_M + 0.1
+/** Drop-commit / attach radius — ONE boundary, ONE drawn size with the carry-detach ring
+ *  (user 2026-08-22: 왜 링 크기가 달라): the dashed ownership ring is the same circle
+ *  everywhere — release inside it and the ball is that player's; drag beyond it and it is
+ *  taken. Was ring max + 0.1 (2.7), which left a lying band at 2.9–3.4 m where the ball sat
+ *  INSIDE the drawn detach ring yet dropped loose. Stays > CARRY_RING_MAX so a ball resting
+ *  ON the carry ring always attaches (the CHG-105 float bug can never return). */
+export const ATTACH_RADIUS_M = 3.4
 
 /**
  * Carry direction: clamp a holder→ball vector to a natural dribbling radius. The holder can carry

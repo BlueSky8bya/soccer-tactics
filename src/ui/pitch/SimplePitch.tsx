@@ -133,7 +133,10 @@ const strokeLength = (pts: readonly Vec2[]): number => {
   return d
 }
 const CLICK_SLOP_M = 0.8
-const CARRY_DETACH_M = 3.4
+/** The detach boundary IS the attach boundary — one dashed circle, one size, everywhere
+ *  (user 2026-08-22: 초기 위치랑 다른 위치랑 링 크기가 달라). Only the mid-drag re-attach
+ *  keeps a lower threshold — invisible hysteresis so the boundary never flickers. */
+const CARRY_DETACH_M = ATTACH_RADIUS_M
 const CARRY_REATTACH_M = 2.9
 
 /**

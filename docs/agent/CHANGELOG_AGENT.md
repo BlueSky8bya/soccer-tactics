@@ -2391,3 +2391,19 @@ halo는 호버 전용으로 복귀. 반경 차이는 유지: 나가는 문턱(3.
 
 Validation: typecheck/lint/build PASS, 288 tests, stagehint 18/18 + repro3/4·pickup·loopstation·
 selcues 무회귀, 스크린샷으로 두 지점 시각 언어 일치 확인.
+
+## CHG-20260822-178 — 소유 링 반경 통일: attach = detach = 3.4 (거짓 구간 제거)
+
+Trigger: 사용자 — "이미 소유한 공을 잡았을 때 하이라이팅 원 크기가 초기 위치랑 다른 위치랑 다르다."
+
+진단(실측): 소유-경계 링 자체는 세 잡기 지점(초기·정션·캐치) 모두 정확히 3.4m 동일. 차이의 정체는
+**잡은 공 자리의 링(뺏김 경계 3.4) vs 다른 지점에 뜨는 드롭-약속 링(attach 2.7)** — 한 문법에 두
+크기. 게다가 attach(2.7) < 그려진 경계(3.4)라서 2.9~3.4m 구간은 링 **안**에 놓았는데 loose가 되는
+거짓 구간이었다.
+
+Change: `ATTACH_RADIUS_M` 2.7→3.4, `CARRY_DETACH_M = ATTACH_RADIUS_M` (단일 소스). 점선 링은
+어디서나 한 크기 — 안에 놓으면 소유, 밖으로 끌면 박탈. 드래그 중 재부착 문턱(2.9)만 보이지 않는
+히스테리시스로 유지. RECEIVE_RADIUS_M(3.5) ≥ 3.4라 수신 해석과도 정합.
+
+Validation: typecheck/lint/build/harness PASS, 288 tests, 프로브 13종(stagehint 18/18 포함) 전부
+PASS, ringsize 실측 3지점 3.4 동일, marathon 450제스처(10세션) 0실패.
