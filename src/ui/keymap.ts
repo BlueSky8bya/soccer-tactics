@@ -39,19 +39,19 @@ export function isCued(b: Binding, active: ReadonlySet<Cue>): boolean {
 
 export const KEYMAP = {
   playback: {
-    toggle: { key: ' ', label: 'Space', hint: '재생 / 일시정지', chip: true, cues: ['space'] },
+    toggle: { key: ' ', label: 'Space', hint: '재생·일시정지', chip: true, cues: ['space'] },
     // its own row, not a tail on the Space hint — the hold was undiscoverable buried there
     // (user 2026-08-21: space 꾹 누르는 키도 안내하게)
     boost: {
       key: ' ',
       label: 'Space 꾹',
-      hint: '누르는 동안 배속 재생 — 배속은 ▶ 버튼을 좌우로 끌어 선택',
+      hint: '누르는 동안 배속 재생 — 배속은 ▶ 좌우 드래그',
       chip: true,
       cues: ['space'],
     },
     restart: { key: 'Home', label: 'Home', hint: '처음으로', chip: true, cues: ['space'] },
     loop: { key: 'g', label: 'G', hint: '반복', chip: true, cues: ['space'] },
-    zen: { key: 'f', label: 'F', hint: '패널 숨기기 / 되돌리기', chip: true },
+    zen: { key: 'f', label: 'F', hint: '패널 접기·펴기', chip: true },
   },
   edit: {
     undo: { label: 'Ctrl+Z', hint: '실행 취소' },

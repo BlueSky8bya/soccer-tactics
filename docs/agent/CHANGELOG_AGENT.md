@@ -2211,3 +2211,14 @@ Validation: typecheck/lint/build/harness PASS, **285 tests PASS** (AppShell 스�
   클릭 아님(재생 토글 안 됨), **Space 꾹 = 0.75(=1.5×0.5) 실측**, 해제 1.5 복귀, 오른쪽 슬라이드
   3 복귀, 일반 클릭은 재생.
 - selcues/cues/flow/subject/identity/overhaul 무회귀. 스크린샷: 옵션 줄이 버튼 위에 온전히 표시.
+
+## CHG-20260822-169 — 왼쪽 패널(CTRL·재생) 문구 압축
+
+Trigger: 사용자 — "여기도 설명 최적화 해줘" (CTRL 단축키·재생 카드 스크린샷).
+
+- `Space` 힌트: "재생 / 일시정지" → **"재생·일시정지"** — 한 쌍의 동작이지 빗금으로 가른 두 대안이 아니다.
+- `Space 꾹`: 3줄로 감기던 문장 → **"누르는 동안 배속 재생 — 배속은 ▶ 좌우 드래그"** 한 줄.
+- `F`: "패널 숨기기 / 되돌리기" → **"패널 접기·펴기"** — 바로 위 Ctrl+Z의 "되돌리기"와 단어가 충돌해
+  다른 낱말로 교체.
+
+Validation: typecheck/lint/build PASS, 285 tests PASS, cues/selcues 프로브 PASS.
