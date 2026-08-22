@@ -269,6 +269,22 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
         const seg = track.segments[i]!
         if (seg.kind !== 'travel' || seg.id.startsWith(GEN_PREFIX)) continue
         const times = cm.segmentTimes[seg.id]
+        /*
+         * CONSEQUENCE ROLLS DIE WITH THEIR CAUSE (user 2026-08-22: 초기 공을 마저 빼앗았더니
+         * 이전 빼앗기의 롤이 살아남아 원점만 새 위치로 끌려가고 공이 두 개가 됐다). An implicit
+         * travel exists only because a POSSESSION was interrupted at its start moment. If nobody
+         * holds the ball just before it fires — that possession has been edited away — the roll
+         * has no cause: it is removed here, whatever edit path got the document into this shape.
+         */
+        if (seg.implicit && times && Number.isFinite(times.start)) {
+          const holder = stateAt(cm, draft, Math.max(0, times.start - 1e-3)).ball.holderId
+          if (!holder) {
+            track.segments.splice(i, 1)
+            i--
+            moved = true
+            continue
+          }
+        }
         const wps = seg.path.waypoints
         const first = wps[0]
         const last = wps[wps.length - 1]

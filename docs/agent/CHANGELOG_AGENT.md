@@ -2407,3 +2407,22 @@ Change: `ATTACH_RADIUS_M` 2.7→3.4, `CARRY_DETACH_M = ATTACH_RADIUS_M` (단일 
 
 Validation: typecheck/lint/build/harness PASS, 288 tests, 프로브 13종(stagehint 18/18 포함) 전부
 PASS, ringsize 실측 3지점 3.4 동일, marathon 450제스처(10세션) 0실패.
+
+## CHG-20260822-179 — 결과 롤은 원인과 함께 죽는다 (공 2개 버그)
+
+Trigger: 사용자 — "정션에서 뺏은 뒤 초기 공도 마저 빼앗으면 공이 2개가 된다. 초기가 아닌 단계에서
+소유권을 뺏는 건 어떤 의도로 처리해야 하나?"
+
+진단(doubleball.cjs): 정션 빼앗기가 남긴 implicit 롤(m+1단계, 정션→드롭)이, 초기 공 빼앗기 후에도
+생존 — moveBallStart의 "패스 원점 따라감"이 롤의 원점을 새 위치로 끌고 가서, 재생 시 공이 새
+드롭에서 옛 드롭으로 저절로 굴러가고 보드엔 안착 지점이 2개(공 2개) 표시됐다. 전제(그 시점의
+소유)가 편집으로 사라졌는데 결과(롤)가 남은 것.
+
+Change: relayout 앵커 라운드에 전제 검사 — implicit travel은 발화 직전(compiled clock −1ms)에
+공을 잡은 소유자가 없으면 삭제. 어떤 편집 경로로 그 형태가 되든 파이프라인이 지운다(결과 기준
+불변식). 의도 정의 확정: 비초기 단계 빼앗기 = "m단계에 소유가 끊기고 공은 놓은 지점까지 굴러가
+멈춘다"(롤은 연속성의 대가, 순간이동 금지) — 초기 순간을 다시 빼앗으면 그 이후 전부(롤 포함)
+덮어쓴다(ADR-0009 v25 모멘트 문법의 일관 적용).
+
+Validation: typecheck/lint/build/harness PASS, 289 tests(implicitRoll 4 — 신규 "dies with its
+cause"), doubleball 재현→수정 확인(worst 0, 잔상 중복 0), 프로브 9종 무회귀.

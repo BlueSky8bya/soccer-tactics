@@ -86,6 +86,16 @@ describe('implicit consequence rolls', () => {
     expect(stepCounts(doc)[1]).toBe(0)
   })
 
+  it('dies with its cause: no possession before it fires → the roll is removed', () => {
+    const doc = docWithRoll({ x: 40, y: 60 })
+    expect(roll(doc)).toBeTruthy()
+    // the user then takes the INITIAL ball away too — the carry that caused the roll is gone
+    moveBallStartInDraft(doc, { x: 44, y: 60 }, null)
+    relayoutStepsInDraft(doc)
+    expect(roll(doc)).toBeUndefined()
+    expect(validateDocument(doc)).toHaveLength(0)
+  })
+
   it('turns into a REAL (visible) pass the moment a receiver takes it', () => {
     const other = filled().getDocument().players[1]!
     const doc = docWithRoll({ x: other.home.x, y: other.home.y })
