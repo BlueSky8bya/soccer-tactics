@@ -49,6 +49,10 @@ function displayD(
 
 function segClass(seg: Segment): string | undefined {
   if (seg.kind === 'travel') {
+    // A takeaway's consequence roll shows like every other movement — dashed line + badge
+    // (user 2026-08-22: 점선이랑 단계 배지도 다른 것들처럼) — but fainter: the ball ROLLS
+    // loose there, nobody kicked it.
+    if (seg.implicit) return styles.pathLoose
     if (seg.travelKind === 'shot') return styles.pathShot
     if (seg.flight === 'lofted' || seg.travelKind === 'cross') return styles.pathLofted
     return styles.pathPass
@@ -67,9 +71,6 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
     const entitySelected = p.selectedEntityIds.includes(track.entityId)
     for (const seg of track.segments) {
       if (!('path' in seg) || seg.path.waypoints.length < 2) continue
-      // Consequence rolls (takeaway) play but are never DRAWN — the user placed a ball there,
-      // they did not author a path (user 2026-08-22: Alt 없이 경로가 그려져).
-      if (seg.kind === 'travel' && seg.implicit) continue
       const att = p.attachedStart && p.attachedStart.segmentId === seg.id ? p.attachedStart : null
       const shown: Path =
         att && seg.path.waypoints[0]?.id === att.waypointId

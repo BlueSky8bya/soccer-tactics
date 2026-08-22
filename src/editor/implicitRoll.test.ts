@@ -80,10 +80,10 @@ describe('implicit consequence rolls', () => {
     expect(validateDocument(bad).some((e) => e.includes('implicit'))).toBe(true)
   })
 
-  it('stays out of the authored step counts', () => {
+  it('shows in the step counts like any other movement (user 2026-08-22: 배지도 나오게)', () => {
     const doc = docWithRoll({ x: 40, y: 60 })
-    // step 1 has the run; step 2 holds ONLY the consequence roll → not an authored move
-    expect(stepCounts(doc)[1]).toBe(0)
+    // step 1 has the run; step 2 holds the roll — it plays there, so the bar says so
+    expect(stepCounts(doc)[1]).toBe(1)
   })
 
   it('dies with its cause: no possession before it fires → the roll is removed', () => {

@@ -2370,15 +2370,10 @@ export function SimplePitch() {
   }, [doc, compiled])
 
   // Geometric pick inputs (PLAN-007 M1): sampled FULL paths, cached by segment identity.
-  // Implicit rolls are invisible, so they must be unpickable too — a line that cannot be seen
-  // must never swallow a press.
   const pickSegments: PickSegment[] = doc.scenes[0]
     ? sceneTracks(doc).flatMap((tr) =>
         tr.segments
-          .filter(
-            (sg) =>
-              'path' in sg && !sg.id.startsWith('gen-') && !(sg.kind === 'travel' && sg.implicit),
-          )
+          .filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
           .map((sg) => ({
             segId: sg.id,
             entityId: tr.entityId,
@@ -2698,9 +2693,7 @@ export function SimplePitch() {
   const badgeAnchors = doc.scenes[0]
     ? doc.scenes[0].timeline.tracks.flatMap((tr) =>
         tr.segments
-          .filter(
-            (s) => 'path' in s && !s.id.startsWith('gen-') && !(s.kind === 'travel' && s.implicit),
-          )
+          .filter((s) => 'path' in s && !s.id.startsWith('gen-'))
           .map((s) => {
             const path = (s as { path: Path }).path
             const lut = buildPathLUT(path)

@@ -248,6 +248,13 @@
   stroke-dasharray: 6 5;
 }
 
+/* A takeaway's consequence roll: same grammar as a pass (dashed + badge) but visibly a
+ * LOOSE ball — shorter dots, fainter (user 2026-08-22: 점선이랑 단계 배지도 나오게). */
+.pathLoose {
+  stroke-dasharray: 2 4;
+  opacity: 0.6;
+}
+
 .pathLofted {
   stroke-dasharray: 2 5;
   stroke-width: 3px;

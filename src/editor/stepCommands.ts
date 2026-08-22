@@ -43,7 +43,6 @@ export function stepCounts(doc: TacticDocument): number[] {
   for (const track of sceneOf(doc).timeline.tracks)
     for (const s of track.segments) {
       if (!('path' in s) || s.id.startsWith(GEN_PREFIX)) continue
-      if (s.kind === 'travel' && s.implicit) continue // consequence rolls are not authored moves
       counts[stepOf(s) - 1]!++
     }
   return counts

@@ -2426,3 +2426,19 @@ Change: relayout 앵커 라운드에 전제 검사 — implicit travel은 발화
 
 Validation: typecheck/lint/build/harness PASS, 289 tests(implicitRoll 4 — 신규 "dies with its
 cause"), doubleball 재현→수정 확인(worst 0, 잔상 중복 0), 프로브 9종 무회귀.
+
+## CHG-20260822-180 — 빼앗기 롤을 다른 움직임처럼 표시 (점선 + 단계 배지), 타이밍 실측 확정
+
+Trigger: 사용자 — "m-1단계까지 진행하고 놓은 자리까지 m단계에 진행되어야 하는 거 아냐? 그리고
+점선이랑 단계 배지도 다른 것들처럼 나오게."
+
+타이밍(rolltiming.cjs 실측): 이미 사용자 공식 그대로였다 — 정션 1(1단계 끝)의 공을 빼앗으면 1단계
+캐리는 그대로, 롤 = 2단계(런 2와 같은 창, 같은 시작), 놓은 지점에 정지. CHG-179 보고의 문구("m단계
+까지 진행")가 모호했던 것. 동작 변경 없음, 계약 프로브로 창 일치를 고정.
+
+표시(사용자 결정 전환, CHG-175의 숨김을 명시적으로 대체): implicit 롤도 라인 + 배지 + 픽 + 스텝바
+카운트 — 단 `pathLoose`(짧은 점, 60%)로 "찬 게 아니라 굴러간 공"임이 구분되게. `implicit` 플래그와
+의미(원인 소멸 시 소멸, 수신 시 승격)는 유지 — 렌더만 복원.
+
+Validation: typecheck/lint/build/harness PASS, 289 tests(카운트 테스트 반전), rolltiming 7/7
+(창 일치·소유 타임라인·라인·배지 3), repro3 갱신 포함 프로브 7종 PASS, marathon 360제스처 0실패.
