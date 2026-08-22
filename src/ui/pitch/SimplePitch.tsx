@@ -34,6 +34,7 @@ import {
   stepRangeFor,
   lastBallMovedStep,
   ballMovesFromStep,
+  momentSpotAt,
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
@@ -255,6 +256,8 @@ type Gesture =
       travelSegId: Id
       startClient: { x: number; y: number }
       began: boolean
+      /** Pulled clear of the receiver's ring — the pass end follows the hand (hysteresis). */
+      detached?: boolean
     }
 
 /**
@@ -690,9 +693,29 @@ export function SimplePitch() {
 
     if (g.type === 'orbit-receive') {
       setOrbitGrabSeg(null)
+      setCarryRing(null)
       if (g.began) {
         if (commit) {
-          core.update((d) => relayoutStepsInDraft(d as TacticDocument))
+          core.update((d) => {
+            const doc2 = d as TacticDocument
+            if (g.detached) {
+              // The ball was pulled OFF the receiver: the pass now ends wherever it was dropped.
+              // Re-derive the destination moment and whoever is actually there — dropping it on
+              // the grass takes possession away entirely (user 2026-08-22: 소유권 뺏김도 없고).
+              // Resolve BEFORE the relayout: with the stale receiver still on the segment, the
+              // arrival anchor would snap the end straight back to them.
+              const f = findSegment(doc2, g.travelSegId)
+              if (f && f.segment.kind === 'travel') {
+                const wps = f.segment.path.waypoints
+                const end = wps[wps.length - 1]!.p
+                const tgt = momentSpotAt(doc2, end)
+                if (tgt) f.segment.target = tgt
+                else delete f.segment.target
+              }
+              resolvePassReceiverInDraft(doc2, g.travelSegId)
+            }
+            relayoutStepsInDraft(doc2)
+          })
           core.commit()
         } else core.cancel()
       }
@@ -955,7 +978,35 @@ export function SimplePitch() {
         settleAndAttach()
       }
     } else {
+      // A single player dropped beside a LOOSE ball takes it (the highlight promised it).
+      const d0 = core.getDocument()
+      const taker =
+        g.started && g.id !== doc.ball.id && g.group.size === 1 && !d0.ball.initialHolderId
+          ? d0.players.find(
+              (p) =>
+                p.id === g.id &&
+                Math.hypot(p.home.x - d0.ball.home.x, p.home.y - d0.ball.home.y) <=
+                  ATTACH_RADIUS_M,
+            )
+          : undefined
+      if (taker) {
+        core.update((d) => {
+          const doc2 = d as TacticDocument
+          moveBallStartInDraft(doc2, doc2.ball.home, taker.id)
+          relayoutStepsInDraft(doc2)
+        })
+      }
       core.commit()
+      if (taker) {
+        pulseKey.current++
+        setPulses((prev) => ({
+          ...prev,
+          [taker.id]: pulseKey.current,
+          [doc.ball.id]: pulseKey.current,
+        }))
+        setAttachFx({ id: taker.id, key: pulseKey.current })
+        ui.flashToast(t('ball.attached', { n: taker.number }))
+      }
     }
     st.setDrag(null)
   }
@@ -1680,6 +1731,21 @@ export function SimplePitch() {
         g.began = true
         core.begin('Set receive side')
       }
+      /*
+       * SAME grammar as the held ball at its start (user 2026-08-22: 반대쪽 공은 빙빙 돌기만 해):
+       * inside the ring the drag picks the catch side; pulled past it, the ball comes AWAY — the
+       * pass end follows the hand, and dropping it elsewhere takes the ball off this receiver.
+       * One mechanism, both ends of the pass, with the same visible ring and hysteresis.
+       */
+      const dist = Math.hypot(pt.x - g.center.x, pt.y - g.center.y)
+      if (!g.detached && dist > CARRY_DETACH_M) g.detached = true
+      else if (g.detached && dist < CARRY_REATTACH_M) g.detached = false
+      setCarryRing({ at: g.center, detached: !!g.detached })
+      if (g.detached) {
+        const free = clampToPitch(pt, doc.pitch)
+        core.update((d) => moveTravelEndInDraft(d as TacticDocument, g.travelSegId, free))
+        return
+      }
       const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
       const target = { x: g.center.x + off.x, y: g.center.y + off.y }
       core.update((d) => moveTravelEndInDraft(d as TacticDocument, g.travelSegId, target, g.center))
@@ -1823,6 +1889,19 @@ export function SimplePitch() {
         if (g.ballOrigin && !ballInGroup)
           doc2.ball.home = { x: doc2.ball.home.x + inc.x, y: doc2.ball.home.y + inc.y }
       })
+      /*
+       * A single PLAYER carried next to a LOOSE ball is about to take it — mirror of dropping the
+       * ball on a player, same radius, same highlight (user 2026-08-22: 공 주위로 선수를 가져갈
+       * 때는 왜 자동으로 안 빨렸지). Guards: single drags only, so moving a formation never steals
+       * the ball by accident; loose only, so taking a HELD ball stays an explicit ball gesture.
+       */
+      if (g.group.size === 1 && g.id !== doc.ball.id && !core.getDocument().ball.initialHolderId) {
+        const bh = core.getDocument().ball.home
+        const nearBall = Math.hypot(raw.x - bh.x, raw.y - bh.y) <= ATTACH_RADIUS_M
+        // the BALL lights up — it is what is about to be taken (the dragged player is already
+        // drawn selected, so lighting them says nothing)
+        setDropTargetId(nearBall ? doc.ball.id : null)
+      }
       st.setDrag({ id: g.id, grab: g.grab, raw, guides: [], snapped: false })
       return
     }
@@ -2528,7 +2607,7 @@ export function SimplePitch() {
             (ui.playback.t === 0 && !isPlaying ? doc.ball.initialHolderId : undefined)
           return hid ? teamColorOf(doc, hid) : undefined
         })()}
-        selected={selection.includes(doc.ball.id)}
+        selected={selection.includes(doc.ball.id) || dropTargetId === doc.ball.id}
         hovered={hoverKey === `ball:${doc.ball.id}`}
         dragging={drag?.id === doc.ball.id}
         pressed={pressedId === doc.ball.id && drag?.id !== doc.ball.id}
