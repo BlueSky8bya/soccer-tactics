@@ -263,6 +263,7 @@ type Op =
   | 'dragRigid'
   | 'moveBall'
   | 'ballMoment'
+  | 'passToMoment'
   | 'undo'
   | 'redo'
   | 'addPlayer'
@@ -281,6 +282,7 @@ const OPS: Op[] = [
   'dragRigid',
   'moveBall',
   'ballMoment',
+  'passToMoment',
   'undo',
   'redo',
   'addPlayer',
@@ -371,6 +373,18 @@ export function session(seed: number, steps: number, out?: { core?: EditorCore }
         const step = 1 + Math.floor(rand() * MAX_STEP)
         addStepPass(core, makePath([from, to]).waypoints, step, undefined)
         did = `pass step≥${step} → #${target.number}`
+        break
+      }
+      case 'passToMoment': {
+        // aim the ball exactly at a player's FUTURE SPOT — the destination-moment path (D9)
+        const runs = segs.filter((s) => s.kind === 'move')
+        if (!runs.length) continue
+        const r = pick(runs)
+        const from = restOf(core.getDocument().ball.id)
+        if (Math.hypot(r.last.x - from.x, r.last.y - from.y) < 4) continue
+        const step = 1 + Math.floor(rand() * MAX_STEP)
+        addStepPass(core, makePath([from, r.last]).waypoints, step, undefined)
+        did = `pass → moment (step-${r.step} end of ${r.entityId})`
         break
       }
       case 'ballMoment': {

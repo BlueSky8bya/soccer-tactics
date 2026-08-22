@@ -5,7 +5,7 @@ import {
   type CSSProperties,
   type PointerEvent as RPointerEvent,
 } from 'react'
-import type { Id, Path, TacticDocument, Vec2 } from '@/domain/types'
+import type { Id, Path, TacticDocument, Vec2, Waypoint } from '@/domain/types'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
 import { clampToPitch, truncateBallPathAtGoal } from '@/editor/geometry'
@@ -127,8 +127,6 @@ const strokeLength = (pts: readonly Vec2[]): number => {
   return d
 }
 const CLICK_SLOP_M = 0.8
-/** Alt+clicking back on the armed anchor disarms it. */
-const AIM_CANCEL_M = 2.2
 const CARRY_DETACH_M = 3.4
 const CARRY_REATTACH_M = 2.9
 
@@ -180,6 +178,8 @@ type Gesture =
       points: Vec2[]
       minStep?: number
       atStep?: number
+      /** The actual press point — the destination when this press turns out to be a landing. */
+      pressPt?: Vec2
       /** Subject captured at PRESS: if this turns out to be a click, its path lands here. */
       landFor?: DrawSubject
       /** Started on a GHOST — a moment, which selection cannot name, so a click arms it. */
@@ -306,22 +306,15 @@ export function SimplePitch() {
   const [detachPos, setDetachPos] = useState<Vec2 | null>(null)
   const [flingPos, setFlingPos] = useState<{ pos: Vec2; spin: number } | null>(null)
   /**
-   * Click-to-click path authoring (user 2026-08-22). Alt+CLICK a subject to arm it, Alt+CLICK
-   * again to land a straight movement there; bend it afterwards by dragging the line. Alt+DRAG
-   * still draws freehand — this is the pointer-only route beside it, not a replacement.
+   * Click-to-click path authoring (user 2026-08-22). Click names the SUBJECT (any token, live or
+   * faded — selection is the only state); Alt+CLICK lands a straight movement to the clicked
+   * point; bend it afterwards by dragging the line. Alt+DRAG still draws freehand. There is no
+   * separate "armed" state any more — a third selection-like state kept falling out of sync with
+   * the real one (사진 3: 엉뚱한 엔티티에서 안내선).
    */
-  const [aim, setAim] = useState<DrawSubject | null>(null)
   const [aimTo, setAimTo] = useState<Vec2 | null>(null)
-  /** endGesture runs from a ref and must not close over a stale `aim`. */
-  const aimRef = useRef(aim)
-  aimRef.current = aim
-  /** Alt held with ONE entity selected: the same guide, without an arming click. */
+  /** Alt held with a subject standing: the rubber-band guide is showing. */
   const quickAimRef = useRef(false)
-  /**
-   * The subject a click would land a path FOR, when the selection alone names it. Read from a ref
-   * because endGesture runs outside the render that computed it.
-   */
-  const quickAimSubjectRef = useRef<DrawSubject | null>(null)
   /**
    * WHICH ball token the last press grabbed — the moment the ball leaves from.
    *
@@ -453,7 +446,13 @@ export function SimplePitch() {
     // A ball path INTO the goal mouth ends in the net — never through it (user 2026-08-21).
     const goalCut = entityId === doc.ball.id ? truncateBallPathAtGoal(raw, doc.pitch) : null
     if (goalCut) raw = goalCut
-    const waypoints = beautifyStroke(raw, () => newIdFor('w'))
+    // A TWO-point raw is a click landing: both ends were chosen deliberately, so neither hand
+    // jitter nor the axis snap has anything to correct — snapping moved a clicked destination
+    // 1.7 m sideways (사진 2 잔향). Drags keep the full beautify.
+    const waypoints: Waypoint[] =
+      raw.length === 2
+        ? raw.map((p) => ({ id: newIdFor('w'), p: { x: p.x, y: p.y } }))
+        : beautifyStroke(raw, () => newIdFor('w'))
     if (goalCut) {
       // beautify may drift the tip — pin the end back inside the netting
       const lastWp = waypoints[waypoints.length - 1]
@@ -764,38 +763,29 @@ export function SimplePitch() {
        * leaves Alt+DRAG on a token drawing that token's own path exactly as before.
        *
        * ONE rule: a click LANDS for whoever is standing, whatever is under it — grass, a token, or
-       * a ghost. Only when nobody stands does the click NAME a subject, and naming a token is just
-       * selecting it, which `startDraw` already did (user 2026-08-22: 단축키 최대한 줄이는 방향으로).
-       * A GHOST is the single thing selection cannot name, because it is a MOMENT rather than an
-       * entity, so that is the one case that still holds its own state.
+       * a ghost. When nobody stands, the click NAMES a subject — and naming is only SELECTION,
+       * which `startDraw` already did (a ball ghost also recorded its moment). No armed state:
+       * the next Alt+click reads the subject straight from the selection.
        */
       if (strokeLength(g.points) < CLICK_SLOP_M) {
         const subject = g.landFor
         if (subject && subject.entityId !== g.entityId) {
-          setAim(null)
           setAimTo(null)
-          finishDraw(subject.entityId, [subject.from, g.points[0]!], subject.minStep, subject.atStep)
+          finishDraw(
+            subject.entityId,
+            [subject.from, g.pressPt ?? g.points[0]!],
+            subject.minStep,
+            subject.atStep,
+          )
           return
-        }
-        if (g.fromGhost) {
-          setAim({
-            entityId: g.entityId,
-            from: g.points[0]!,
-            minStep: g.minStep,
-            atStep: g.atStep,
-          })
-          setAimTo(null)
-          ui.flashToast(t('simple.aimArmed'))
         }
         return
       }
-      setAim(null)
       finishDraw(g.entityId, g.points, g.minStep, g.atStep)
       return
     }
 
     if (g.type === 'aim') {
-      setAim(null)
       setAimTo(null)
       setSnapPos(null)
       if (!commit) return
@@ -1016,13 +1006,6 @@ export function SimplePitch() {
       if (gesture.current) {
         e.preventDefault()
         endGestureRef.current(false)
-        return
-      }
-      // an armed click-to-click aim is a live gesture too, even with no pointer down
-      if (aimRef.current) {
-        e.preventDefault()
-        setAim(null)
-        setAimTo(null)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -1086,16 +1069,43 @@ export function SimplePitch() {
   }
 
   /**
+   * The standing SUBJECT — who an Alt gesture would draw for.
+   *
+   * Named by whatever is selected: an entity directly, or a MOVEMENT — clicking any faded token
+   * picked "that entity at that moment", so the movement's entity is the subject (사진 3,
+   * 2026-08-22: 마지막 고스트를 클릭해도 Alt 안내선이 나와야지). One selection model, no third
+   * "armed" state to fall out of sync.
+   */
+  const deriveSubject = (selection: readonly Id[], segId: Id | null): DrawSubject | null => {
+    if (selection.length === 1) return { entityId: selection[0]!, ...subjectAnchor(selection[0]!) }
+    if (segId) {
+      const f = findSegment(core.getDocument(), segId)
+      if (f && 'path' in f.segment) {
+        const entityId = f.track.entityId
+        // A selected BALL movement names a MOMENT, exactly as clicking its faded token does: the
+        // next pass leaves from where this one lands, overwriting anything after (ADR-0009 v25).
+        if (entityId === doc.ball.id && f.segment.kind === 'travel') {
+          const wps = f.segment.path.waypoints
+          return {
+            entityId,
+            from: wps[wps.length - 1]!.p,
+            atStep: stepOf(f.segment) + 1,
+          }
+        }
+        return { entityId, ...subjectAnchor(entityId) }
+      }
+    }
+    return null
+  }
+
+  /**
    * Who a CLICK here would draw for, read BEFORE the press changes anything. `startDraw` selects
    * the pressed entity on pointerdown, so by release the previous subject is gone — it has to be
    * captured now or not at all.
    */
   const subjectAtPress = (): DrawSubject | null => {
-    const armed = aimRef.current
-    if (armed) return armed
-    const sel = useUiStore.getState().selection
-    if (sel.length !== 1) return null
-    return { entityId: sel[0]!, ...subjectAnchor(sel[0]!) }
+    const st = useUiStore.getState()
+    return deriveSubject(st.selection, st.selectedSegmentId)
   }
 
   const startDraw = (
@@ -1106,6 +1116,11 @@ export function SimplePitch() {
     landFor?: DrawSubject,
     fromGhost?: true,
     atStep?: number,
+    /** Where the pointer actually PRESSED. A ghost press starts its own draw at the entity's rest,
+     *  so when the press turns out to be a click LANDING for a standing subject, the destination
+     *  has to be this — the spot under the finger — not the draw's start (사진 1: 고스트를 찍었는데
+     *  엔티티의 마지막 위치로 감). */
+    pressPt?: Vec2,
   ) => {
     const st = useUiStore.getState()
     st.returnToAuthoringStart()
@@ -1122,6 +1137,7 @@ export function SimplePitch() {
       landFor,
       fromGhost,
       atStep,
+      pressPt: pressPt ?? startPos,
     }
     st.setPathDraft({ entityId, points: [startPos] })
     svgRef.current?.setPointerCapture(pointerId)
@@ -1193,32 +1209,6 @@ export function SimplePitch() {
         gesture.current = { type: 'annot-erase', pointerId: e.pointerId, began: false }
         eraseAt(pt)
       }
-      svg.setPointerCapture(e.pointerId)
-      return
-    }
-
-    // Armed by a previous Alt+click: THIS press lands the endpoint, wherever it is and whatever
-    // sits under it. Pressing the anchor again disarms — an armed state must always be escapable.
-    if (aim && !e.altKey) {
-      setAim(null)
-      setAimTo(null)
-    }
-    if (aim && e.altKey && e.button === 0) {
-      if (Math.hypot(pt.x - aim.from.x, pt.y - aim.from.y) <= AIM_CANCEL_M) {
-        setAim(null)
-        setAimTo(null)
-        return
-      }
-      gesture.current = {
-        type: 'aim',
-        pointerId: e.pointerId,
-        entityId: aim.entityId,
-        from: aim.from,
-        minStep: aim.minStep,
-        atStep: aim.atStep,
-        to: pt,
-      }
-      setAimTo(pt)
       svg.setPointerCapture(e.pointerId)
       return
     }
@@ -1348,7 +1338,7 @@ export function SimplePitch() {
       {
         liveTokenNearGhost: !!yieldId,
         chainActive: !!chain.current,
-        soloSelection: st.selection.length === 1,
+        soloSelection: !!subjectAtPress(),
       },
     )
 
@@ -1379,19 +1369,21 @@ export function SimplePitch() {
           landFor,
           true,
           ghostMoment ? ghostMoment.step + 1 : undefined,
+          // land on the GHOST the finger is on, not on this entity's rest
+          { x: ghostTop!.pos.x, y: ghostTop!.pos.y },
         )
         return
       }
       case 'draw-to-point': {
-        // The selection already named the subject; this press only says WHERE. Start from where
-        // that entity currently ends up, which is the same anchor a chained drag would use.
-        const subject = st.selection[0]!
+        // The selection already named the subject; this press only says WHERE. The subject and its
+        // anchor come from the SAME derivation the guide used, entity or selected movement alike.
+        const subject = subjectAtPress()
+        if (!subject) return
         st.returnToAuthoringStart()
         gesture.current = {
           type: 'aim',
           pointerId: e.pointerId,
-          entityId: subject,
-          ...subjectAnchor(subject),
+          ...subject,
           to: pt,
         }
         setAimTo(pt)
@@ -1560,9 +1552,9 @@ export function SimplePitch() {
     const g = gesture.current
     if (!g || g.pointerId !== e.pointerId) {
       if (!g) {
-        // armed (or Alt held over a selection): the rubber band follows the cursor, so what the
+        // Alt held with a subject standing: the rubber band follows the cursor, so what the
         // next click will do is visible before it happens
-        if (aimRef.current || quickAimRef.current) {
+        if (quickAimRef.current) {
           const sv = svgRef.current
           if (sv) setAimTo(clampToPitch(clientToPitch(sv, e.clientX, e.clientY), doc.pitch))
         }
@@ -2002,12 +1994,12 @@ export function SimplePitch() {
           ?.entityId
       : undefined) ?? doc.ball.id,
   )
+  // The guide's subject comes from the SAME derivation the landing uses — an entity selection or a
+  // selected movement's entity (사진 3) — so what the guide shows and what the click does can never
+  // disagree.
   const quickAim =
-    drawKeyHeld && !aim && ui.selection.length === 1 && !gesture.current
-      ? { entityId: ui.selection[0]!, ...subjectAnchor(ui.selection[0]!) }
-      : null
+    drawKeyHeld && !gesture.current ? deriveSubject(ui.selection, ui.selectedSegmentId) : null
   quickAimRef.current = !!quickAim
-  quickAimSubjectRef.current = quickAim
   const attachedStart = deriveAttachedPathStart(doc, compiled, ui.selectedSegmentId)
 
   // A-05a rest hierarchy: paths outside the CURRENT step recede (0.55) but stay readable.
@@ -2527,7 +2519,7 @@ export function SimplePitch() {
           aria-hidden="true"
         />
       )}
-      {quickAim && !aim && (
+      {quickAim && (
         <g
           className={styles.aimGuide}
           aria-hidden="true"
@@ -2550,31 +2542,6 @@ export function SimplePitch() {
           )}
         </g>
       )}
-      {aim &&
-        (() => {
-          // The aim depicts THIS entity's next movement, so it is that entity's colour — blue
-          // player, blue guide; ball, white guide (user 2026-08-22).
-          const c = entityColorOf(doc, aim.entityId)
-          return (
-            <g
-              className={styles.aimGuide}
-              aria-hidden="true"
-              style={{ '--st-entity': c } as CSSProperties}
-            >
-              {aimTo && (
-                <line
-                  x1={aim.from.x}
-                  y1={aim.from.y}
-                  x2={aimTo.x}
-                  y2={aimTo.y}
-                  className={styles.aimLine}
-                />
-              )}
-              <circle cx={aim.from.x} cy={aim.from.y} r={1.15} className={styles.aimAnchor} />
-              {aimTo && <circle cx={aimTo.x} cy={aimTo.y} r={0.7} className={styles.aimTip} />}
-            </g>
-          )
-        })()}
       {slingAim && (
         <g className={styles.slingAim} aria-hidden="true">
           <line

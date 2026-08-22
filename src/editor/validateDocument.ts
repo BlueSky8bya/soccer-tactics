@@ -184,6 +184,12 @@ export function validateDocument(input: unknown): string[] {
               !(isStr(sg.receiverId) && playerIds.has(sg.receiverId))
             )
               bad(`${SP}.receiverId`, 'unknown player')
+            if (sg.target !== undefined) {
+              const tgt = sg.target as Record<string, unknown>
+              if (!isObj(tgt) || !(isStr(tgt.entityId) && playerIds.has(tgt.entityId)))
+                bad(`${SP}.target.entityId`, 'unknown player')
+              else if (!isNum(tgt.step)) bad(`${SP}.target.step`, 'must be a number')
+            }
           }
           if (!['move', 'hold', 'possessed', 'travel', 'loose'].includes(kind))
             bad(`${SP}.kind`, `unknown ${kind}`)

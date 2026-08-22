@@ -189,6 +189,13 @@ export type BallSegment =
       path: Path
       receiverId?: Id
       flight?: 'ground' | 'lofted'
+      /**
+       * The DESTINATION MOMENT the user aimed at: this pass arrives exactly when `entityId`'s
+       * step-`step` movement ends, at that junction. Written when the pass was aimed at a future
+       * spot (a faded token); absent for a pass to a point on the grass. Additive-optional —
+       * older documents simply have plain flights (ADR-0010 D4/D9).
+       */
+      target?: { entityId: Id; step: number }
     })
   | (SegmentBase & { kind: 'loose'; position?: Vec2 })
 

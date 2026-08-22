@@ -74,6 +74,12 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: 'Shift+잔디 드래그', hint: '기존 선택에 박스 추가', compact: true, cues: ['shift'] },
   { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)', cues: ['ctrl'] },
   {
+    label: '클릭',
+    hint: '대상 선택 — 선수·공·흐린 토큰 어디든 (고른 대상이 다음 Alt의 주인공)',
+    compact: true,
+    cues: ['ball', 'player', 'path'],
+  },
+  {
     label: '겹친 곳 다시 클릭',
     hint: '겹쳐 있는 다음 대상 선택 (선수→고스트→경로 순환)',
     compact: true,
@@ -94,25 +100,29 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: '선수 클릭', hint: '등번호·이름·포지션 편집', compact: true, cues: ['player'] },
 ]
 
-/** 경로 그리기·다듬기·재생. */
+/**
+ * 경로 그리기·다듬기·재생 — ONE grammar (2026-08-22 대개편): a click picks the SUBJECT (any token,
+ * live or faded), Alt+click sends it to the clicked point. Aiming at a faded token is a destination
+ * MOMENT: the ball arrives exactly when that movement does. The old list said the same thing twice
+ * (once for tokens, once for faded tokens) because faded tokens used to be a special state — they
+ * no longer are, so the rows halved (user: 단축키 설명만 봐도 2배가 되어있잖아).
+ */
 export const ANIM_BINDINGS: Binding[] = [
-  { label: 'Alt+드래그', hint: '선수는 이동 경로, 공은 패스', compact: true, cues: ['alt', 'ball', 'player'] },
   {
     label: 'Alt+클릭',
-    hint: '고른 대상이 클릭한 곳까지 직선으로 — 잔디·선수·흐린 토큰 어디든 (휘는 건 나중에 선을 당겨서)',
+    hint: '고른 대상이 클릭한 곳까지 — 흐린 토큰을 찍으면 그 시점에 맞춰 도착 (스루패스)',
     compact: true,
-    cues: ['alt', 'ball', 'player'],
+    cues: ['alt', 'ball', 'player', 'path'],
   },
   {
-    label: '흐린 토큰 Alt+드래그·클릭',
-    hint: '그 엔티티의 다음 움직임을 이어 그리기 (어느 시점 토큰을 눌러도 마지막에서 이어져요)',
+    label: 'Alt+드래그',
+    hint: '같은 것을 곡선으로 한 번에 — 선수는 이동 경로, 공은 패스',
     compact: true,
-    cues: ['alt', 'path'],
+    cues: ['alt', 'ball', 'player', 'path'],
   },
   { label: '흐린 토큰 드래그', hint: '그 움직임의 끝 위치 미세조정', compact: true, cues: ['path'] },
   { label: '경로 클릭', hint: '선택 후 Delete 삭제, 숫자키로 단계 변경', compact: true, cues: ['path'] },
   { label: '경로 드래그', hint: '잡은 지점을 당겨 곡선으로 휘기', compact: true, cues: ['path'] },
-  { label: '배지/경로 클릭', hint: '움직임 선택 — 단계·재생·삭제 카드 표시' },
   { label: '단계 1~9', hint: '같은 번호는 같이, 다음 번호는 이어서' },
 ]
 

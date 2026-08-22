@@ -19,7 +19,6 @@ import {
   ensureTrack,
   findSegment,
   findTrack,
-  lastKnownPosition,
   passerFor,
   possessTrigger,
   removeSegmentInDraft,
@@ -84,6 +83,17 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
         delete s.receiverId
         // nobody is waiting for it any more: it is a ball rolling into space
         if (s.travelKind === 'pass') s.travelKind = 'loose'
+      }
+      // A destination MOMENT names a specific movement. Delete that movement — or its player — and
+      // the moment no longer exists, so the pass reverts to a plain flight to its drawn endpoint.
+      if (s.kind === 'travel' && s.target) {
+        const run = scene.timeline.tracks
+          .find((tr) => tr.entityId === s.target!.entityId)
+          ?.segments.find(
+            (r) =>
+              'path' in r && !r.id.startsWith(GEN_PREFIX) && stepOf(r) === s.target!.step,
+          )
+        if (!alive.has(s.target.entityId) || !run) delete s.target
       }
     }
     const ids = new Set(track.segments.map((s) => s.id))
@@ -172,37 +182,33 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     }
   }
   /**
-   * THROUGH BALL (user 2026-08-20): a pass aimed at a receiver's FUTURE spot must ARRIVE when the
-   * runner does — stretch the pass duration, never shrink it. It runs INSIDE the anchor loop
-   * because it moves the arrival instant, which moves the anchor: sequenced after the snap it left
-   * the pass attached to wherever the receiver stood at the un-stretched arrival, metres from
-   * where they actually collect it (fuzz seed 572). `deriveTimings` resets durations to the step
-   * window, so this re-applies at the top of every round.
+   * THROUGH BALL: a pass aimed at a DESTINATION MOMENT (`seg.target`, ADR-0010 D9) arrives exactly
+   * when that movement ends — stretched OR shrunk, because the moment is the user's answer, not a
+   * floor. The old version guessed the target by distance (any of the receiver's run-ends within
+   * 3 m) and only ever stretched; combined with the arrival anchor re-deriving the endpoint from
+   * "wherever the receiver is at arrival", the guess could slide a pass a whole leg past the spot
+   * the user clicked (사진 1·2, 2026-08-22: 1단계 고스트를 찍었는데 2단계 끝으로 이어짐). An
+   * explicit moment pins the fixed point to the click.
+   *
+   * It runs INSIDE the anchor loop because it moves the arrival instant, which moves the anchor
+   * (fuzz seed 572); `deriveTimings` resets durations to the step window, so this re-applies at
+   * the top of every round.
    */
   const syncThroughBall = (): void => {
     for (const track of scene.timeline.tracks) {
       if (track.entityKind !== 'ball') continue
       for (const seg of track.segments) {
-        if (seg.kind !== 'travel' || !seg.receiverId || seg.id.startsWith(GEN_PREFIX)) continue
+        if (seg.kind !== 'travel' || !seg.target || seg.id.startsWith(GEN_PREFIX)) continue
         if (seg.trigger.type !== 'at' || !('duration' in seg.timing)) continue
-        const end = seg.path.waypoints[seg.path.waypoints.length - 1]?.p
-        if (!end) continue
-        const rTrack = scene.timeline.tracks.find((tr) => tr.entityId === seg.receiverId)
-        if (!rTrack) continue
-        for (const run of rTrack.segments) {
-          if (!('path' in run) || run.id.startsWith(GEN_PREFIX)) continue
-          if (run.trigger.type !== 'at' || !('duration' in run.timing)) continue
-          const rEnd = run.path.waypoints[run.path.waypoints.length - 1]?.p
-          // Pass ends rest at the receiver's CARRIED spot (2.0–2.6m) — the match tolerance
-          // must cover that attachment distance.
-          if (!rEnd || Math.hypot(rEnd.x - end.x, rEnd.y - end.y) > 3.0) continue
-          const receiverArrives = run.trigger.t + run.timing.duration
-          const synced = receiverArrives - seg.trigger.t
-          if (synced > seg.timing.duration) {
-            seg.timing.duration = Math.round(synced * 100) / 100
-          }
-          break
-        }
+        const rTrack = scene.timeline.tracks.find((tr) => tr.entityId === seg.target!.entityId)
+        const run = rTrack?.segments.find(
+          (r) => 'path' in r && !r.id.startsWith(GEN_PREFIX) && stepOf(r) === seg.target!.step,
+        )
+        if (!run || run.trigger.type !== 'at' || !('duration' in run.timing)) continue
+        const momentEnds = run.trigger.t + run.timing.duration
+        const synced = momentEnds - seg.trigger.t
+        // A moment that ends before the ball even leaves cannot be met — plain flight instead.
+        if (synced > 0.05) seg.timing.duration = Math.round(synced * 100) / 100
       }
     }
   }
@@ -348,25 +354,61 @@ export function addStepRun(
       step: stepOf({ step }),
     })
     relayoutStepsInDraft(doc)
-    // A run drawn AFTER a loose pass can become its receiver (user 2026-08-21 사진4): re-resolve
-    // any receiverless pass ending near this run's end so the ball attaches to the carry ring
-    // instead of stacking exactly on the player ghost.
+    // A run drawn AFTER a loose pass can become its receiver (user 2026-08-21 사진4): a receiverless
+    // pass ending near this run's end was AIMED at this future spot — it just did not exist yet.
+    // Give it the destination moment, and the sync/anchor machinery does the rest.
     const runEnd = waypoints[waypoints.length - 1]?.p
     if (runEnd) {
       const ballTrack = findTrack(doc, doc.ball.id)
-      let resolved = false
+      let retargeted = false
       for (const sg of ballTrack?.segments ?? []) {
-        if (sg.kind !== 'travel' || sg.id.startsWith('gen-') || sg.receiverId) continue
+        if (sg.kind !== 'travel' || sg.id.startsWith('gen-') || sg.receiverId || sg.target)
+          continue
         const end = sg.path.waypoints[sg.path.waypoints.length - 1]?.p
         if (end && Math.hypot(end.x - runEnd.x, end.y - runEnd.y) <= RECEIVE_RADIUS_M) {
-          resolvePassReceiverInDraft(doc, sg.id)
-          resolved = true
+          sg.target = { entityId: playerId, step }
+          retargeted = true
         }
       }
-      if (resolved) relayoutStepsInDraft(doc)
+      if (retargeted) {
+        relayoutStepsInDraft(doc)
+        for (const sg of ballTrack?.segments ?? [])
+          if (sg.kind === 'travel' && sg.target?.entityId === playerId && !sg.receiverId)
+            resolvePassReceiverInDraft(doc, sg.id)
+        relayoutStepsInDraft(doc)
+      }
     }
   })
   return id
+}
+
+/**
+ * The FUTURE SPOT (a faded token) at `pt`, if any: the end of a player's authored movement within
+ * `radius`. This is what turns a click or a drag-release into a destination MOMENT — derived from
+ * the document here, in one place, so the click flow and the drag flow cannot disagree
+ * (ADR-0010 D9). The ball's own spots are excluded: a destination moment names a receiver.
+ */
+export function momentSpotAt(
+  doc: TacticDocument,
+  pt: Vec2,
+  radius = 2.5,
+): { entityId: Id; step: number } | null {
+  let best: { entityId: Id; step: number } | null = null
+  let bestD = radius
+  for (const tr of sceneOf(doc).timeline.tracks) {
+    if (tr.entityKind !== 'player') continue
+    for (const sg of tr.segments) {
+      if (!('path' in sg) || sg.id.startsWith(GEN_PREFIX)) continue
+      const end = sg.path.waypoints[sg.path.waypoints.length - 1]?.p
+      if (!end) continue
+      const d = Math.hypot(end.x - pt.x, end.y - pt.y)
+      if (d < bestD) {
+        bestD = d
+        best = { entityId: tr.entityId, step: stepOf(sg) }
+      }
+    }
+  }
+  return best
 }
 
 /**
@@ -485,6 +527,15 @@ export function addStepPass(
         ...(off ? { offset: off } : {}),
       })
     }
+    /*
+     * The DESTINATION MOMENT (ADR-0010 D9). If the drawn endpoint lands on a player's future spot
+     * — a faded token — the user aimed at that MOMENT, and the pass must arrive exactly when it
+     * happens, at that junction. Derived here from the document, for the click flow and the drag
+     * flow alike, so the two can never disagree. A pass to anywhere else is a plain flight to the
+     * drawn point; whoever is physically there when it arrives receives it.
+     */
+    const endPt = waypoints[waypoints.length - 1]?.p
+    const target = endPt ? momentSpotAt(doc, endPt) : null
     track.segments.push({
       id,
       kind: 'travel',
@@ -493,6 +544,7 @@ export function addStepPass(
       timing: { speed: DEFAULT_PASS_SPEED },
       path: { waypoints },
       step: stepOf({ step }),
+      ...(target ? { target } : {}),
     })
     if (!doc.ball.initialHolderId && holder) doc.ball.initialHolderId = holder
     relayoutStepsInDraft(doc)
@@ -503,8 +555,14 @@ export function addStepPass(
 }
 
 /**
- * Receiver for a pass, tried in order: positions at the arrival time → resting (t=0) positions →
- * every authored future spot (ghosts) → each player's final position. First radius hit wins.
+ * Receiver for a pass: whoever is PHYSICALLY within reach of the endpoint at the arrival time.
+ *
+ * One candidate set, on purpose. The old fallbacks — resting positions, ghost spots, last-known
+ * positions — named receivers who were not there when the ball arrived, and the arrival anchor
+ * then dragged the endpoint to wherever that receiver actually was: aiming at a player's START
+ * teleported the pass a full leg to their run's end (사진 2, 2026-08-22). A pass aimed at a future
+ * spot reaches its receiver honestly instead, via `target`: the arrival is synced to that moment,
+ * so by the time this resolver looks, the receiver IS at the endpoint.
  * NOTE: mutates receiver/possession only — the CALLER runs relayoutStepsInDraft once
  * afterwards (single-pipeline rule, ADR-0010 / audit Q4).
  */
@@ -516,33 +574,15 @@ export function resolvePassReceiverInDraft(
   const compiled = compile(doc)
   const arrival = compiled.segmentTimes[segmentId]?.end ?? 0
   const rs = stateAt(compiled, doc, arrival)
-  const ghostSpots: { id: Id; pos: { x: number; y: number } }[] = []
-  for (const tr of sceneOf(doc).timeline.tracks) {
-    if (tr.entityKind !== 'player') continue
-    for (const sg of tr.segments) {
-      if (!('path' in sg) || sg.id.startsWith(GEN_PREFIX)) continue
-      const end = sg.path.waypoints[sg.path.waypoints.length - 1]?.p
-      if (end) ghostSpots.push({ id: tr.entityId, pos: end })
-    }
-  }
-  const candidateSets: ReceiverCandidate[][] = [
-    // The resolved set carries the motion state too, so the catch point is placed by the carry
-    // resolver rather than composed from a bare offset (invariant B1).
-    doc.players.map((p) => ({
-      id: p.id,
-      pos: rs.players[p.id]?.pos ?? p.home,
-      moving: rs.players[p.id]?.moving ?? false,
-      ...(rs.players[p.id]?.carryAhead ? { carry: rs.players[p.id]!.carryAhead } : {}),
-    })),
-    doc.players.map((p) => ({ id: p.id, pos: p.home })),
-    ghostSpots,
-    doc.players.map((p) => ({ id: p.id, pos: lastKnownPosition(doc, p.id) })),
-  ]
-  for (const candidates of candidateSets) {
-    syncTravelReceiverInDraft(doc, segmentId, candidates, RECEIVE_RADIUS_M, opts)
-    const seg = findSegment(doc, segmentId)
-    if (seg && seg.segment.kind === 'travel' && seg.segment.receiverId) break
-  }
+  // The resolved set carries the motion state too, so the catch point is placed by the carry
+  // resolver rather than composed from a bare offset (invariant B1).
+  const atArrival: ReceiverCandidate[] = doc.players.map((p) => ({
+    id: p.id,
+    pos: rs.players[p.id]?.pos ?? p.home,
+    moving: rs.players[p.id]?.moving ?? false,
+    ...(rs.players[p.id]?.carryAhead ? { carry: rs.players[p.id]!.carryAhead } : {}),
+  }))
+  syncTravelReceiverInDraft(doc, segmentId, atArrival, RECEIVE_RADIUS_M, opts)
 }
 
 /**

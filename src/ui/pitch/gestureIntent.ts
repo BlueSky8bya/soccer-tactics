@@ -33,10 +33,10 @@ export interface PointerContext {
   /** An unbroken Shift zigzag chain is in progress. */
   chainActive: boolean
   /**
-   * Exactly one entity is selected. With a subject already chosen, Alt+click on grass needs no
-   * separate "arm" click — the selection IS the arming (user 2026-08-22: 엔티티가 선택되어 있다는
-   * 가정 하에 도착점만 찍으면 되는 거 아냐?). And with nothing selected the press was inert anyway,
-   * so this costs no existing behaviour.
+   * A SUBJECT stands: one entity is selected, or a movement is (its entity is the subject —
+   * clicking any faded token picked "that entity at that moment", 사진 3 2026-08-22). With a
+   * subject chosen, Alt+click on grass needs no separate "arm" click — the selection IS the
+   * arming. With nothing selected the press was inert anyway, so this costs no behaviour.
    */
   soloSelection: boolean
 }
