@@ -1116,7 +1116,14 @@ export function SimplePitch() {
    * "armed" state to fall out of sync.
    */
   const deriveSubject = (selection: readonly Id[], segId: Id | null): DrawSubject | null => {
-    if (selection.length === 1) return { entityId: selection[0]!, ...subjectAnchor(selection[0]!) }
+    /*
+     * THE SEGMENT WINS WHEN BOTH STAND. `select()` clears the segment but `selectSegment()` keeps
+     * the entity selection, so whenever both exist the segment was named LATER — reading the
+     * entity first meant a ghost click was silently ignored: after finishing player A's path,
+     * clicking the ball's faded token still aimed A (user 2026-08-22: 공 클릭하고 Alt 누르면
+     * 이전 선수 경로가 나와), and clicking the ball's post-step token still moved the step-0 ball.
+     * Most recent naming is the subject — always.
+     */
     if (segId) {
       const f = findSegment(core.getDocument(), segId)
       if (f && 'path' in f.segment) {
@@ -1134,6 +1141,7 @@ export function SimplePitch() {
         return { entityId, ...subjectAnchor(entityId) }
       }
     }
+    if (selection.length === 1) return { entityId: selection[0]!, ...subjectAnchor(selection[0]!) }
     return null
   }
 
