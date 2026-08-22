@@ -158,7 +158,7 @@ export const GUIDE_ANIM_BINDINGS: Binding[] = ANIM_BINDINGS.filter((b) => b.comp
 export const GUIDE_PLAY_BINDINGS: Binding[] = [
   KEYMAP.playback.toggle,
   KEYMAP.playback.boost,
-  { label: '▶ 좌우 드래그', hint: '꾹 배속 선택 — 0.5 · 2 · 3', cues: ['space'] },
+  { label: '▶ 좌우 드래그', hint: '꾹 눌러서 배속 선택', cues: ['space'] },
   KEYMAP.playback.zen,
 ]
 
