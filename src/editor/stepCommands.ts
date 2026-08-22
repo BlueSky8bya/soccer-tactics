@@ -256,6 +256,26 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
           const rp = stateAt(cm, draft, arrival).players[seg.receiverId]
           const hold = track.segments[i + 1]
           const held = hold && hold.kind === 'possessed' && hold.holderId === seg.receiverId
+          /*
+           * THE ENDPOINT IS THE AUTHOR'S; THE RECEIVER IS PHYSICS. This anchor exists to place the
+           * catch on the carry ring — centimetres. If a later edit moved the receiver clear of the
+           * drawn end by more than the receive radius, they simply are not there when the ball
+           * lands: the ball rolls into the spot the author chose, and dragging the endpoint after
+           * them re-routed a pass 20 m without being asked (user 2026-08-22 사진 2). Targeted
+           * passes are exempt — their arrival is synced to the moment, so the receiver IS there.
+           */
+          if (
+            !seg.target &&
+            rp &&
+            Math.hypot(rp.pos.x - last.p.x, rp.pos.y - last.p.y) > RECEIVE_RADIUS_M
+          ) {
+            const gone = seg.receiverId
+            delete seg.receiverId
+            if (seg.travelKind === 'pass') seg.travelKind = 'loose'
+            if (held && hold.holderId === gone) track.segments.splice(i + 1, 1)
+            moved = true
+            continue
+          }
           if (rp) {
             const to = heldBallPos(
               { pos: rp.pos, moving: rp.moving },
@@ -323,6 +343,26 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
 }
 
 /**
+ * The last step at which this player RECEIVES an authored pass (0 when they never do).
+ *
+ * Receiving is an engagement, exactly as carrying is for the ball (`lastBallMovedStep`): a player
+ * who catches at step k was busy through step k, so their next movement defaults to AFTER it.
+ * Without this, a run drawn by the receiver landed on step 1 — before the pass even left — and the
+ * arrival anchor dragged the pass 20 m to wherever that run ended (user 2026-08-22 사진: 공 경로가
+ * 5번 선수의 마지막 단계로 수정됨). An explicit re-step afterwards can still place the run earlier
+ * (a deliberate run BEFORE the catch), and the anchor stays honest either way.
+ */
+export function lastReceivedStep(doc: TacticDocument, playerId: Id): number {
+  let max = 0
+  const ball = findTrack(doc, doc.ball.id)
+  for (const sg of ball?.segments ?? []) {
+    if (sg.kind !== 'travel' || sg.id.startsWith(GEN_PREFIX)) continue
+    if (sg.receiverId === playerId) max = Math.max(max, stepOf(sg))
+  }
+  return max
+}
+
+/**
  * Player run drawn in simple mode: one undo step (create + step + relayout).
  *
  * Returns null when the entity has no step left. The bump below can land past MAX_STEP, and
@@ -337,14 +377,19 @@ export function addStepRun(
   step: number,
 ): Id | null {
   const id = newId('seg')
-  const track0 = findTrack(core.getDocument(), playerId)
-  if (Math.max(step, lastAuthoredStep(track0) + 1) > MAX_STEP) return null
+  const doc0 = core.getDocument()
+  const track0 = findTrack(doc0, playerId)
+  if (
+    Math.max(step, lastAuthoredStep(track0) + 1, lastReceivedStep(doc0, playerId) + 1) > MAX_STEP
+  )
+    return null
   core.transaction('Add run', (d) => {
     const doc = d as TacticDocument
     const track = ensureTrack(doc, playerId, 'player')
     // A player's own movements are inherently sequential — the next one starts where the last
-    // ended, so it cannot share that step. The chip may still push it further out.
-    step = Math.max(step, lastAuthoredStep(track) + 1)
+    // ended, so it cannot share that step. Receiving counts as an engagement too: the catch's
+    // step is a floor, so the run happens after it. The chip may still push it further out.
+    step = Math.max(step, lastAuthoredStep(track) + 1, lastReceivedStep(doc, playerId) + 1)
     track.segments.push({
       id,
       kind: 'move',
