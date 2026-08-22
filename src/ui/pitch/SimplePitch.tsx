@@ -11,6 +11,7 @@ import { addPlayer, setEntityHome } from '@/editor/commands'
 import { PITCH_MARGIN_M, clampToPitch, truncateBallPathAtGoal } from '@/editor/geometry'
 import {
   findSegment,
+  findTrack,
   lastKnownPosition,
   moveBallStartInDraft,
   shiftBallAnchorsForPlayerInDraft,
@@ -879,8 +880,17 @@ export function SimplePitch() {
       const releasedOnPlayer = d.players.some(
         (p) => Math.hypot(p.home.x - at.x, p.home.y - at.y) <= ATTACH_RADIUS_M,
       )
+      /*
+       * A ball with an AUTHORED pass is placed, never thrown: its next movement is already written,
+       * so a fast release must not launch a physics roll on top of it (user 2026-08-22: 경로가
+       * 있을 때는 던져지는 기능을 막고). The throw stays for a pathless ball — there it IS the
+       * feature. The double-click slingshot is explicit and unaffected.
+       */
+      const ballHasPath = (findTrack(d, d.ball.id)?.segments ?? []).some(
+        (sg) => 'path' in sg && !sg.id.startsWith('gen-'),
+      )
       let fling: ReturnType<typeof simulateFling> | null = null
-      if (!releasedOnPlayer && vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
+      if (!releasedOnPlayer && !ballHasPath && vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
         const gw = 7.32 / 2
         fling = simulateFling(at, vel, doc.pitch, {
           top: doc.pitch.width / 2 - gw,
@@ -1853,6 +1863,16 @@ export function SimplePitch() {
          * same code rather than two that have to agree.
          */
         moveBallStartInDraft(doc2, raw, holderId0)
+        return
+      }
+      /*
+       * A LOOSE ball with an authored pass: the screen draws the PASS ORIGIN, not `ball.home`, so
+       * writing only the home moved nothing until release — the ball sat still under the cursor
+       * and then teleported to the drop (user 2026-08-22: 집어서 옮겨지는 게 아니고 순간이동 돼).
+       * The origin has to follow the hand live, with the same call the drop commits.
+       */
+      if (g.id === doc2.ball.id && !holderId0) {
+        moveBallStartInDraft(doc2, { x: origin.x + delta.x, y: origin.y + delta.y }, null)
         return
       }
       setEntityHome(doc2, g.id, { x: origin.x + delta.x, y: origin.y + delta.y })
