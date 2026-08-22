@@ -10,6 +10,7 @@ import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
 import { PITCH_MARGIN_M, clampToPitch, truncateBallPathAtGoal } from '@/editor/geometry'
 import {
+  DEFAULT_PASS_SPEED,
   ensureTrack,
   findSegment,
   findTrack,
@@ -36,6 +37,7 @@ import {
   lastBallMovedStep,
   ballMovesFromStep,
   momentSpotAt,
+  truncateBallFromStepInDraft,
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
@@ -253,6 +255,10 @@ type Gesture =
       began: boolean
       /** The carried-ball moment under the press — a CLICK selects the ball here (사진 2). */
       moment?: { step: number; pos: Vec2 }
+      /** Pulled clear of the holder's ring — the ball comes away here (hysteresis). */
+      detached?: boolean
+      /** Where the detached ball currently hangs — the loose spot the drop will commit. */
+      dropAt?: Vec2
     }
   /** Arrival-ghost orbit (ADR-0010 D3): slide a RECEIVED pass's end around its receiver —
    *  a dedicated junction command; curvature and receiver identity never change. */
@@ -691,9 +697,43 @@ export function SimplePitch() {
     }
     if (g.type === 'orbit-carry') {
       setOrbitGrabSeg(null)
+      setCarryRing(null)
+      setDetachPos(null)
       if (g.began) {
-        if (commit) core.commit()
-        else core.cancel()
+        if (!commit) {
+          core.cancel()
+          return
+        }
+        if (g.detached && g.dropAt && g.moment) {
+          // Dropped OUTSIDE the ring: the holder loses the ball at this moment — it ROLLS from
+          // their feet to the drop and lies there (a teleport to the drop would tear B1). Anything
+          // the ball was going to do later cannot happen without it — overwritten, exactly as
+          // grabbing any earlier ball moment overwrites the rest (ADR-0009 v25).
+          const dropAt = g.dropAt
+          core.update((d) => {
+            const doc2 = d as TacticDocument
+            truncateBallFromStepInDraft(doc2, g.moment!.step + 1)
+            ensureTrack(doc2, doc2.ball.id, 'ball').segments.push({
+              id: newIdFor('seg'),
+              kind: 'travel',
+              travelKind: 'loose',
+              trigger: { type: 'at', t: 0 },
+              timing: { speed: DEFAULT_PASS_SPEED },
+              path: {
+                waypoints: [
+                  { id: newIdFor('w'), p: { ...g.moment!.pos } },
+                  { id: newIdFor('w'), p: { ...dropAt } },
+                ],
+              },
+              step: Math.min(MAX_STEP, g.moment!.step + 1),
+            })
+            relayoutStepsInDraft(doc2)
+          })
+          core.commit()
+          ui.flashToast(t('ball.takenAway', { s: g.moment.step }))
+          return
+        }
+        core.commit()
         return
       }
       /*
@@ -966,19 +1006,20 @@ export function SimplePitch() {
           )
           if (!run || !('path' in run)) return
           const spot = run.path.waypoints[run.path.waypoints.length - 1]!.p
-          // loose AT the spot until the runner gets there…
-          moveBallStartInDraft(d2, { ...spot }, null)
-          // …then it is theirs, chained to the run so every retiming carries the pickup along
+          // The ball waits ON the carry ring beside the spot — never on top of the faded token —
+          // keeping the drop DIRECTION the hand chose (user 2026-08-22: 선수 주위로 안 겹치게).
+          const off = carryOffset({ x: at.x - spot.x, y: at.y - spot.y })
+          moveBallStartInDraft(d2, { x: spot.x + off.x, y: spot.y + off.y }, null)
+          // …then it is theirs, chained to the run so every retiming carries the pickup along.
+          // The locked ring offset makes the next leg's carry BLEND out from the waiting spot
+          // instead of snapping a dribble-length ahead in one frame (invariant B1).
           ensureTrack(d2, d2.ball.id, 'ball').segments.push({
             id: newIdFor('seg'),
             kind: 'possessed',
             trigger: { type: 'afterSegment', segmentId: run.id, anchor: 'end', offset: 0 },
             timing: { duration: 0 },
             holderId: pickup.entityId,
-            // The ball waits AT the runner's arrival spot — the catch is at the feet, and the
-            // locked zero offset makes the next leg's carry BLEND out from there instead of
-            // snapping a dribble-length ahead in one frame (invariant B1).
-            offset: { x: 0, y: 0 },
+            offset: off,
             offsetLocked: true,
           })
           relayoutStepsInDraft(d2)
@@ -1788,6 +1829,22 @@ export function SimplePitch() {
         g.began = true
         core.begin('Set carry side')
       }
+      /*
+       * ONE grammar for every owned ball (user 2026-08-22: 모든 곳에서 동일하게): inside the ring
+       * the drag only picks the side — still theirs; past the ring the ball comes AWAY, and the
+       * drop takes it off the holder at this moment, loose on the grass. Same ring, same
+       * hysteresis as the ball at its start.
+       */
+      const dist = Math.hypot(pt.x - g.center.x, pt.y - g.center.y)
+      if (!g.detached && dist > CARRY_DETACH_M) g.detached = true
+      else if (g.detached && dist < CARRY_REATTACH_M) g.detached = false
+      setCarryRing({ at: g.center, detached: !!g.detached })
+      if (g.detached) {
+        g.dropAt = clampToPitch(pt, doc.pitch)
+        setDetachPos(g.dropAt)
+        return
+      }
+      setDetachPos(null)
       const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
       core.update((d) => {
         const doc2 = d as TacticDocument

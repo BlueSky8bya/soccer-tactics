@@ -7,7 +7,7 @@
 import type { Track, Id, Path, TacticDocument, Vec2, Waypoint } from '@/domain/types'
 import { GEN_PREFIX } from '@/engine/opponent'
 import { heldBallPos } from '@/engine/carry'
-import { BALL_OFFSET, carryOffset, compile } from '@/engine/compile'
+import { ATTACH_RADIUS_M, BALL_OFFSET, carryOffset, compile } from '@/engine/compile'
 import { buildPathLUT } from '@/engine/path'
 import { stateAt } from '@/engine/stateAt'
 import { newId } from './commands'
@@ -103,6 +103,25 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
     for (const s of track.segments)
       if (s.trigger.type === 'afterSegment' && !ids.has(s.trigger.segmentId))
         s.trigger = { type: 'at', t: 0 }
+    /*
+     * A PICKUP (the ball waiting for a runner: a leading possession chained to a player's run) is
+     * only real while the ball actually WAITS within reach of that junction. Drag the ball away,
+     * or give it to someone at kickoff, and the runner arrives to nothing — the possession goes,
+     * whatever route the edit came in by.
+     */
+    const first = track.segments[0]
+    if (first && first.kind === 'possessed' && first.trigger.type === 'afterSegment') {
+      const run = scene.timeline.tracks
+        .flatMap((tr) => tr.segments)
+        .find((sg) => first.trigger.type === 'afterSegment' && sg.id === first.trigger.segmentId)
+      const end =
+        run && 'path' in run ? run.path.waypoints[run.path.waypoints.length - 1]?.p : undefined
+      const waiting =
+        !draft.ball.initialHolderId &&
+        !!end &&
+        Math.hypot(end.x - draft.ball.home.x, end.y - draft.ball.home.y) <= ATTACH_RADIUS_M
+      if (!waiting) track.segments.shift()
+    }
   }
 
   const authored = scene.timeline.tracks
