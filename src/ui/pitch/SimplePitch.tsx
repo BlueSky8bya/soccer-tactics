@@ -2058,8 +2058,17 @@ export function SimplePitch() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ui.playback.t, isPlaying])
-  /** Frame is away from the authoring start: playing, paused mid-play, held result, or step preview. */
-  const viewingFrame = isPlaying || ui.playback.t > 0
+  /*
+   * The board is being ANIMATED — only then does the authoring decor (badges, ghosts, the step
+   * picker) fade out, and only then do frame phases dim the paths (D-02).
+   *
+   * A STILL frame away from t=0 is not playback, it is authoring from a chosen moment: picking
+   * step 2 in the bar previews that step's starting frame, and hiding every step badge and button
+   * there locked the user out of the very controls the bar had just pointed at (user 2026-08-22:
+   * 단계 2~9를 선택하면 배지가 다 사라져). Any press snaps back to the authoring start anyway
+   * (returnToAuthoringStart in every press path), so still frames are safe to keep interactive.
+   */
+  const viewingFrame = isPlaying
   const draftColor = ui.pathDraft ? entityColorOf(doc, ui.pathDraft.entityId) : ''
   /**
    * Alt held with exactly one entity selected: the selection already names the subject, so the
