@@ -2222,3 +2222,17 @@ Trigger: 사용자 — "여기도 설명 최적화 해줘" (CTRL 단축키·재�
   다른 낱말로 교체.
 
 Validation: typecheck/lint/build PASS, 285 tests PASS, cues/selcues 프로브 PASS.
+
+## CHG-20260822-170 — 토스트는 실제 착지 단계를 말한다
+
+Trigger: 사용자, 사진 — "5번이 공 받고 침투하는 4단계를 추가했는데 '1단계에 추가됨'이라고 나와."
+
+Cause: `finishDraw`의 토스트가 UI 지역변수 `step`(칩 값 1)을 읽었다. 커맨드는 안에서 단계를 밀어
+올린다(자기 체인 +1, **캐치 단계 +1** — CHG-167) — 4단계에 착지했는데 토스트는 낡은 1을 말했다.
+
+Change: 커맨드가 만든 세그먼트를 문서에서 되읽어 **착지 단계**로 토스트한다. 지그재그 체인의 다음
+단계 계산도 같은 값 기준.
+
+Validation: typecheck/lint/build PASS, 285 tests PASS. 신규 `pw/toaststep.cjs` 2/2 — 사진 재현
+(캐리 2단계 → 3단계 패스 → #5 런): 런 4단계 착지 + 토스트 "**4단계에 추가됨**". steps/flow/subject/
+midghost/aimclick 무회귀.

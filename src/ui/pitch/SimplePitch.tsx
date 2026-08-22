@@ -517,11 +517,20 @@ export function SimplePitch() {
       ui.flashToast(t('simple.stepLimit'))
       return
     }
+    /*
+     * The step this ASKED for and the step it LANDED on differ whenever the command bumped it —
+     * a receiver's run after a step-3 catch lands on 4, not on the chip's 1 — and the toast was
+     * reading the stale local (user 2026-08-22: 4단계로 추가됐는데 1단계에 추가됨이라고 나와).
+     * The document is the only honest source of where it actually went.
+     */
+    const landedSeg = findSegment(core.getDocument(), made)
+    const landed =
+      landedSeg && 'path' in landedSeg.segment ? stepOf(landedSeg.segment) : step
     // commit confirmation: subject pops again as the arrow lands (M4)
     pulseKey.current++
     setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
     // Zigzag: while Shift stays down, the next press draws the next leg from where this ended.
-    chain.current = { entityId, step: nextChainStep(step) ?? MAX_STEP + 1 }
+    chain.current = { entityId, step: nextChainStep(landed) ?? MAX_STEP + 1 }
     // Deliberately NOT selected: picking the next step chip must never retarget what was just drawn.
     st.selectSegment(null)
     /*
@@ -533,7 +542,9 @@ export function SimplePitch() {
     st.select([entityId])
     // The grabbed moment consumed itself; the next press names a fresh one.
     ballMomentRef.current = null
-    ui.flashToast(wiped > 0 ? t('simple.ballRerouted', { n: wiped }) : t('simple.added', { n: step }))
+    ui.flashToast(
+      wiped > 0 ? t('simple.ballRerouted', { n: wiped }) : t('simple.added', { n: landed }),
+    )
   }
 
   /**
