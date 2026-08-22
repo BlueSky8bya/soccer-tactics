@@ -372,6 +372,12 @@ export function moveTravelEndInDraft(
 export const RECEIVE_RADIUS_M = 3.5
 
 /**
+ * How far the PASSER must have moved from where they released the ball before they may collect it
+ * again (m). Below this the "pass" never left them — see syncTravelReceiverInDraft.
+ */
+export const SELF_RECEIVE_MIN_M = RECEIVE_RADIUS_M
+
+/**
  * A candidate receiver AND the motion state that decides where the ball comes to rest on them.
  * `moving`/`carry` are what `heldBallPos` needs: without them the catch point is composed here as
  * `pos + offset` while playback resolves it through the carry rule, and the two disagree by up to
@@ -403,8 +409,24 @@ export function syncTravelReceiverInDraft(
   if (!end) return
   const prev = f.track.segments[f.index - 1]
   const passer = prev && prev.kind === 'possessed' ? prev.holderId : undefined
+  /*
+   * THE PASSER MAY RECEIVE THEIR OWN PASS — IF THEY WENT AND GOT IT (user 2026-08-23: 공 띄워서
+   * 다시 받는 것). Lobbing it over yourself, knocking it ahead and running onto it, a one-two off
+   * nobody: all real, and a blanket "never the passer" made them impossible — the ball landed on
+   * the player and stayed nobody's, so every later step showed him running ball-less.
+   *
+   * What the blanket rule was actually protecting is the pass that never left: drawn from the
+   * holder's foot to a point they are still standing next to when it lands, it would snap
+   * straight back and the ball would never travel. So the test is DISTANCE FROM THE LAUNCH SPOT
+   * at arrival: move clear of where you kicked it and it is yours to collect; stand still and it
+   * is not a pass to anyone.
+   */
+  const start = seg.path.waypoints[0]!.p
   const near = playersAtArrival
-    .filter((p) => p.id !== passer)
+    .filter(
+      (p) =>
+        p.id !== passer || Math.hypot(p.pos.x - start.x, p.pos.y - start.y) > SELF_RECEIVE_MIN_M,
+    )
     .map((p) => ({ ...p, dist: Math.hypot(p.pos.x - end.x, p.pos.y - end.y) }))
     .filter((x) => x.dist <= radius)
     .sort((a, b) => a.dist - b.dist)[0]

@@ -2490,3 +2490,21 @@ Change: `BallMark`(원+패턴+하이라이트)를 Token.tsx에서 export, 라이
 
 Validation: typecheck/lint/build PASS, 289 tests, 프로브 6종 PASS, 스크린샷으로 라이브·잔상 공
 동일 확인.
+
+## CHG-20260823-184 — 자기 패스는 "달려가서 받으면" 받는다 (띄워서 다시 받기)
+
+Trigger: 사용자 — "1번 선수가 2단계를 진행하는데 0번 위치 공을 같은 선수의 1단계 직후로 휘어서
+부여하면(띄워서 다시 받기 의도) 2단계에도 공이 부여돼 있어야 하는 거 아냐?"
+
+진단(selfpass/selfpass2/selfpass3 3중 프로브): 기본 흐름 4변형은 통과했으나 **W2 — 초기 소유
+상태에서 정션 빼앗기 후 자기에게 띄우기**가 재현 실패. 원인은 `syncTravelReceiverInDraft`의
+`filter(p => p.id !== passer)` — **패스한 선수는 수신 후보에서 무조건 제외**. 공은 선수 위에
+도착하지만 무소유로 남고, 이후 단계는 전부 공 없이 재생됐다. 자기 머리 위로 띄우기·앞으로 차고
+달려 받기가 원천 불가였던 것.
+
+Change: 제외 조건을 **발사 지점으로부터의 거리**로 교체 — 도착 시점에 패서가 발사 지점에서
+SELF_RECEIVE_MIN_M(3.5m, RECEIVE_RADIUS와 동일) 넘게 벗어나 있으면 후보. 원래 규칙이 지키던 것은
+"떠나지 않은 패스"(제자리에서 2m 차고 그 자리에 서 있기)뿐이고, 그건 이 조건이 그대로 막는다.
+
+Validation: typecheck/lint/build/harness PASS, 291 tests(신규 selfPass 2 — 받는 경우/안 받는 경우
+양쪽 계약), 프로브 14종 PASS(신규 selfpass·selfpass2·selfpass3 포함), marathon 450제스처 0실패.
