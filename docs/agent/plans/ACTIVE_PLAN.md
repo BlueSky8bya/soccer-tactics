@@ -1,6 +1,6 @@
 # ACTIVE PLAN — PLAN-20260822-013: 순간 문법 (Moment Grammar)
 
-Status: In Progress
+Status: Completed (2026-08-22) — M1·M2·M3 전부 검증 통과
 Level: L3 (상호작용 의미론 + 스키마 additive 변경)
 Trigger: 사용자 2026-08-22 — "Alt 경로 그리기가 너무 복잡하고 실제로 틀린다. 단순하고 구조적으로 무결점하게."
 
