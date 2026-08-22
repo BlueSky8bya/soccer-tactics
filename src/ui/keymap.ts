@@ -73,33 +73,18 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
   { label: '드래그', hint: '옮기기 (여러 명이면 같이)' },
   { label: '빈 잔디 드래그', hint: '박스로 여러 명 선택' },
-  { label: 'Shift+잔디 드래그', hint: '지금 선택에 추가로 담기', compact: true, cues: ['shift'] },
-  { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)', cues: ['ctrl'] },
-  {
-    label: '클릭',
-    hint: '움직일 대상 고르기 — 선수·공·잔상 어디든',
-    compact: true,
-    cues: ['ball', 'player', 'path'],
-  },
-  {
-    label: '겹친 곳 다시 클릭',
-    hint: '겹쳐 있는 것들을 차례로 선택',
-    compact: true,
-  },
+  { label: 'Shift+잔디 드래그', hint: '선택에 더하기', compact: true, cues: ['shift'] },
+  { label: 'Ctrl+선수 클릭', hint: '선택에 넣기·빼기', cues: ['ctrl'] },
+  /*
+   * NO "클릭 = 대상 고르기" row. Clicking a thing to work on it is the one gesture nobody has to
+   * be told, and spending the panel's scarcest space on it pushed the rows that DO teach something
+   * off the fold (user 2026-08-22: 클릭 설명은 뭐하러 둔거야).
+   */
+  { label: '겹친 곳 다시 클릭', hint: '차례로 고르기', compact: true },
   { label: '공 → 선수 드롭', hint: '그 선수가 공 보유', cues: ['ball'] },
-  {
-    label: '공 휙 던지기',
-    hint: '빠르게 놓으면 관성으로 굴러감',
-    compact: true,
-    cues: ['ball'],
-  },
-  {
-    label: '공 더블클릭+드래그',
-    hint: '당긴 반대 방향으로 발사 — 길게 당길수록 세게',
-    compact: true,
-    cues: ['ball'],
-  },
-  { label: '선수 클릭', hint: '등번호·이름·포지션 편집', compact: true, cues: ['player'] },
+  { label: '공 휙 던지기', hint: '빠르게 놓으면 굴러감', compact: true, cues: ['ball'] },
+  { label: '공 더블클릭+드래그', hint: '당긴 반대로 발사', compact: true, cues: ['ball'] },
+  { label: '선수 클릭', hint: '등번호·이름 편집', compact: true, cues: ['player'] },
 ]
 
 /**
@@ -112,19 +97,19 @@ export const PLACE_BINDINGS: Binding[] = [
 export const ANIM_BINDINGS: Binding[] = [
   {
     label: 'Alt+클릭',
-    hint: '고른 대상이 찍은 곳까지 — 잔상을 찍으면 그 타이밍에 맞춰 도착',
+    hint: '찍은 곳까지 — 잔상은 그 타이밍',
     compact: true,
     cues: ['alt', 'ball', 'player', 'path'],
   },
   {
     label: 'Alt+드래그',
-    hint: '곡선 경로를 한 번에 — 선수는 이동, 공은 패스',
+    hint: '곡선으로 한 번에',
     compact: true,
     cues: ['alt', 'ball', 'player', 'path'],
   },
-  { label: '잔상 드래그', hint: '그 움직임의 도착 지점 조정', compact: true, cues: ['path'] },
-  { label: '경로 클릭', hint: '선택 — Delete로 삭제, 숫자키로 단계 변경', compact: true, cues: ['path'] },
-  { label: '경로 드래그', hint: '당겨서 곡선으로 휘기', compact: true, cues: ['path'] },
+  { label: '잔상 드래그', hint: '도착 지점 조정', compact: true, cues: ['path'] },
+  { label: '경로 클릭', hint: '선택 — Delete·숫자키', compact: true, cues: ['path'] },
+  { label: '경로 드래그', hint: '당겨서 휘기', compact: true, cues: ['path'] },
   { label: '단계 1~9', hint: '같은 번호는 같이, 다음 번호는 이어서' },
 ]
 
