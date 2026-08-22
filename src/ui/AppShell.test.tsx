@@ -304,9 +304,11 @@ describe('playback staging (PLAN-006 M5)', () => {
     const { container } = setup()
     const rows = [...container.querySelectorAll('aside')].map((a) => a.textContent ?? '').join(' ')
     expect(rows).toContain('Space 꾹')
-    // the factor is CHOSEN on the play button now, so the row explains where, not a number
+    // the factor is CHOSEN on the play button now: the hold row stays one line, and the pick
+    // lives in its own gesture row (a wrapped hint hangs indented under the keycap)
     expect(rows).toMatch(/배속/)
-    expect(KEYMAP.playback.boost.hint).toMatch(/▶/)
+    expect(rows).toMatch(/▶/)
+    expect(KEYMAP.playback.boost.hint.length).toBeLessThan(16)
     // the plain Space row stays about play/pause only
     expect(KEYMAP.playback.toggle.hint).not.toMatch(/배속/)
   })

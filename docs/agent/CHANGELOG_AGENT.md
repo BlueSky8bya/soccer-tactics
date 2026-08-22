@@ -2236,3 +2236,18 @@ Change: 커맨드가 만든 세그먼트를 문서에서 되읽어 **착지 단�
 Validation: typecheck/lint/build PASS, 285 tests PASS. 신규 `pw/toaststep.cjs` 2/2 — 사진 재현
 (캐리 2단계 → 3단계 패스 → #5 런): 런 4단계 착지 + 토스트 "**4단계에 추가됨**". steps/flow/subject/
 midghost/aimclick 무회귀.
+
+## CHG-20260822-171 — 재생 카드: 접히는 힌트 제거, 전 줄 한 줄 정렬
+
+Trigger: 사용자 — "디자인이 조화롭지 않아. 들여쓰기가 됐잖아" (Space 꾹 줄이 키캡 아래로 접혀
+들여쓰기처럼 보임).
+
+Cause: 키캡 인라인 배치에서 힌트가 접히면 이어지는 줄이 키캡 폭만큼 들여져 카드의 "왼쪽 모서리
+하나" 규칙이 깨진다.
+
+Change: `Space 꾹` 힌트를 **"배속 재생"** 한 줄로. 배속 선택법은 제스처 전용 줄로 분리 —
+**"▶ 좌우 드래그 / 꾹 배속 선택 — 0.5 · 2 · 3"** (제스처가 원래 쓰는 스택 레이아웃이라 모서리 정렬).
+스크린샷으로 전 줄 한 줄 확인.
+
+Validation: typecheck/lint/build PASS, 285 tests PASS (AppShell 단언을 "힌트는 짧다 + ▶ 줄 존재"로
+갱신), cues 프로브 PASS.

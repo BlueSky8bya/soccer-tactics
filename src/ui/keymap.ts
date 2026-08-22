@@ -42,10 +42,13 @@ export const KEYMAP = {
     toggle: { key: ' ', label: 'Space', hint: '재생·일시정지', chip: true, cues: ['space'] },
     // its own row, not a tail on the Space hint — the hold was undiscoverable buried there
     // (user 2026-08-21: space 꾹 누르는 키도 안내하게)
+    // one line beside its keycap — a wrapped hint hangs indented under the cap and breaks the
+    // card's single left edge (user 2026-08-22: 들여쓰기가 됐잖아). Where the factor is picked is
+    // its own GESTURE row below, in the stacked layout gestures already use.
     boost: {
       key: ' ',
       label: 'Space 꾹',
-      hint: '누르는 동안 배속 재생 — 배속은 ▶ 좌우 드래그',
+      hint: '배속 재생',
       chip: true,
       cues: ['space'],
     },
@@ -155,6 +158,7 @@ export const GUIDE_ANIM_BINDINGS: Binding[] = ANIM_BINDINGS.filter((b) => b.comp
 export const GUIDE_PLAY_BINDINGS: Binding[] = [
   KEYMAP.playback.toggle,
   KEYMAP.playback.boost,
+  { label: '▶ 좌우 드래그', hint: '꾹 배속 선택 — 0.5 · 2 · 3', cues: ['space'] },
   KEYMAP.playback.zen,
 ]
 
