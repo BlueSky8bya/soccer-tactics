@@ -536,18 +536,26 @@
 
 /* Carry-vs-detach boundary while dragging a held ball (user 2026-08-21). Inside it the ball
    orbits its holder; crossing it takes the ball away. Drawn only during that drag. */
+/*
+ * The possession boundary — INSIDE it a drag only picks the carry side, OUTSIDE it the ball comes
+ * away. Both states must read equally at every grab point (user 2026-08-22: 다른 단계에서는 점선이
+ * 안 나와): the detached ring used to fade to 22% white, so anyone who crossed it quickly never
+ * saw the boundary at all. Same weight now; the rhythm changes instead — dashes while held,
+ * dots once the ball is out.
+ */
 .carryRing {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.75);
-  stroke-width: 0.2;
-  stroke-dasharray: 0.7 0.6;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 0.22;
+  stroke-dasharray: 0.9 0.6;
 }
 
 .carryRingOut {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.22);
-  stroke-width: 0.16;
-  stroke-dasharray: 0.4 0.9;
+  stroke: rgba(255, 255, 255, 0.8);
+  stroke-width: 0.22;
+  stroke-dasharray: 0.3 0.55;
+  stroke-linecap: round;
 }
 
 .stepBadge {
