@@ -791,18 +791,24 @@ export function SimplePitch() {
           // what the highlight promised: a live token = a pass to them; a step's spot = the ball
           // waits there and the runner picks it up; grass = loose. The robbed run owner is
           // excluded — their ring already means "keep it theirs".
+          //
+          // THE ROLL REPLACES STEP m ITSELF (user 2026-08-22: 공이 0-1로 연결되어야지, 0-1-2가
+          // 아니라): dragging the carried ghost at junction m re-places the ball's step-m
+          // movement — carried through m−1, then the ball departs and travels to the drop DURING
+          // step m — exactly as dragging a player's ghost adjusts THAT run's end. The relayout
+          // origin anchor pins the roll's start to wherever the ball rests when step m begins.
           const robbedId = findSegment(doc, g.runSegId)?.track.entityId
           const cand = dropCandidateAt(doc, dropAt, {
             excludeId: robbedId ?? null,
-            minStep: g.moment.step + 1,
-            dropStep: g.moment.step + 1,
+            minStep: g.moment.step,
+            dropStep: g.moment.step,
           })
           const candPlayer = cand ? doc.players.find((pl) => pl.id === cand.entityId) : undefined
           core.update((d) => {
             const doc2 = d as TacticDocument
-            truncateBallFromStepInDraft(doc2, g.moment!.step + 1)
+            truncateBallFromStepInDraft(doc2, g.moment!.step)
             const ballTrack = ensureTrack(doc2, doc2.ball.id, 'ball')
-            const rollStep = Math.min(MAX_STEP, g.moment!.step + 1)
+            const rollStep = Math.min(MAX_STEP, g.moment!.step)
             if (cand && cand.step !== undefined) {
               const run = findTrack(doc2, cand.entityId)?.segments.find(
                 (sg) => 'path' in sg && !sg.id.startsWith('gen-') && stepOf(sg) === cand.step,
@@ -868,10 +874,7 @@ export function SimplePitch() {
             ui.flashToast(
               cand.step !== undefined
                 ? t('ball.attachedAt', { n: candPlayer.number, s: cand.step })
-                : t('ball.givenAt', {
-                    s: Math.min(MAX_STEP, g.moment.step + 1),
-                    n: candPlayer.number,
-                  }),
+                : t('ball.givenAt', { s: g.moment.step, n: candPlayer.number }),
             )
           } else ui.flashToast(t('ball.takenAway', { s: g.moment.step }))
           return
@@ -2032,8 +2035,8 @@ export function SimplePitch() {
         applyDropHint(
           dropCandidateAt(doc, g.dropAt, {
             excludeId: robbedId ?? null,
-            minStep: (g.moment?.step ?? 0) + 1,
-            dropStep: (g.moment?.step ?? 0) + 1,
+            minStep: g.moment?.step ?? 1,
+            dropStep: g.moment?.step ?? 1,
           }),
         )
         return

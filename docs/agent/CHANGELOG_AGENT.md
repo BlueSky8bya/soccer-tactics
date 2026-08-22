@@ -2442,3 +2442,21 @@ Trigger: 사용자 — "m-1단계까지 진행하고 놓은 자리까지 m단계
 
 Validation: typecheck/lint/build/harness PASS, 289 tests(카운트 테스트 반전), rolltiming 7/7
 (창 일치·소유 타임라인·라인·배지 3), repro3 갱신 포함 프로브 7종 PASS, marathon 360제스처 0실패.
+
+## CHG-20260822-181 — 빼앗기는 그 단계를 교체한다 (0-1 연결, m+1이 아니라 m)
+
+Trigger: 사용자 — "0단계부터 소유한 공을 1단계 직후 잔상에서 잔디로 놓으면 공이 0-1로 연결되어야지,
+지금은 0-1(정션)-2(드롭)로 이어진다."
+
+의미 확정(이전 CHG-180 해석 정정): 정션 m 잔상 빼앗기 = **공의 m단계 움직임 자체를 교체** —
+m−1까지 캐리 유지, m단계에 공이 휴식 위치에서 이탈해 드롭으로 굴러감. 선수 잔상 플레인 드래그가
+"그 움직임의 도착 조정"인 것과 완전 대칭. truncate(m)+롤 step=m, 원점은 relayout 원점 앵커가
+공의 그 시점 위치로 고정. 힌트 minStep/dropStep = m, givenAt/takenAway 토스트 = m.
+
+Premise 검사 구조화: 1단계 롤은 t=0 발화라 시계 검사(stateAt)가 자기 자신에게 공을 넘긴 뒤를 봐서
+정당한 롤을 죽였음 → **구조 검사**로 교체(선행 possessed 존재, 또는 첫 움직임 + initialHolder).
+클록 프리·byte-idempotent, doubleball(공 2개) 방지 동일 보장.
+
+Validation: typecheck/lint/build/harness PASS, 289 tests, rolltiming 7/7 신계약(롤=1단계 창 0~1.93s
+일치·휴식 위치 출발·1단계 끝 드롭 안착), carrydetach 갱신 포함 프로브 11종 PASS(takeaway 1회
+FAIL은 HMR 플레이크 — 2회 연속 재실행 클린), doubleball worst 0 유지, marathon 360제스처 0실패.
