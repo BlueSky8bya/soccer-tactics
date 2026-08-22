@@ -8,7 +8,7 @@ import {
 import type { Id, Path, TacticDocument, Vec2, Waypoint } from '@/domain/types'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
-import { clampToPitch, truncateBallPathAtGoal } from '@/editor/geometry'
+import { PITCH_MARGIN_M, clampToPitch, truncateBallPathAtGoal } from '@/editor/geometry'
 import {
   findSegment,
   lastKnownPosition,
@@ -180,6 +180,8 @@ type Gesture =
       atStep?: number
       /** The actual press point — the destination when this press turns out to be a landing. */
       pressPt?: Vec2
+      /** Pressed on empty grass (chain press): a click lands even for the SAME entity. */
+      grassPress?: true
       /** Subject captured at PRESS: if this turns out to be a click, its path lands here. */
       landFor?: DrawSubject
       /** Started on a GHOST — a moment, which selection cannot name, so a click arms it. */
@@ -240,6 +242,8 @@ type Gesture =
       /** The RUN whose end junction this carry belongs to — junction-local pin. */
       runSegId: Id
       began: boolean
+      /** The carried-ball moment under the press — a CLICK selects the ball here (사진 2). */
+      moment?: { step: number; pos: Vec2 }
     }
   /** Arrival-ghost orbit (ADR-0010 D3): slide a RECEIVED pass's end around its receiver —
    *  a dedicated junction command; curvature and receiver identity never change. */
@@ -516,6 +520,13 @@ export function SimplePitch() {
     chain.current = { entityId, step: nextChainStep(step) ?? MAX_STEP + 1 }
     // Deliberately NOT selected: picking the next step chip must never retarget what was just drawn.
     st.selectSegment(null)
+    /*
+     * The SUBJECT stays the subject. A ghost press selects the pressed entity on pointerdown, so
+     * after landing a pass on someone's future spot the RECEIVER was left selected — and the very
+     * next Alt+click drew a run for them instead of the ball's next pass (사진 1, 2026-08-22).
+     * Whoever just MOVED is who the next click continues.
+     */
+    st.select([entityId])
     // The grabbed moment consumed itself; the next press names a fresh one.
     ballMomentRef.current = null
     ui.flashToast(wiped > 0 ? t('simple.ballRerouted', { n: wiped }) : t('simple.added', { n: step }))
@@ -598,6 +609,9 @@ export function SimplePitch() {
       relayoutStepsInDraft(d2)
     })
     core.commit()
+    // The ball now STARTS here: the named moment follows it, or the next Alt+click would leave
+    // from wherever the ball sat before the throw.
+    ballMomentRef.current = { step: 0, pos: { ...core.getDocument().ball.home } }
     const done = () => {
       if (!near) return
       pulseKey.current++
@@ -658,6 +672,17 @@ export function SimplePitch() {
       if (g.began) {
         if (commit) core.commit()
         else core.cancel()
+        return
+      }
+      /*
+       * No drag = a CLICK on the carried-ball ghost: pick the BALL at that moment, exactly as
+       * clicking any other ball token does. It used to do nothing at all, so a shot could only be
+       * drawn from where the ball's own path ends — not from where it is CARRIED to (사진 2,
+       * 2026-08-22: 잔상에서 공을 클릭해도 활성화가 안 됨).
+       */
+      if (commit && g.moment) {
+        st.select([doc.ball.id])
+        ballMomentRef.current = g.moment
       }
       return
     }
@@ -769,7 +794,9 @@ export function SimplePitch() {
        */
       if (strokeLength(g.points) < CLICK_SLOP_M) {
         const subject = g.landFor
-        if (subject && subject.entityId !== g.entityId) {
+        // A press ON the subject's own token names it again — that is selection, not a landing.
+        // A press anywhere else (another entity, or grass in a chain) is the destination.
+        if (subject && (subject.entityId !== g.entityId || g.grassPress)) {
           setAimTo(null)
           finishDraw(
             subject.entityId,
@@ -872,6 +899,8 @@ export function SimplePitch() {
         relayoutStepsInDraft(d2) // see launchBall: the drop must settle the whole chain
       })
       core.commit()
+      // same as launchBall: the moment follows the ball's new starting spot
+      ballMomentRef.current = { step: 0, pos: { ...core.getDocument().ball.home } }
       // The ball may have snapped to a holder: animate the last few pixels (document is already final).
       const settled = core.getDocument().ball.home
       const dx = at.x - settled.x
@@ -1332,7 +1361,15 @@ export function SimplePitch() {
         ghost: !!ghostTop,
         segment: !!segTop,
         token: !!tokenEntityId,
-        insidePitch: pt.x >= 0 && pt.x <= L && pt.y >= 0 && pt.y <= W,
+        // The line is not a wall: throw-ins, corners and keepers exist a step outside it, so a
+        // press up to the pitch MARGIN (2 m) still authors — every destination is then clamped to
+        // that same margin, so nothing escapes the board or tunnels a goal (user 2026-08-22:
+        // 라인 살짝 바깥까지만).
+        insidePitch:
+          pt.x >= -PITCH_MARGIN_M &&
+          pt.x <= L + PITCH_MARGIN_M &&
+          pt.y >= -PITCH_MARGIN_M &&
+          pt.y <= W + PITCH_MARGIN_M,
       },
       { button: e.button, draw: e.altKey, ctrl: e.ctrlKey || e.metaKey },
       {
@@ -1398,7 +1435,8 @@ export function SimplePitch() {
       case 'adjust-ghost-end': {
         // Plain drag on a ghost = fine-tune that movement's end. A CARRIED ball ghost instead
         // ORBITS its holder: the drag slides the ball around the carry ring (user 2026-08-21).
-        ballMomentRef.current = ghostMoment
+        // The moment is committed at RELEASE (click) — writing it here left a stale moment behind
+        // whenever the press became a drag.
         const segId = ghostTop!.segId
         const f = segId ? findSegment(core.getDocument(), segId) : null
         if (!f || !('path' in f.segment)) return
@@ -1414,6 +1452,7 @@ export function SimplePitch() {
             center,
             runSegId: segId!,
             began: false,
+            moment: ghostMoment ?? undefined,
           }
           setOrbitGrabSeg(segId!)
           svg.setPointerCapture(e.pointerId)
@@ -1462,9 +1501,21 @@ export function SimplePitch() {
         return
       }
       case 'draw-chain': {
-        // Unbroken Alt chain: this press continues the zigzag from the last end.
+        // Unbroken Alt chain: this press continues the zigzag from the last end. A CLICK here is a
+        // landing for the standing subject (grass press — nothing new to name), so consecutive
+        // Alt+clicks flow 1, 2, 3 without releasing Alt (user 2026-08-22).
         const entityId = chain.current!.entityId
-        startDraw(entityId, e.pointerId, lastKnownPosition(core.getDocument(), entityId))
+        startDraw(
+          entityId,
+          e.pointerId,
+          lastKnownPosition(core.getDocument(), entityId),
+          undefined,
+          subjectAtPress() ?? undefined,
+          undefined,
+          undefined,
+          pt,
+        )
+        if (gesture.current?.type === 'draw') gesture.current.grassPress = true
         return
       }
       case 'draw-from-token': {
@@ -1999,6 +2050,12 @@ export function SimplePitch() {
   // disagree.
   const quickAim =
     drawKeyHeld && !gesture.current ? deriveSubject(ui.selection, ui.selectedSegmentId) : null
+  // aimTo survives Alt being released, so the next hold flashed a line to the PREVIOUS cursor spot
+  // for a frame before the first move corrected it (user 2026-08-22: 이전에 클릭한 위치에 안내선이
+  // 깜빡). No Alt, no remembered cursor.
+  useEffect(() => {
+    if (!drawKeyHeld) setAimTo(null)
+  }, [drawKeyHeld])
   quickAimRef.current = !!quickAim
   const attachedStart = deriveAttachedPathStart(doc, compiled, ui.selectedSegmentId)
 
@@ -2519,29 +2576,43 @@ export function SimplePitch() {
           aria-hidden="true"
         />
       )}
-      {quickAim && (
-        <g
-          className={styles.aimGuide}
-          aria-hidden="true"
-          style={{ '--st-entity': entityColorOf(doc, quickAim.entityId) } as CSSProperties}
-        >
-          {/* the anchor appears the instant Alt goes down — waiting for the first pointer move
-              meant holding Alt showed nothing at all */}
-          <circle cx={quickAim.from.x} cy={quickAim.from.y} r={1.15} className={styles.aimAnchor} />
-          {aimTo && (
-            <>
-              <line
-                x1={quickAim.from.x}
-                y1={quickAim.from.y}
-                x2={aimTo.x}
-                y2={aimTo.y}
-                className={styles.aimLine}
+      {quickAim &&
+        (() => {
+          /*
+           * Two readings, split by where the cursor is (user 2026-08-22):
+           *  · NEAR the subject — "나 드래그 당할 준비중" — a ready halo on the entity, no line:
+           *    this hand is about to DRAG.
+           *  · AWAY — the dashed line says where a CLICK would land. No dot at the cursor: the
+           *    cursor is already there, and the dot made click and drag look alike.
+           */
+          const near =
+            !aimTo || Math.hypot(aimTo.x - quickAim.from.x, aimTo.y - quickAim.from.y) < 3.2
+          return (
+            <g
+              className={styles.aimGuide}
+              aria-hidden="true"
+              style={{ '--st-entity': entityColorOf(doc, quickAim.entityId) } as CSSProperties}
+            >
+              {/* the anchor appears the instant Alt goes down — waiting for the first pointer
+                  move meant holding Alt showed nothing at all */}
+              <circle
+                cx={quickAim.from.x}
+                cy={quickAim.from.y}
+                r={near ? 1.5 : 1.15}
+                className={near ? styles.aimReady : styles.aimAnchor}
               />
-              <circle cx={aimTo.x} cy={aimTo.y} r={0.7} className={styles.aimTip} />
-            </>
-          )}
-        </g>
-      )}
+              {aimTo && !near && (
+                <line
+                  x1={quickAim.from.x}
+                  y1={quickAim.from.y}
+                  x2={aimTo.x}
+                  y2={aimTo.y}
+                  className={styles.aimLine}
+                />
+              )}
+            </g>
+          )
+        })()}
       {slingAim && (
         <g className={styles.slingAim} aria-hidden="true">
           <line

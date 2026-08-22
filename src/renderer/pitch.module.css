@@ -491,10 +491,13 @@
   stroke-dasharray: 0.7 0.5;
 }
 
-.aimTip {
-  fill: var(--st-entity, #fff);
-  stroke: #fff;
-  stroke-width: 0.16;
+/* Cursor NEAR the subject: a solid "ready to be dragged" halo — the hand is about to grab, so no
+   line yet. Solid where the anchor is dashed, because this is a state, not a route. */
+.aimReady {
+  fill: none;
+  stroke: var(--st-entity, #fff);
+  stroke-width: 0.34;
+  opacity: 0.9;
 }
 
 @media (prefers-reduced-motion: no-preference) {
