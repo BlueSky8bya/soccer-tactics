@@ -1,7 +1,7 @@
 # PLAN-20260823-014 — 핵심 재현 무결성 감사, Phase 1 (개정 v2)
 
 Plan ID: PLAN-20260823-014
-Status: Ready — G0만 먼저 실행 가능하며, M1/M2는 G0 PASS 전까지 착수 금지
+Status: Phase 1 Complete (2026-08-23) — 판정 Core Closure Supported; DG-BROWSER 결정 및 후속 PLAN(C/D/E, remediation) 대기
 Level: L2 — 전량 테스트 안정화 + domain/engine/editor 교차 감사. 브라우저·UX·스키마 변경은 별도 계획이다.
 Trigger: 사용자 2026-08-23 Claude Code 리뷰 — 이동하는 전량 테스트 실패, 미결 브라우저 런타임, 과대 범위, 측정 전 합격선 문제를 수정한다.
 Owner: 후속 실행 에이전트

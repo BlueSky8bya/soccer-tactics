@@ -1,10 +1,26 @@
 # Current State
 
-Last Updated: 2026-08-22 (세션 19, 순간 문법 + 루프스테이션 CHG-175·176 — 드롭 약속 문법(모든 단계 링+글로우, 시간-정직 dropStep), implicit 롤, intent 로그 계측) (직전: 세션 18, 불변식 B1)
+Last Updated: 2026-08-23 (세션 20, PLAN-014 Phase 1 — G0 flake 수리 + M1 mutation-kill + M2 junction parity, 판정 **Core Closure Supported**) (직전: 세션 19, 순간 문법)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 
 ## Current Objective
+
+**핵심 재현 무결성 감사 Phase 1 (2026-08-23, PLAN-014 완료) — 판정: Core Closure Supported.**
+사용자가 "신뢰가 아닌 현재 증거로 총검증"을 요청, Codex 초안(총검증 단일 계획)을 Claude 리뷰로
+G0+core M1/M2로 축소 개정 후 실행. **G0**: AppShell 전량-실행 flake의 root cause는 vitest jsdom
+(pretendToBeVisual)의 실-타이머 rAF가 부하 중 `await act` 사이에 발화해 빈 보드 0.2s 재생을 완주시킨
+것 + afterEach 부분 리셋 leak — 프레임 삼킴 큐 + `getInitialState` 전체 리셋으로 종결(전량 3회+serial
+연속 PASS). **M1**: I1~I10 전부에 mutant, SURVIVED 0 — 자기 detector KILL 8종, I9(relayout self-heal
++멱등)가 사실상 광역 2차 방어선, I7은 I5에 구조적으로 가려짐(2차 울타리), I8은 문서 mutation 불가로
+predicate 단위 검증. **M2**: semantic resolver 1개(heldBallPos), 우회 조립 0, 커밋 문서의 relayout
+우회 0, 6 fixture 전 junction parity Δ=0.0000(계약 0.25m), relayout 0.07~0.58ms, 저장 왕복 byte 동일.
+Findings 6건 전부 P2(detector 계층·import 정책·tie-break) — 제품 결함 아님, remediation 후보.
+증거: `plans/evidence/PLAN-014-M1-mutation-report.md`, `PLAN-014-M2-junction-graph.md`,
+계약: `invariantMutation.test.ts` 17핀, `junctionParity.test.ts` 8. **범위 한정**: core
+document/engine/editor만 — UI gesture/render/hit/UX는 DG-BROWSER 결정 전 `NOT VERIFIED`.
+
+### 이전 목표(완료): 순간 문법
 
 **순간 문법 (2026-08-22, PLAN-013 완료) — Alt 경로 지정의 구조 수술.** 사용자가 사진 3장으로 "찍은
 곳으로 안 간다 + 설명이 2배 + 마지막 고스트에선 안내선이 안 나온다"를 보고. 원인: 목적지가 무저장이라
@@ -140,7 +156,9 @@ R5(pick dispatch)/R7(blur·lostpointercapture cancel)/R12-D(letterbox 7px)/R12-E
 
 ## Active Work
 
-`plans/ACTIVE_PLAN.md` PLAN-20260820-004 (Draft). 완료: `plans/completed/PLAN-20260820-003-review-round.md`(Codex 계획·Claude 구현, M1~M6 PASS).
+`plans/ACTIVE_PLAN.md` PLAN-20260823-014 — **Phase 1 Complete (Core Closure Supported)**.
+후속 대기: DG-BROWSER 사용자 결정(브라우저 감사 여부), C 문서 drift, D-static/D-browser, E-core,
+Findings F-M1-01~04·F-M2-01~02 remediation. 직전 완료: `plans/completed/PLAN-20260822-013-moment-grammar.md`.
 
 ## Known Issues
 
@@ -170,11 +188,14 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 
 ## Next Exact Steps
 
-1. (사용자) `npm run dev` → 라운드 6 체크리스트(첫 방문 + 튜토리얼 + 체감). **커밋 권장**(R1~R9 uncommitted).
-   1a. Codex 다음 계획 후보: ISSUE-009 리드 패스(달리는 수신자), 타임라인 블록 키보드 조작, 미니바 가장자리 flip, Record 모드, Scene/Phase, ADR-0008.
-   1b. Codex에 다음 계획 요청 시 `docs/agent/CODEX_BRIEF.md` + `plans/completed/PLAN-20260820-003-review-round.md` "추가 개선 후보" 참조.
-2. 피드백 → ISSUE 등록 → PLAN-003 R2 반영.
-3. 다음 세션 hook 출력 확인 → ISSUE-002.
+1. (사용자) **DG-BROWSER 결정** — 브라우저 감사 방식 3택: ① Playwright devDependency + tracked `pw/`
+   (권고) ② external harness(버전·소스 고정) ③ 생략(UI/UX 폐쇄 `NOT VERIFIED` 수용).
+   결정 전에는 D-browser/E 착수 불가; C 문서 drift·D-static은 결정 없이 진행 가능.
+2. (사용자) Findings remediation 우선순위 확인 — 전부 P2: F-M1-01(I2 전 waypoint 확장),
+   F-M1-02(B1 전역 예산), F-M1-03·F-M2-01(import 시 relayout/거부 정책, AMB-06),
+   F-M1-04(중복 id compile 크래시), F-M2-02(receiver tie 명문화).
+3. (사용자) `npm run dev` → 라운드 6 체크리스트(첫 방문 + 튜토리얼 + 체감) — 이전 세션에서 이월.
+4. 다음 세션 hook 출력 확인 → ISSUE-002.
 
 ## DELEGATED 체크리스트 (사용자, 라운드 6 — 첫 방문)
 
@@ -197,6 +218,19 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 
 ## Last Verified
 
+- `npm run typecheck` → PASS — 2026-08-23 (세션 20)
+- `npm run lint` → PASS — 2026-08-23
+- `npm test` → PASS (46 files / 316 tests), **전량 3회 연속 + `--maxWorkers=1` 1회** — 2026-08-23
+- `npm run build` → PASS — 2026-08-23
+- `npm run harness:verify` → PASS (0 warnings) — 2026-08-23
+- mutation-kill 스위트 (`invariantMutation.test.ts`, 17핀) → PASS, SURVIVED 0 — 2026-08-23
+- junction parity 스위트 (`junctionParity.test.ts`, 8) → PASS, 전 junction Δ=0.0000 — 2026-08-23
+- `npx vitest run src/editor/tacticFuzz.test.ts` 기본 campaign(360세션) → PASS — 2026-08-23
+- 브라우저 probe/marathon → **NOT RUN** (DG-BROWSER 미결; `pw/` 자산은 현재 checkout에 없음 —
+  아래 2026-08-22 브라우저 결과는 HISTORICAL이며 현재 PASS로 재인용하지 않음)
+
+### 이전 세션 (2026-08-22, 세션 19)
+
 - `npm run typecheck` → PASS — 2026-08-22 (세션 19)
 - `npm run lint` → PASS — 2026-08-22
 - `npm test` → PASS (39 files / 261 tests) — 2026-08-22
@@ -214,7 +248,7 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 - 렌더 대조(`render.cjs`) — 재생 중 토큰의 실제 SVG transform vs 시계: 최대 0.22m(스프링 정착),
   m↔px 왕복 1.4e-14m → PASS — 2026-08-22
 
-### 이전 세션
+### 이전 세션 (2026-08-21)
 
 - `npm run typecheck` → PASS — 2026-08-21
 - `npm run lint` → PASS — 2026-08-21
