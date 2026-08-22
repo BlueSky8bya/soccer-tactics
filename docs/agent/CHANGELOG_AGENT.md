@@ -2376,3 +2376,18 @@ Change:
 Validation: typecheck/lint/build/harness PASS, 288 tests. `pw/stagehint.cjs` 18/18(매트릭스 계약:
 힌트=링+글로우=커밋 일치, S3b/S8 시간-정직 무약속, 전 케이스 연속성+스키마 0), 링·공 프로브
 12종 + 광역 10종 무회귀, marathon 1800제스처(30세션) 0실패.
+
+## CHG-20260822-177 — 링 시각 언어 통일 (반경 차이는 히스테리시스로서 의도 유지)
+
+Trigger: 사용자 — "0단계 초기 상태의 하이라이팅 링이랑 다음 단계 흐릿한 토큰의 링이 왜 다르게 생겼지?"
+
+진단: 반경 차이(뺏김 3.4 / 소유 2.7)는 히스테리시스라 의도지만, 그 위에 스타일 불일치가 겹쳐
+있었다 — giveRing이 carryRing보다 미묘하게 굵고 밝았고(0.24/90% vs 0.22/85%), 잔상 힌트에는
+호버 언어인 색깔 실선 halo가 덧씌워져 라이브 토큰의 "조각이 도톰해지는" 선택 언어와 어긋났다.
+
+Change: giveRing 스트로크를 carryRing과 동일하게(0.22, 85%, 대시 0.9/0.6); 잔상 힌트의 색 halo
+제거, 대신 `.ghostDropLift` — 선택된 라이브 토큰과 같은 언어(테두리 두꺼워지고 그림자, 1.12배).
+halo는 호버 전용으로 복귀. 반경 차이는 유지: 나가는 문턱(3.4) > 들어오는 문턱(2.7).
+
+Validation: typecheck/lint/build PASS, 288 tests, stagehint 18/18 + repro3/4·pickup·loopstation·
+selcues 무회귀, 스크린샷으로 두 지점 시각 언어 일치 확인.

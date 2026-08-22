@@ -552,13 +552,26 @@
 
 /* The drop PROMISE ring: released inside it, the ball belongs to that spot's player —
  * a live token or a step's faded token alike (user 2026-08-22: 바닥인지 소유인지 모르겠다).
- * Same dash grammar as the carry ring: dashes = ownership. */
+ * EXACTLY the carry ring's stroke (user 2026-08-22: 왜 링이 다르게 생겼지) — both mean the
+ * ownership boundary; only the RADIUS differs, honestly: leaving costs 3.4 m (detach),
+ * entering costs 2.7 m (attach) — the hysteresis that stops flicker at the edge. */
 .giveRing {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.9);
-  stroke-width: 0.24;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 0.22;
   stroke-dasharray: 0.9 0.6;
   animation: giveRingIn 160ms ease-out;
+}
+
+/* The drop-hint TARGET lifts the way a selected live token does (border thickens, shadow
+ * deepens) — one language at every stage; the colored hover halo stays a HOVER cue only. */
+.ghostDropLift {
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.28;
+  filter: drop-shadow(0 0.4px 0.8px rgba(0, 0, 0, 0.5));
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(1.12);
 }
 
 @keyframes giveRingIn {

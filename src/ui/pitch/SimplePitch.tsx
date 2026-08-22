@@ -3039,7 +3039,7 @@ export function SimplePitch() {
             data-gy={g.pos.y}
             data-drop-hint={hinted ? '1' : undefined}
           >
-            {(hinted || hoverKey === `ghost:${g.segId}:${g.entityId}`) && (
+            {hoverKey === `ghost:${g.segId}:${g.entityId}` && (
               <circle r={g.kind === 'ball' ? 1.35 : 2.1} className={styles.hoverHalo} />
             )}
             {g.kind === 'ball' ? (
@@ -3056,7 +3056,11 @@ export function SimplePitch() {
                 <circle cx={0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
               </g>
             ) : (
-              <circle r={1.5} style={{ fill: g.color }} />
+              <circle
+                r={1.5}
+                style={{ fill: g.color }}
+                className={hinted ? styles.ghostDropLift : undefined}
+              />
             )}
             {g.number !== undefined && (
               <text textAnchor="middle" dominantBaseline="central">
