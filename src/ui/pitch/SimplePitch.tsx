@@ -71,6 +71,7 @@ import { stateAt } from '@/engine/stateAt'
 import { DrawingLayer, PenStroke } from '@/renderer/DrawingLayer'
 import { PathLayer } from '@/renderer/PathLayer'
 import { PitchMarkings } from '@/renderer/PitchMarkings'
+import { BallMark } from '@/renderer/Token'
 import styles from '@/renderer/pitch.module.css'
 import { playableEnd } from '@/editor/usePlayback'
 import { clientToPitch } from '@/renderer/pointer'
@@ -3047,12 +3048,10 @@ export function SimplePitch() {
                   orbitGrabSeg === g.segId ? styles.ghostGrabbed : ''
                 }`}
               >
-                {/* small invisible hit halo; visual matches the live ball size */}
+                {/* small invisible hit halo; the mark itself is the LIVE ball's, faded by the
+                    parent group — one ball design everywhere (user 2026-08-22) */}
                 <circle r={1.0} fill="transparent" stroke="none" />
-                <circle r={0.68} />
-                <circle cx={0} cy={-0.3} r={0.15} className={styles.ghostBallDot} />
-                <circle cx={-0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
-                <circle cx={0.28} cy={0.19} r={0.15} className={styles.ghostBallDot} />
+                <BallMark />
               </g>
             ) : (
               <circle

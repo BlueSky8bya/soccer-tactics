@@ -59,6 +59,25 @@ function BallPattern() {
   )
 }
 
+/**
+ * THE BALL, drawn once. The live token and every faded moment share this mark, so a ball is a
+ * ball wherever it appears (user 2026-08-22: 초기 단계 축구공이랑 그 이외가 디자인이 달라 — the
+ * ghosts used to be a plain white disc with three dots). Ghosts simply inherit their parent
+ * group's opacity.
+ */
+export function BallMark(p: { r?: number; spin?: number; className?: string }) {
+  const r = p.r ?? BALL_R
+  return (
+    <>
+      <circle r={r} className={`${styles.ball} ${p.className ?? ''}`} />
+      <g transform={`rotate(${((p.spin ?? 0) * 180) / Math.PI}) scale(${r})`}>
+        <BallPattern />
+      </g>
+      <circle cx={-r * 0.35} cy={-r * 0.35} r={r * 0.22} className={styles.ballSpecular} />
+    </>
+  )
+}
+
 /** Pure token renderer: position in, SVG out. */
 export const Token = memo(function Token(p: TokenProps) {
   const r = p.kind === 'ball' ? BALL_R : TOKEN_R
@@ -100,7 +119,6 @@ export const Token = memo(function Token(p: TokenProps) {
     const scale = 1 + Math.min(0.9, h * 0.14) // bigger when higher (closer to the camera)
     const shadowDx = 0.35 + h * 0.22
     const shadowDy = 0.3 + h * 0.18
-    const spinDeg = ((p.spin ?? 0) * 180) / Math.PI
     body = (
       <>
         {/* ground shadow: drifts away and softens with height */}
@@ -114,12 +132,7 @@ export const Token = memo(function Token(p: TokenProps) {
         />
         {p.hovered && <circle r={r + 0.55} className={styles.hoverHalo} />}
         <g transform={`scale(${scale})`}>
-          <circle r={r} className={`${styles.ball} ${p.selected ? styles.ballSelected : ''}`} />
-          <g transform={`rotate(${spinDeg}) scale(${r})`}>
-            <BallPattern />
-          </g>
-          {/* specular */}
-          <circle cx={-r * 0.35} cy={-r * 0.35} r={r * 0.22} className={styles.ballSpecular} />
+          <BallMark r={r} spin={p.spin} className={p.selected ? styles.ballSelected : ''} />
         </g>
         <circle r={hitR} className={styles.tokenHit} />
       </>

@@ -2476,3 +2476,17 @@ Change:
 
 Validation: typecheck/lint/build PASS, 289 tests(keymapCues 11 — 모든 큐가 여전히 보이는 행을
 켠다), selcues 프로브 PASS + 스크린샷 3종으로 줄바꿈 없음 확인.
+
+## CHG-20260822-183 — 공 디자인 통일: 잔상 공도 라이브 공과 같은 그림
+
+Trigger: 사용자 — "초기 애니메이션 단계 축구공이랑 그 이외 축구공 디자인이 다르다. 일치시켜라."
+
+진단: 라이브 공은 32조각 패턴 + 스페큘러 하이라이트 + 비-스케일 테두리, 잔상 공은 흰 원판 +
+점 3개(별도 CSS)로 완전히 다른 그림이었다 — 0단계와 그 이후에서 공의 정체가 바뀌는 셈.
+
+Change: `BallMark`(원+패턴+하이라이트)를 Token.tsx에서 export, 라이브 토큰과 잔상이 같은 것을
+그린다. 잔상은 부모 그룹 opacity만 상속. `.ghostBall circle:first-child` / `.ghostBallDot` 규칙
+삭제(잔상 전용 디자인 소멸).
+
+Validation: typecheck/lint/build PASS, 289 tests, 프로브 6종 PASS, 스크린샷으로 라이브·잔상 공
+동일 확인.

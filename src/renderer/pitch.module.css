@@ -666,11 +666,8 @@
   pointer-events: none;
 }
 
-.ghostBall circle:first-child {
-  fill: #ffffff;
-  stroke: rgba(20, 24, 32, 0.65);
-  stroke-width: 0.14;
-}
+/* The ghost ball IS the ball (BallMark) — nothing to restyle here; it only fades with its
+   parent group. The old disc-and-three-dots rules lived here (user 2026-08-22: 디자인 일치). */
 
 /* orbit grab: the carried ghost lifts and brightens while held (user 2026-08-21) */
 .ghostGrabbed {
@@ -679,10 +676,6 @@
   transform-origin: center;
   opacity: 1;
   filter: drop-shadow(0 0.3px 0.6px rgba(0, 0, 0, 0.5));
-}
-
-.ghostBallDot {
-  fill: rgba(20, 24, 32, 0.6);
 }
 
 .snapRing circle {
