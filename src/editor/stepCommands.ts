@@ -460,8 +460,8 @@ export function momentSpotAt(
   doc: TacticDocument,
   pt: Vec2,
   radius = 2.5,
-): { entityId: Id; step: number } | null {
-  let best: { entityId: Id; step: number } | null = null
+): { entityId: Id; step: number; pos: Vec2 } | null {
+  let best: { entityId: Id; step: number; pos: Vec2 } | null = null
   let bestD = radius
   for (const tr of sceneOf(doc).timeline.tracks) {
     if (tr.entityKind !== 'player') continue
@@ -472,7 +472,7 @@ export function momentSpotAt(
       const d = Math.hypot(end.x - pt.x, end.y - pt.y)
       if (d < bestD) {
         bestD = d
-        best = { entityId: tr.entityId, step: stepOf(sg) }
+        best = { entityId: tr.entityId, step: stepOf(sg), pos: { x: end.x, y: end.y } }
       }
     }
   }
@@ -603,7 +603,9 @@ export function addStepPass(
      * drawn point; whoever is physically there when it arrives receives it.
      */
     const endPt = waypoints[waypoints.length - 1]?.p
-    const target = endPt ? momentSpotAt(doc, endPt) : null
+    const spot = endPt ? momentSpotAt(doc, endPt) : null
+    // only the MOMENT is stored — the spot's position is derived, never document data
+    const target = spot ? { entityId: spot.entityId, step: spot.step } : null
     track.segments.push({
       id,
       kind: 'travel',

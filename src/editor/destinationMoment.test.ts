@@ -183,8 +183,8 @@ describe('destination moment — the pass goes where the click pointed', () => {
   it('momentSpotAt reads future spots only — never the ball, never a start', () => {
     const core = board()
     const doc = core.getDocument()
-    expect(momentSpotAt(doc, { x: 32, y: 30 })).toEqual({ entityId: 'p1', step: 1 })
-    expect(momentSpotAt(doc, { x: 70, y: 10 })).toEqual({ entityId: 'p2', step: 2 })
+    expect(momentSpotAt(doc, { x: 32, y: 30 })).toMatchObject({ entityId: 'p1', step: 1 })
+    expect(momentSpotAt(doc, { x: 70, y: 10 })).toMatchObject({ entityId: 'p2', step: 2 })
     expect(momentSpotAt(doc, { x: 16, y: 46 })).toBeNull() // a START is not a future spot
     expect(momentSpotAt(doc, { x: 90, y: 60 })).toBeNull()
   })

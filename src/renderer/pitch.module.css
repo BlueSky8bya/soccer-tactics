@@ -550,6 +550,32 @@
   stroke-dasharray: 0.9 0.6;
 }
 
+/* The drop PROMISE ring: released inside it, the ball belongs to that spot's player —
+ * a live token or a step's faded token alike (user 2026-08-22: 바닥인지 소유인지 모르겠다).
+ * Same dash grammar as the carry ring: dashes = ownership. */
+.giveRing {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 0.24;
+  stroke-dasharray: 0.9 0.6;
+  animation: giveRingIn 160ms ease-out;
+}
+
+@keyframes giveRingIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+}
+
 .carryRingOut {
   fill: none;
   stroke: rgba(255, 255, 255, 0.8);

@@ -351,6 +351,16 @@ export function SimplePitch() {
   const flingKeyRef = useRef(0)
   /** Player under the DRAGGED ball (≤2.6m) — lights up so "give" vs "ground" is obvious. */
   const [dropTargetId, setDropTargetId] = useState<Id | null>(null)
+  /**
+   * The DROP PROMISE of a ball drag, as one visual grammar for EVERY stage (user 2026-08-22:
+   * 잡은 공이 어떤 선수한테 적용될 예정인지, 바닥인지 소유인지 모르겠다): who would own the ball
+   * if released HERE, at which spot (a live token or a step's faded token), with the ownership
+   * boundary drawn around that spot. Null = the ball would lie on the grass.
+   */
+  const [dropHint, setDropHint] = useState<{ entityId: Id; spot: Vec2; step?: number } | null>(
+    null,
+  )
+  const dropHintKeyRef = useRef('')
   /** Dev-only QA mirror: probes read the live interaction state instead of guessing from paint. */
   const debugRef = useRef<Record<string, unknown>>({})
   /** Goal-net cloth FX (benchmark: FIFA-style nets are ANCHORED at the frame and bulge at the
@@ -668,11 +678,69 @@ export function SimplePitch() {
     } else done()
   }
 
+  /**
+   * Who would OWN the ball released at `at` — the nearest live token first, then any step's
+   * future spot. ONE derivation for every ball drag (start ball, carried ghost, catch ghost,
+   * pass end), so the highlight, the boundary ring and the drop can never disagree
+   * (user 2026-08-22: 초기상황 제외한 다른 단계의 선수한테는 안내가 안 나온다).
+   */
+  const dropCandidateAt = (
+    d: TacticDocument,
+    at: Vec2,
+    opts?: { excludeId?: Id | null; moments?: boolean; minStep?: number; dropStep?: number },
+  ): { entityId: Id; spot: Vec2; step?: number } | null => {
+    const ex = opts?.excludeId ?? null
+    /*
+     * TIME-honest live tokens (loop-station S3/S5): a ball landing at step `dropStep` can only be
+     * received at a player's token if that player is STILL THERE then — a player whose first run
+     * starts at or before that step has left, and promising their empty past spot would author a
+     * doomed receive (the arrival anchor would honestly un-receive it). Their CURRENT position at
+     * that moment is a junction ghost, which the moment branch below already offers.
+     */
+    const stillThereAt = (plId: Id): boolean => {
+      if (opts?.dropStep === undefined) return true
+      const first =
+        findTrack(d, plId)?.segments.reduce<number | null>(
+          (acc, sg) =>
+            'path' in sg && !sg.id.startsWith('gen-')
+              ? Math.min(acc ?? Infinity, stepOf(sg))
+              : acc,
+          null,
+        ) ?? null
+      return first === null || first > opts.dropStep
+    }
+    const live = d.players
+      .map((pl) => ({
+        id: pl.id,
+        dist: Math.hypot(pl.home.x - at.x, pl.home.y - at.y),
+        spot: pl.home,
+      }))
+      .filter((x) => x.dist <= ATTACH_RADIUS_M && x.id !== ex && stillThereAt(x.id))
+      .sort((a, b) => a.dist - b.dist)[0]
+    if (live) return { entityId: live.id, spot: { ...live.spot } }
+    if (opts?.moments === false) return null
+    const m = momentSpotAt(d, at, ATTACH_RADIUS_M)
+    if (m && m.entityId !== ex && (opts?.minStep === undefined || m.step >= opts.minStep))
+      return { entityId: m.entityId, spot: m.pos, step: m.step }
+    return null
+  }
+
+  /** One setter drives the token light AND the boundary ring — keyed against re-render spam. */
+  const applyDropHint = (h: { entityId: Id; spot: Vec2; step?: number } | null) => {
+    const key = h ? `${h.entityId}@${h.step ?? 'live'}` : ''
+    if (key === dropHintKeyRef.current) return
+    dropHintKeyRef.current = key
+    setDropHint(h)
+    setDropTargetId(h?.entityId ?? null)
+  }
+
   const endGestureImpl = (commit: boolean) => {
     const g = gesture.current
     gesture.current = null
     setPressedId(null)
     setDropTargetId(null)
+    setDropHint(null)
+    dropHintKeyRef.current = ''
     setCarryRing(null)
     setDetachPos(null)
     const svg = svgRef.current
@@ -716,44 +784,91 @@ export function SimplePitch() {
           // IMPLICIT segment: the user placed a ball, they did not draw a path. Anything the ball
           // was going to do later cannot happen without it — overwritten (ADR-0009 v25).
           const dropAt = g.dropAt
-          // the run's owner is the one being ROBBED — the ring already means "keep it theirs",
-          // so their own token can never be a give target
+          // SAME derivation the mid-drag hint used (dropCandidateAt), so the drop always does
+          // what the highlight promised: a live token = a pass to them; a step's spot = the ball
+          // waits there and the runner picks it up; grass = loose. The robbed run owner is
+          // excluded — their ring already means "keep it theirs".
           const robbedId = findSegment(doc, g.runSegId)?.track.entityId
-          const giveTo = doc.players
-            .map((pl) => ({ pl, dist: Math.hypot(pl.home.x - dropAt.x, pl.home.y - dropAt.y) }))
-            .filter((x) => x.dist <= ATTACH_RADIUS_M && x.pl.id !== robbedId)
-            .sort((a, b) => a.dist - b.dist)[0]?.pl
+          const cand = dropCandidateAt(doc, dropAt, {
+            excludeId: robbedId ?? null,
+            minStep: g.moment.step + 1,
+            dropStep: g.moment.step + 1,
+          })
+          const candPlayer = cand ? doc.players.find((pl) => pl.id === cand.entityId) : undefined
           core.update((d) => {
             const doc2 = d as TacticDocument
             truncateBallFromStepInDraft(doc2, g.moment!.step + 1)
-            ensureTrack(doc2, doc2.ball.id, 'ball').segments.push({
-              id: newIdFor('seg'),
-              kind: 'travel',
-              travelKind: giveTo ? 'pass' : 'loose',
-              ...(giveTo ? { receiverId: giveTo.id } : { implicit: true }),
-              trigger: { type: 'at', t: 0 },
-              timing: { speed: DEFAULT_PASS_SPEED },
-              path: {
-                waypoints: [
-                  { id: newIdFor('w'), p: { ...g.moment!.pos } },
-                  { id: newIdFor('w'), p: giveTo ? { ...giveTo.home } : { ...dropAt } },
-                ],
-              },
-              step: Math.min(MAX_STEP, g.moment!.step + 1),
-            })
+            const ballTrack = ensureTrack(doc2, doc2.ball.id, 'ball')
+            const rollStep = Math.min(MAX_STEP, g.moment!.step + 1)
+            if (cand && cand.step !== undefined) {
+              const run = findTrack(doc2, cand.entityId)?.segments.find(
+                (sg) => 'path' in sg && !sg.id.startsWith('gen-') && stepOf(sg) === cand.step,
+              )
+              const spot =
+                run && 'path' in run
+                  ? run.path.waypoints[run.path.waypoints.length - 1]!.p
+                  : cand.spot
+              const off = carryOffset({ x: dropAt.x - spot.x, y: dropAt.y - spot.y })
+              ballTrack.segments.push({
+                id: newIdFor('seg'),
+                kind: 'travel',
+                travelKind: 'loose',
+                implicit: true,
+                trigger: { type: 'at', t: 0 },
+                timing: { speed: DEFAULT_PASS_SPEED },
+                path: {
+                  waypoints: [
+                    { id: newIdFor('w'), p: { ...g.moment!.pos } },
+                    { id: newIdFor('w'), p: { x: spot.x + off.x, y: spot.y + off.y } },
+                  ],
+                },
+                step: rollStep,
+              })
+              if (run)
+                ballTrack.segments.push({
+                  id: newIdFor('seg'),
+                  kind: 'possessed',
+                  trigger: { type: 'afterSegment', segmentId: run.id, anchor: 'end', offset: 0 },
+                  timing: { duration: 0 },
+                  holderId: cand.entityId,
+                  offset: off,
+                  offsetLocked: true,
+                })
+            } else {
+              ballTrack.segments.push({
+                id: newIdFor('seg'),
+                kind: 'travel',
+                travelKind: cand ? 'pass' : 'loose',
+                ...(cand ? { receiverId: cand.entityId } : { implicit: true }),
+                trigger: { type: 'at', t: 0 },
+                timing: { speed: DEFAULT_PASS_SPEED },
+                path: {
+                  waypoints: [
+                    { id: newIdFor('w'), p: { ...g.moment!.pos } },
+                    { id: newIdFor('w'), p: cand ? { ...cand.spot } : { ...dropAt } },
+                  ],
+                },
+                step: rollStep,
+              })
+            }
             relayoutStepsInDraft(doc2)
           })
           core.commit()
-          if (giveTo) {
+          if (cand && candPlayer) {
             pulseKey.current++
             setPulses((prev) => ({
               ...prev,
-              [giveTo.id]: pulseKey.current,
+              [cand.entityId]: pulseKey.current,
               [doc.ball.id]: pulseKey.current,
             }))
-            setAttachFx({ id: giveTo.id, key: pulseKey.current })
+            setAttachFx({ id: cand.entityId, key: pulseKey.current })
             ui.flashToast(
-              t('ball.givenAt', { s: Math.min(MAX_STEP, g.moment.step + 1), n: giveTo.number }),
+              cand.step !== undefined
+                ? t('ball.attachedAt', { n: candPlayer.number, s: cand.step })
+                : t('ball.givenAt', {
+                    s: Math.min(MAX_STEP, g.moment.step + 1),
+                    n: candPlayer.number,
+                  }),
             )
           } else ui.flashToast(t('ball.takenAway', { s: g.moment.step }))
           return
@@ -793,7 +908,7 @@ export function SimplePitch() {
                 const wps = f.segment.path.waypoints
                 const end = wps[wps.length - 1]!.p
                 const tgt = momentSpotAt(doc2, end)
-                if (tgt) f.segment.target = tgt
+                if (tgt) f.segment.target = { entityId: tgt.entityId, step: tgt.step }
                 else delete f.segment.target
               }
               resolvePassReceiverInDraft(doc2, g.travelSegId)
@@ -946,6 +1061,12 @@ export function SimplePitch() {
         if (f && f.segment.kind === 'travel') {
           const wps2 = f.segment.path.waypoints
           if (g.wpId === wps2[wps2.length - 1]?.id) {
+            // Landing on a step's spot names the destination MOMENT (same rule as drawing the
+            // pass there); a landing anywhere else clears it. Then the physical receiver.
+            const end = wps2[wps2.length - 1]!.p
+            const tgt = momentSpotAt(doc2, end, ATTACH_RADIUS_M)
+            if (tgt) f.segment.target = { entityId: tgt.entityId, step: tgt.step }
+            else delete f.segment.target
             resolvePassReceiverInDraft(doc2, g.segmentId)
             relayoutStepsInDraft(doc2)
           }
@@ -1900,20 +2021,22 @@ export function SimplePitch() {
       if (g.detached) {
         g.dropAt = clampToPitch(pt, doc.pitch)
         setDetachPos(g.dropAt)
-        // Pushing the taken ball INTO a player lights them — the SAME give-promise as every other
-        // ball drag (user 2026-08-22: 공 잡고 선수한테 들이밀면 선수 하이라이팅도 안 되고). The
-        // robbed run owner is excluded: the ring already means "keep it theirs".
+        // The drop PROMISE, at every stage alike (user 2026-08-22): a live token or any step's
+        // future spot lights up with the ownership ring around it. The robbed run owner is
+        // excluded — their own ring already means "keep it theirs" — and a spot the runner has
+        // already left (an earlier step) can never receive.
         const robbedId = findSegment(doc, g.runSegId)?.track.entityId
-        const da = g.dropAt
-        const over = doc.players
-          .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - da.x, pl.home.y - da.y) }))
-          .filter((x) => x.dist <= ATTACH_RADIUS_M && x.id !== robbedId)
-          .sort((a, b) => a.dist - b.dist)[0]
-        setDropTargetId(over?.id ?? null)
+        applyDropHint(
+          dropCandidateAt(doc, g.dropAt, {
+            excludeId: robbedId ?? null,
+            minStep: (g.moment?.step ?? 0) + 1,
+            dropStep: (g.moment?.step ?? 0) + 1,
+          }),
+        )
         return
       }
       setDetachPos(null)
-      setDropTargetId(null)
+      applyDropHint(null)
       const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
       core.update((d) => {
         const doc2 = d as TacticDocument
@@ -1942,16 +2065,18 @@ export function SimplePitch() {
       setCarryRing({ at: g.center, detached: !!g.detached })
       if (g.detached) {
         const free = clampToPitch(pt, doc.pitch)
-        // give-promise highlight, same as every other detached ball drag (user 2026-08-22)
-        const over = doc.players
-          .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - free.x, pl.home.y - free.y) }))
-          .filter((x) => x.dist <= ATTACH_RADIUS_M)
-          .sort((a, b) => a.dist - b.dist)[0]
-        setDropTargetId(over?.id ?? null)
+        // drop promise, live token or any step's spot alike (user 2026-08-22); the pass lands
+        // at its own step, so a token its player has left by then makes no promise
+        const passSeg = findSegment(doc, g.travelSegId)?.segment
+        applyDropHint(
+          dropCandidateAt(doc, free, {
+            dropStep: passSeg ? stepOf(passSeg as { step?: number }) : undefined,
+          }),
+        )
         core.update((d) => moveTravelEndInDraft(d as TacticDocument, g.travelSegId, free))
         return
       }
-      setDropTargetId(null)
+      applyDropHint(null)
       const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
       const target = { x: g.center.x + off.x, y: g.center.y + off.y }
       core.update((d) => moveTravelEndInDraft(d as TacticDocument, g.travelSegId, target, g.center))
@@ -1983,6 +2108,22 @@ export function SimplePitch() {
         const target = clampToPitch(pt, doc.pitch)
         core.update((d) =>
           bendMoveWaypointInDraft(d as TacticDocument, g.segmentId, g.wpId!, target),
+        )
+        // Dragging the END of a BALL pass is a ball drag like any other: the drop promise
+        // (who would receive — live token or a step's spot) shows while the hand moves
+        // (user 2026-08-22: 잡은 공이 어디에 적용될 예정인지 모르겠다).
+        const d2 = core.getDocument()
+        const f2 = findSegment(d2, g.segmentId)
+        const isBallEnd =
+          !!f2 &&
+          f2.segment.kind === 'travel' &&
+          g.wpId === f2.segment.path.waypoints[f2.segment.path.waypoints.length - 1]?.id
+        applyDropHint(
+          isBallEnd
+            ? dropCandidateAt(d2, target, {
+                dropStep: stepOf(f2.segment as { step?: number }),
+              })
+            : null,
         )
       }
       return
@@ -2106,7 +2247,7 @@ export function SimplePitch() {
         const nearBall = Math.hypot(raw.x - bh.x, raw.y - bh.y) <= ATTACH_RADIUS_M
         // the BALL lights up — it is what is about to be taken (the dragged player is already
         // drawn selected, so lighting them says nothing)
-        setDropTargetId(nearBall ? doc.ball.id : null)
+        applyDropHint(nearBall ? { entityId: doc.ball.id, spot: { ...bh } } : null)
       }
       st.setDrag({ id: g.id, grab: g.grab, raw, guides: [], snapped: false })
       return
@@ -2137,19 +2278,17 @@ export function SimplePitch() {
     }
     const origin = g.group.get(g.id) ?? g.home
     const delta = { x: raw.x - origin.x, y: raw.y - origin.y }
-    // who would RECEIVE the ball if dropped here (attach range) — light them up
-    const over = doc.players
-      .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - raw.x, pl.home.y - raw.y) }))
-      .filter((x) => x.dist <= ATTACH_RADIUS_M)
-      .sort((a, b) => a.dist - b.dist)[0]
-    // A player's FUTURE spot receives a drop too (user 2026-08-22): the ball waits there and the
-    // player picks it up as their run arrives. Only for a ball with no authored path of its own.
-    const overMoment =
-      over || ballDragHasPath(core.getDocument())
+    // The drop PROMISE — who would own the ball released here (live token or any step's spot),
+    // with the ownership ring drawn around them. While a HELD ball orbits inside its own ring
+    // there is no question to answer (the carry ring already says "still theirs"). A ball with
+    // an authored path keeps live-token drops only (a future-spot pickup would tear its chain).
+    applyDropHint(
+      holderId0 && !g.detached
         ? null
-        : momentSpotAt(core.getDocument(), raw, ATTACH_RADIUS_M)
-    const litId = over?.id ?? overMoment?.entityId ?? null
-    setDropTargetId((prev) => (prev === litId ? prev : litId))
+        : dropCandidateAt(core.getDocument(), raw, {
+            moments: !ballDragHasPath(core.getDocument()),
+          }),
+    )
     core.update((d) => {
       const doc2 = d as TacticDocument
       if (holderId0 && holderHome0 && !g.detached) {
@@ -2195,6 +2334,7 @@ export function SimplePitch() {
       gesture: gesture.current?.type ?? null,
       carryRing: carryRing ? { detached: carryRing.detached } : null,
       dropTargetId,
+      dropHint: dropHint ? { entityId: dropHint.entityId, step: dropHint.step ?? null } : null,
       detachPos: !!detachPos,
       pressedId,
       selection: [...useUiStore.getState().selection],
@@ -2872,7 +3012,14 @@ export function SimplePitch() {
       )}
       {/* ghosts: future positions - kept mounted, faded while viewing a frame (D-02) */}
       <g className={viewingFrame ? styles.decorHidden : styles.decorShown}>
-        {ghosts.map((g) => (
+        {ghosts.map((g) => {
+          /* the drop-promise glow: THIS step's spot would receive the dragged ball */
+          const hinted =
+            dropHint?.step !== undefined &&
+            g.kind === 'player' &&
+            dropHint.entityId === g.entityId &&
+            dropHint.step === g.step
+          return (
           <g
             key={g.id}
             className={styles.ghostToken}
@@ -2880,8 +3027,8 @@ export function SimplePitch() {
             style={
               {
                 opacity:
-                  (drawKeyHeld || hoverKey === `ghost:${g.segId}:${g.entityId}`
-                    ? Math.min(0.9, g.opacity + 0.3)
+                  (drawKeyHeld || hinted || hoverKey === `ghost:${g.segId}:${g.entityId}`
+                    ? Math.min(0.95, g.opacity + 0.35)
                     : g.opacity) * (focusIds.size > 0 && !focusIds.has(g.entityId) ? 0.25 : 1),
                 '--st-entity': g.color,
               } as CSSProperties
@@ -2890,8 +3037,9 @@ export function SimplePitch() {
             data-move-seg={g.segId}
             data-gx={g.pos.x}
             data-gy={g.pos.y}
+            data-drop-hint={hinted ? '1' : undefined}
           >
-            {hoverKey === `ghost:${g.segId}:${g.entityId}` && (
+            {(hinted || hoverKey === `ghost:${g.segId}:${g.entityId}`) && (
               <circle r={g.kind === 'ball' ? 1.35 : 2.1} className={styles.hoverHalo} />
             )}
             {g.kind === 'ball' ? (
@@ -2916,7 +3064,8 @@ export function SimplePitch() {
               </text>
             )}
           </g>
-        ))}
+          )
+        })}
       </g>
       {/* The white drag guide is gone with the gesture that produced it: it only ever appeared
           when possession pinned the ball's render away from the pointer, and a held ball no longer
@@ -2930,6 +3079,18 @@ export function SimplePitch() {
           cy={carryRing.at.y}
           r={CARRY_DETACH_M}
           className={carryRing.detached ? styles.carryRingOut : styles.carryRing}
+          aria-hidden="true"
+        />
+      )}
+      {dropHint && (
+        /* The drop PROMISE of the drag in progress: released inside this ring, the ball is
+           THEIRS (a live token or that step's spot — user 2026-08-22: 바닥에 놓일 예정인지
+           선수에 소유될 예정인지 모르겠다). Same dash grammar as the carry ring. */
+        <circle
+          cx={dropHint.spot.x}
+          cy={dropHint.spot.y}
+          r={ATTACH_RADIUS_M}
+          className={styles.giveRing}
           aria-hidden="true"
         />
       )}

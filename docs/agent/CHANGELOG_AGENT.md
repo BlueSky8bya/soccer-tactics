@@ -2348,3 +2348,31 @@ Validation: typecheck/lint/build/harness PASS, 288 tests(신규 implicitRoll 3).
 (특이 6상황: 자기 자신 드롭·마지막 정션·Escape 취소·undo/redo·안착 재드래그·안착發 Alt), marathon
 450제스처 10세션 0실패(신규 불변식: 스키마 상시 검증·Alt 없는 draw intent 금지·implicit+receiver
 동시 금지, 신규 제스처 ballGhostOut/ballGhostToToken), 링·광역 프로브 16종 무회귀.
+
+## CHG-20260822-176 — 드롭 약속 문법: 모든 단계·모든 잡기에서 링+하이라이팅, 시간-정직
+
+Trigger: 사용자 — "초기상황 제외한 다른 단계의 선수한테는 소유/박탈 원형 점선이 안 나온다. 공을
+선수 주위로 가져가도 하이라이팅이 안 된다 — 잡은 공이 바닥에 놓일지 누구 소유가 될지 모르겠다.
+수백·수천번 마라톤 돌려서 의도 반하는 것·해석 어려운 것 다 개선해라."
+
+진단: 힌트가 (1) 선수의 **시작 토큰(home)만** 후보로 봤고 — 이후 단계의 선수 위치(잔상)는 무시,
+(2) bend 계열 공 드래그(수신자 없는 패스 끝 잔상)에는 힌트 코드가 아예 없었고, (3) 시간을 무시해
+이미 떠난 선수의 홈 토큰에 건네기를 약속했다(도착 앵커가 정직하게 un-receive → "줬는데 안 가짐").
+스테이지힌트 매트릭스(4 잡기 × 3 타깃)로 전부 재현 후 수정.
+
+Change:
+- **`dropCandidateAt` 단일 유도**: 라이브 토큰 우선, 다음 momentSpotAt(이제 pos 반환; 저장되는
+  target에는 pos 제거) — 공 드래그 4경로(시작 공·orbit-carry·orbit-receive·bend 끝) 전부 이것
+  하나로 힌트·커밋이 항상 일치.
+- **드롭 약속 시각화**: 후보 지점에 ATTACH 반경 `giveRing`(대시 = 소유 문법, 160ms in), 라이브
+  토큰 하이라이팅 + 단계 잔상 글로우(`data-drop-hint`), endGesture에서 일괄 해제.
+- **시간-정직 (`dropStep`)**: 드롭이 단계 s에 떨어질 때 첫 런이 s 이하인 선수의 홈 토큰은 후보
+  제외(빈 과거 지점) — 그 선수의 "그 시점 위치"는 정션 잔상이 이미 제공. orbit-carry 모멘트
+  후보는 minStep(뺏은 순간+1)도 유지 — 이미 지나간 스팟은 약속 안 함.
+- **orbit-carry 커밋 3분기**: 라이브 = receiverId 패스 건네기 / 단계 잔상 = implicit 롤 + 링
+  대기 + afterSegment 픽업(도착 시 소유) / 잔디 = implicit 롤. bend 커밋은 momentSpotAt→target
+  + resolvePassReceiver(순간 지정 패스로 승격).
+
+Validation: typecheck/lint/build/harness PASS, 288 tests. `pw/stagehint.cjs` 18/18(매트릭스 계약:
+힌트=링+글로우=커밋 일치, S3b/S8 시간-정직 무약속, 전 케이스 연속성+스키마 0), 링·공 프로브
+12종 + 광역 10종 무회귀, marathon 1800제스처(30세션) 0실패.
