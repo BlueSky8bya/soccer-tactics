@@ -38,6 +38,7 @@ export function StepBar() {
     outer: for (const tr of doc.scenes[0].timeline.tracks)
       for (const sg of tr.segments) {
         if (!('path' in sg) || sg.id.startsWith('gen-')) continue
+        if (sg.kind === 'travel' && sg.implicit) continue
         const w = compiled.segmentTimes[sg.id]
         if (w && playingT >= w.start - 1e-9 && playingT <= w.end + 1e-9) {
           activeStep = Math.max(

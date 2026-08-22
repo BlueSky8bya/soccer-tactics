@@ -196,6 +196,13 @@ export type BallSegment =
        * older documents simply have plain flights (ADR-0010 D4/D9).
        */
       target?: { entityId: Id; step: number }
+      /**
+       * A CONSEQUENCE roll, not an authored movement: written by a takeaway so playback stays
+       * continuous (the ball rolls from the holder's feet to where it was dropped). Rendered
+       * without a path line or step badge — the user placed a ball, they did not draw a path
+       * (user 2026-08-22: Alt 없이 경로가 그려져). Additive-optional.
+       */
+      implicit?: boolean
     })
   | (SegmentBase & { kind: 'loose'; position?: Vec2 })
 

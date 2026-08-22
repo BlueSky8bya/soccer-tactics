@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-08-22 (세션 19, 순간 문법 — 클릭=주어·Alt+클릭=목적지, 퍼즈로 결함 10+종 규명·수정, 자동저장 1칸) (직전: 세션 18, 불변식 B1)
+Last Updated: 2026-08-22 (세션 19, 순간 문법 + 루프스테이션 CHG-175 — implicit 롤·분리 드래그 건네기 통일·링 즉시 표시·intent 로그 계측) (직전: 세션 18, 불변식 B1)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 

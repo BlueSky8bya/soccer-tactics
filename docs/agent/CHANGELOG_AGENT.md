@@ -2313,3 +2313,38 @@ Change: 두 상태 동일 무게 — 잡힘 = 대시(0.9/0.6, 85%), 분리 = **�
 
 Validation: typecheck/lint/build PASS, 285 tests PASS. 신규 `pw/recvtakeaway.cjs` 6/6(받은-공 경로
 계약), ringrepro 미드-드래그 스크린샷으로 링 선명 확인, 링 관련 프로브 8종 무회귀.
+
+## CHG-20260822-175 — 루프스테이션: Alt 없는 유령 경로·링 부재·하이라이팅 부재의 진짜 뿌리 3개
+
+Trigger: 사용자 — "소유된 공 클릭→다시 클릭+드래그로 소유권 밖에 뒀는데 Alt 없이 경로가 그려진다.
+소유권 안내 점선도 안 생긴다. 공을 선수한테 들이밀어도 하이라이팅이 안 된다. 구조적으로 처음부터
+로그/플래그 세워가며 다 확인해라. 루프스테이션 돌려라."
+
+계측(신규 dev 플래그): `__stIntentLog`(포인터다운마다 intent+수식키+픽), `__stFlags`(제스처·링·
+dropTarget 라이브), `__stValidate`(라이브 문서 스키마 검증). 이 로그로 사용자 플로우 6변형(V1~V6)
++ 잔상 경로(A/B) 전수 재현.
+
+진단 — 재현 확정 3건:
+1. **"Alt 없이 경로"의 정체**: 빼앗기 드롭이 쓰는 loose-roll travel이 **배지 달린 경로 라인**으로
+   렌더됐다. draw 계열 intent는 전 변형에서 Alt 없이 절대 발화 안 함(로그 증명) — 그려진 건 결과
+   세그먼트였다.
+2. **하이라이팅/건네기 공백**: orbit-carry/orbit-receive의 분리(detached) 드래그에는 선수 위
+   하이라이팅이 없었고, 선수 위 드롭도 소유 이전 없이 발밑에 loose로 굴렀다.
+3. **링 타이밍**: 링이 첫 이동 후에야 그려짐 — 잡는 순간에는 안내가 없었다.
+   (+ V4: 재생 종료 후 보드가 마지막 프레임에 머물러 시작 위치 클릭이 marquee가 됨)
+
+Change:
+- **`implicit` 플래그(additive 스키마)**: 빼앗기 롤은 재생 연속성용 결과 세그먼트 — 라인·배지·픽·
+  스텝바·stepCounts에서 제외, 잔디 위 공 잔상은 유지. 수신자가 붙는 순간 implicit 해제(진짜
+  패스로 승격). validateDocument에 불리언 검증.
+- **분리 드래그의 건네기 문법 통일**: 두 orbit 모두 분리 중 ATTACH 반경 선수 하이라이팅;
+  orbit-carry 드롭은 그 선수에게 **패스(receiverId)**로 건네기(빼앗기는 선수 자신은 제외 —
+  링이 이미 "유지"를 뜻함), orbit-receive는 기존 retarget. 토스트 `ball.givenAt`.
+- **링은 잡는 순간부터**: 소유 공 3개 grab 지점(초기 held·정션 캐리·캐치) 모두 pointerdown 즉시.
+- **Escape가 시계도 중립으로**: 재생 종료 프레임에서 Escape 시 authoring start 복귀.
+
+Validation: typecheck/lint/build/harness PASS, 288 tests(신규 implicitRoll 3). 프로브: repro1
+13/13(V1~V6), repro2, repro3 6/6, repro4 8/8(링 즉시·receive 건네기·연속성), loopstation 19/19
+(특이 6상황: 자기 자신 드롭·마지막 정션·Escape 취소·undo/redo·안착 재드래그·안착發 Alt), marathon
+450제스처 10세션 0실패(신규 불변식: 스키마 상시 검증·Alt 없는 draw intent 금지·implicit+receiver
+동시 금지, 신규 제스처 ballGhostOut/ballGhostToToken), 링·광역 프로브 16종 무회귀.

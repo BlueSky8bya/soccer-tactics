@@ -264,6 +264,7 @@ export const ko = {
   'ball.attached': '#{n} 공 보유 — 선수를 옮기면 공도 같이 갑니다',
   'ball.attachedAt': '{s}단계에 도착하면 #{n} 공 보유',
   'ball.takenAway': '{s}단계 이후 공을 잔디에 — 이후 패스는 지워졌어요 (Ctrl+Z 복구)',
+  'ball.givenAt': '{s}단계에 공이 #{n}에게 — 이후 원래 패스는 지워졌어요 (Ctrl+Z 복구)',
   'variant.cloned': '{v}안으로 복제됨 — 상단 전술안에서 전환',
   'simple.tooShort': '너무 짧아요 — 조금 더 길게 드래그하면 경로가 만들어져요',
   'sab.label': '선택한 움직임',

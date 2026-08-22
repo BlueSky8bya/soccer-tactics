@@ -162,6 +162,10 @@ export function useEditorKeyboard(): void {
           if (ui.drag || ui.pathDraft) return // pitch handles gesture cancel
           if (ui.selectedSegmentId) ui.selectSegment(null)
           else ui.clearSelection()
+          // Back to neutral includes the CLOCK: after playback the board rests on the final
+          // frame, and clicking where a token STARTED hits nothing — Escape must bring the
+          // authoring frame back (loop-station V4, 2026-08-22).
+          if (!ui.playback.playing && ui.playback.t !== 0) ui.returnToAuthoringStart()
           return
         case 'x': {
           // X = clear EVERY authored movement (same as the panel button, one key).

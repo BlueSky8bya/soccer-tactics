@@ -184,6 +184,8 @@ export function validateDocument(input: unknown): string[] {
               !(isStr(sg.receiverId) && playerIds.has(sg.receiverId))
             )
               bad(`${SP}.receiverId`, 'unknown player')
+            if (sg.implicit !== undefined && typeof sg.implicit !== 'boolean')
+              bad(`${SP}.implicit`, 'must be boolean')
             if (sg.target !== undefined) {
               const tgt = sg.target as Record<string, unknown>
               if (!isObj(tgt) || !(isStr(tgt.entityId) && playerIds.has(tgt.entityId)))

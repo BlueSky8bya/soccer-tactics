@@ -63,6 +63,7 @@ import { MIN_POINT_DIST_PX, mapPenPressure, mouseSpeedPressure, smoothPressure }
 
 const sceneTracks = (d: TacticDocument) => sceneOf(d).timeline.tracks
 import { useUiStore } from '@/editor/uiStore'
+import { validateDocument } from '@/editor/validateDocument'
 import { useCompiled, useResolvedState } from '@/editor/useCompiled'
 import { ATTACH_RADIUS_M, carryOffset } from '@/engine/compile'
 import { beautifyStroke, buildPathLUT, pointAtDistance } from '@/engine/path'
@@ -350,6 +351,8 @@ export function SimplePitch() {
   const flingKeyRef = useRef(0)
   /** Player under the DRAGGED ball (≤2.6m) — lights up so "give" vs "ground" is obvious. */
   const [dropTargetId, setDropTargetId] = useState<Id | null>(null)
+  /** Dev-only QA mirror: probes read the live interaction state instead of guessing from paint. */
+  const debugRef = useRef<Record<string, unknown>>({})
   /** Goal-net cloth FX (benchmark: FIFA-style nets are ANCHORED at the frame and bulge at the
    *  impact, oscillating back — the stretch starts at the goal's edges, never floats inside). */
   const [netFx, setNetFx] = useState<{
@@ -699,30 +702,41 @@ export function SimplePitch() {
       setOrbitGrabSeg(null)
       setCarryRing(null)
       setDetachPos(null)
+      setDropTargetId(null)
       if (g.began) {
         if (!commit) {
           core.cancel()
           return
         }
         if (g.detached && g.dropAt && g.moment) {
-          // Dropped OUTSIDE the ring: the holder loses the ball at this moment — it ROLLS from
-          // their feet to the drop and lies there (a teleport to the drop would tear B1). Anything
-          // the ball was going to do later cannot happen without it — overwritten, exactly as
-          // grabbing any earlier ball moment overwrites the rest (ADR-0009 v25).
+          // Dropped OUTSIDE the ring: the holder loses the ball at this moment. ON a player it is
+          // GIVEN — a pass to them, same highlight-keeps-its-promise rule as every other ball drop
+          // (user 2026-08-22: 공 잡고 선수한테 들이밀면 하이라이팅·전달). On grass it ROLLS from
+          // the holder's feet to the drop and lies there (a teleport would tear B1) — as an
+          // IMPLICIT segment: the user placed a ball, they did not draw a path. Anything the ball
+          // was going to do later cannot happen without it — overwritten (ADR-0009 v25).
           const dropAt = g.dropAt
+          // the run's owner is the one being ROBBED — the ring already means "keep it theirs",
+          // so their own token can never be a give target
+          const robbedId = findSegment(doc, g.runSegId)?.track.entityId
+          const giveTo = doc.players
+            .map((pl) => ({ pl, dist: Math.hypot(pl.home.x - dropAt.x, pl.home.y - dropAt.y) }))
+            .filter((x) => x.dist <= ATTACH_RADIUS_M && x.pl.id !== robbedId)
+            .sort((a, b) => a.dist - b.dist)[0]?.pl
           core.update((d) => {
             const doc2 = d as TacticDocument
             truncateBallFromStepInDraft(doc2, g.moment!.step + 1)
             ensureTrack(doc2, doc2.ball.id, 'ball').segments.push({
               id: newIdFor('seg'),
               kind: 'travel',
-              travelKind: 'loose',
+              travelKind: giveTo ? 'pass' : 'loose',
+              ...(giveTo ? { receiverId: giveTo.id } : { implicit: true }),
               trigger: { type: 'at', t: 0 },
               timing: { speed: DEFAULT_PASS_SPEED },
               path: {
                 waypoints: [
                   { id: newIdFor('w'), p: { ...g.moment!.pos } },
-                  { id: newIdFor('w'), p: { ...dropAt } },
+                  { id: newIdFor('w'), p: giveTo ? { ...giveTo.home } : { ...dropAt } },
                 ],
               },
               step: Math.min(MAX_STEP, g.moment!.step + 1),
@@ -730,7 +744,18 @@ export function SimplePitch() {
             relayoutStepsInDraft(doc2)
           })
           core.commit()
-          ui.flashToast(t('ball.takenAway', { s: g.moment.step }))
+          if (giveTo) {
+            pulseKey.current++
+            setPulses((prev) => ({
+              ...prev,
+              [giveTo.id]: pulseKey.current,
+              [doc.ball.id]: pulseKey.current,
+            }))
+            setAttachFx({ id: giveTo.id, key: pulseKey.current })
+            ui.flashToast(
+              t('ball.givenAt', { s: Math.min(MAX_STEP, g.moment.step + 1), n: giveTo.number }),
+            )
+          } else ui.flashToast(t('ball.takenAway', { s: g.moment.step }))
           return
         }
         core.commit()
@@ -752,6 +777,7 @@ export function SimplePitch() {
     if (g.type === 'orbit-receive') {
       setOrbitGrabSeg(null)
       setCarryRing(null)
+      setDropTargetId(null)
       if (g.began) {
         if (commit) {
           core.update((d) => {
@@ -1439,7 +1465,18 @@ export function SimplePitch() {
         lastBallPressRef.current = { at: now, x: e.clientX, y: e.clientY }
         const heldBy =
           resolved.ball.holderId ?? (ui.playback.t === 0 ? doc.ball.initialHolderId : undefined)
+        // A HELD ball shows its possession boundary from the grab itself (user 2026-08-22:
+        // 안내 점선이 안 생겨) — before any movement, so the ring explains the drag it invites.
+        if (heldBy) {
+          const hh = doc.players.find((pl) => pl.id === heldBy)?.home
+          if (hh) setCarryRing({ at: hh, detached: false })
+        }
         if (isDouble && !heldBy) {
+          if (import.meta.env.DEV) {
+            const w = window as unknown as { __stIntentLog?: unknown[] }
+            // eslint-disable-next-line no-underscore-dangle
+            ;(w.__stIntentLog ??= []).push({ intent: 'sling-double', heldBy: null })
+          }
           lastBallPressRef.current = null // a sling consumes the pair; no cycling, no triple
           st.select([entityId])
           gesture.current = {
@@ -1561,6 +1598,21 @@ export function SimplePitch() {
         soloSelection: !!subjectAtPress(),
       },
     )
+    if (import.meta.env.DEV) {
+      const w = window as unknown as { __stIntentLog?: unknown[] }
+      // eslint-disable-next-line no-underscore-dangle
+      ;(w.__stIntentLog ??= []).push({
+        intent,
+        alt: e.altKey,
+        ctrl: e.ctrlKey || e.metaKey,
+        button: e.button,
+        pt: { x: +pt.x.toFixed(1), y: +pt.y.toFixed(1) },
+        ghost: ghostTop ? { entityId: ghostTop.entityId, step: ghostTop.step } : null,
+        seg: segTop?.segId ?? null,
+        token: tokenEntityId,
+        holder: pressHolderId ?? null,
+      })
+    }
 
     switch (intent) {
       case 'draw-from-ghost': {
@@ -1638,6 +1690,10 @@ export function SimplePitch() {
             moment: ghostMoment ?? undefined,
           }
           setOrbitGrabSeg(segId!)
+          // The possession boundary shows the moment the ball is GRABBED, not after the first
+          // pull — the guidance must exist before the choice it explains (user 2026-08-22:
+          // 소유권 안내 점선이 안 생겨).
+          setCarryRing({ at: center, detached: false })
           svg.setPointerCapture(e.pointerId)
           return
         }
@@ -1664,6 +1720,8 @@ export function SimplePitch() {
               began: false,
             }
             setOrbitGrabSeg(segId!)
+            // boundary visible from the grab itself — same affordance as every owned ball
+            setCarryRing({ at: center, detached: false })
             svg.setPointerCapture(e.pointerId)
             return
           }
@@ -1842,9 +1900,20 @@ export function SimplePitch() {
       if (g.detached) {
         g.dropAt = clampToPitch(pt, doc.pitch)
         setDetachPos(g.dropAt)
+        // Pushing the taken ball INTO a player lights them — the SAME give-promise as every other
+        // ball drag (user 2026-08-22: 공 잡고 선수한테 들이밀면 선수 하이라이팅도 안 되고). The
+        // robbed run owner is excluded: the ring already means "keep it theirs".
+        const robbedId = findSegment(doc, g.runSegId)?.track.entityId
+        const da = g.dropAt
+        const over = doc.players
+          .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - da.x, pl.home.y - da.y) }))
+          .filter((x) => x.dist <= ATTACH_RADIUS_M && x.id !== robbedId)
+          .sort((a, b) => a.dist - b.dist)[0]
+        setDropTargetId(over?.id ?? null)
         return
       }
       setDetachPos(null)
+      setDropTargetId(null)
       const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
       core.update((d) => {
         const doc2 = d as TacticDocument
@@ -1873,9 +1942,16 @@ export function SimplePitch() {
       setCarryRing({ at: g.center, detached: !!g.detached })
       if (g.detached) {
         const free = clampToPitch(pt, doc.pitch)
+        // give-promise highlight, same as every other detached ball drag (user 2026-08-22)
+        const over = doc.players
+          .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - free.x, pl.home.y - free.y) }))
+          .filter((x) => x.dist <= ATTACH_RADIUS_M)
+          .sort((a, b) => a.dist - b.dist)[0]
+        setDropTargetId(over?.id ?? null)
         core.update((d) => moveTravelEndInDraft(d as TacticDocument, g.travelSegId, free))
         return
       }
+      setDropTargetId(null)
       const off = carryOffset({ x: pt.x - g.center.x, y: pt.y - g.center.y })
       const target = { x: g.center.x + off.x, y: g.center.y + off.y }
       core.update((d) => moveTravelEndInDraft(d as TacticDocument, g.travelSegId, target, g.center))
@@ -2113,6 +2189,18 @@ export function SimplePitch() {
     endGestureRef.current(true)
   }
 
+  // Dev-only QA mirror (refreshed every render): the flags a probe cannot read from paint alone.
+  if (import.meta.env.DEV) {
+    debugRef.current = {
+      gesture: gesture.current?.type ?? null,
+      carryRing: carryRing ? { detached: carryRing.detached } : null,
+      dropTargetId,
+      detachPos: !!detachPos,
+      pressedId,
+      selection: [...useUiStore.getState().selection],
+    }
+  }
+
   // Dev-only QA hook: headless probes can inspect the real document/compiled state.
   useEffect(() => {
     if (!import.meta.env.DEV) return
@@ -2127,13 +2215,27 @@ export function SimplePitch() {
     // eslint-disable-next-line no-underscore-dangle
     ;(window as unknown as Record<string, unknown>).__stStateAt = (at: number) =>
       stateAt(compiled, doc, at)
+    // Live interaction flags + the running intent log (probes: what did this press MEAN?).
+    // eslint-disable-next-line no-underscore-dangle
+    ;(window as unknown as Record<string, unknown>).__stFlags = () => ({
+      ...debugRef.current,
+      gesture: gesture.current?.type ?? null,
+    })
+    // Schema check on the LIVE document — lets every probe assert integrity after any gesture.
+    // eslint-disable-next-line no-underscore-dangle
+    ;(window as unknown as Record<string, unknown>).__stValidate = () => validateDocument(doc)
   }, [doc, compiled])
 
   // Geometric pick inputs (PLAN-007 M1): sampled FULL paths, cached by segment identity.
+  // Implicit rolls are invisible, so they must be unpickable too — a line that cannot be seen
+  // must never swallow a press.
   const pickSegments: PickSegment[] = doc.scenes[0]
     ? sceneTracks(doc).flatMap((tr) =>
         tr.segments
-          .filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
+          .filter(
+            (sg) =>
+              'path' in sg && !sg.id.startsWith('gen-') && !(sg.kind === 'travel' && sg.implicit),
+          )
           .map((sg) => ({
             segId: sg.id,
             entityId: tr.entityId,
@@ -2453,7 +2555,9 @@ export function SimplePitch() {
   const badgeAnchors = doc.scenes[0]
     ? doc.scenes[0].timeline.tracks.flatMap((tr) =>
         tr.segments
-          .filter((s) => 'path' in s && !s.id.startsWith('gen-'))
+          .filter(
+            (s) => 'path' in s && !s.id.startsWith('gen-') && !(s.kind === 'travel' && s.implicit),
+          )
           .map((s) => {
             const path = (s as { path: Path }).path
             const lut = buildPathLUT(path)

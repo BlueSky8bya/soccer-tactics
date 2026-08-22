@@ -473,6 +473,9 @@ export function syncTravelReceiverInDraft(
   }
   if (seg.travelKind === 'pass' || seg.travelKind === 'loose')
     seg.travelKind = receiver ? 'pass' : 'loose'
+  // A consequence roll someone now RECEIVES is no longer a mere consequence — it must be
+  // visible like any pass a player runs onto.
+  if (receiver && seg.implicit) delete seg.implicit
   const nx = f.track.segments[f.index + 1]
   if (
     nx &&

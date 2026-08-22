@@ -67,6 +67,9 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
     const entitySelected = p.selectedEntityIds.includes(track.entityId)
     for (const seg of track.segments) {
       if (!('path' in seg) || seg.path.waypoints.length < 2) continue
+      // Consequence rolls (takeaway) play but are never DRAWN — the user placed a ball there,
+      // they did not author a path (user 2026-08-22: Alt 없이 경로가 그려져).
+      if (seg.kind === 'travel' && seg.implicit) continue
       const att = p.attachedStart && p.attachedStart.segmentId === seg.id ? p.attachedStart : null
       const shown: Path =
         att && seg.path.waypoints[0]?.id === att.waypointId
