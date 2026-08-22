@@ -96,7 +96,10 @@ export function relayoutStepsInDraft(draft: TacticDocument): void {
         if (!alive.has(s.target.entityId) || !run) delete s.target
       }
     }
-    const ids = new Set(track.segments.map((s) => s.id))
+    // A trigger may reference a segment in ANY track — a pickup possession chains to the
+    // receiving PLAYER'S run. Checking only the ball's own ids rewrote that reference to t=0,
+    // so the ball was held from kickoff instead of waiting at the spot (user 2026-08-22).
+    const ids = new Set(scene.timeline.tracks.flatMap((tr) => tr.segments.map((s) => s.id)))
     for (const s of track.segments)
       if (s.trigger.type === 'afterSegment' && !ids.has(s.trigger.segmentId))
         s.trigger = { type: 'at', t: 0 }

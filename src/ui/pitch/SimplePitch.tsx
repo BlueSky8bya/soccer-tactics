@@ -10,6 +10,7 @@ import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { addPlayer, setEntityHome } from '@/editor/commands'
 import { PITCH_MARGIN_M, clampToPitch, truncateBallPathAtGoal } from '@/editor/geometry'
 import {
+  ensureTrack,
   findSegment,
   findTrack,
   lastKnownPosition,
@@ -146,6 +147,12 @@ interface DrawSubject {
   minStep?: number
   atStep?: number
 }
+
+/** The ball has an authored path of its own — it is PLACED then, never thrown or given mid-air. */
+const ballDragHasPath = (d: TacticDocument): boolean =>
+  (d.scenes[0]?.timeline.tracks.find((tr) => tr.entityKind === 'ball')?.segments ?? []).some(
+    (sg) => 'path' in sg && !sg.id.startsWith('gen-'),
+  )
 
 type Gesture =
   | {
@@ -920,11 +927,24 @@ export function SimplePitch() {
        * 있을 때는 던져지는 기능을 막고). The throw stays for a pathless ball — there it IS the
        * feature. The double-click slingshot is explicit and unaffected.
        */
-      const ballHasPath = (findTrack(d, d.ball.id)?.segments ?? []).some(
-        (sg) => 'path' in sg && !sg.id.startsWith('gen-'),
-      )
+      const ballHasPath = ballDragHasPath(d)
+      /*
+       * Dropped on a player's FUTURE spot (user 2026-08-22): the ball is left waiting there, and
+       * the moment their run arrives they pick it up — a `possessed` chained to that run's end, so
+       * the pickup follows the run through every retiming. Live players win when both are under
+       * the drop; a ball that already has a path keeps its ordinary move.
+       */
+      const pickup =
+        !releasedOnPlayer && !ballHasPath ? momentSpotAt(d, at, ATTACH_RADIUS_M) : null
       let fling: ReturnType<typeof simulateFling> | null = null
-      if (!releasedOnPlayer && !ballHasPath && vel && speed >= FLING_MIN_SPEED && !ui.reducedMotion) {
+      if (
+        !releasedOnPlayer &&
+        !pickup &&
+        !ballHasPath &&
+        vel &&
+        speed >= FLING_MIN_SPEED &&
+        !ui.reducedMotion
+      ) {
         const gw = 7.32 / 2
         fling = simulateFling(at, vel, doc.pitch, {
           top: doc.pitch.width / 2 - gw,
@@ -937,6 +957,48 @@ export function SimplePitch() {
         .map((p) => ({ p, dist: Math.hypot(p.home.x - at.x, p.home.y - at.y) }))
         .filter((x) => x.dist <= ATTACH_RADIUS_M) // one semantic constant (ADR-0010 D5)
         .sort((a, b) => a.dist - b.dist)[0]
+      if (pickup && !near) {
+        const who = d.players.find((p) => p.id === pickup.entityId)
+        core.update((dd) => {
+          const d2 = dd as TacticDocument
+          const run = findTrack(d2, pickup.entityId)?.segments.find(
+            (sg) => 'path' in sg && !sg.id.startsWith('gen-') && stepOf(sg) === pickup.step,
+          )
+          if (!run || !('path' in run)) return
+          const spot = run.path.waypoints[run.path.waypoints.length - 1]!.p
+          // loose AT the spot until the runner gets there…
+          moveBallStartInDraft(d2, { ...spot }, null)
+          // …then it is theirs, chained to the run so every retiming carries the pickup along
+          ensureTrack(d2, d2.ball.id, 'ball').segments.push({
+            id: newIdFor('seg'),
+            kind: 'possessed',
+            trigger: { type: 'afterSegment', segmentId: run.id, anchor: 'end', offset: 0 },
+            timing: { duration: 0 },
+            holderId: pickup.entityId,
+            // The ball waits AT the runner's arrival spot — the catch is at the feet, and the
+            // locked zero offset makes the next leg's carry BLEND out from there instead of
+            // snapping a dribble-length ahead in one frame (invariant B1).
+            offset: { x: 0, y: 0 },
+            offsetLocked: true,
+          })
+          relayoutStepsInDraft(d2)
+        })
+        core.commit()
+        ballMomentRef.current = null
+        if (who) {
+          pulseKey.current++
+          setPulses((prev) => ({
+            ...prev,
+            [who.id]: pulseKey.current,
+            [doc.ball.id]: pulseKey.current,
+          }))
+          setAttachFx({ id: who.id, key: pulseKey.current })
+          ui.flashToast(t('ball.attachedAt', { n: who.number, s: pickup.step }))
+        }
+        setDropTargetId(null)
+        st.setDrag(null)
+        return
+      }
       core.update((dd) => {
         const d2 = dd as TacticDocument
         moveBallStartInDraft(d2, at, near?.p.id ?? null)
@@ -1947,7 +2009,14 @@ export function SimplePitch() {
       .map((pl) => ({ id: pl.id, dist: Math.hypot(pl.home.x - raw.x, pl.home.y - raw.y) }))
       .filter((x) => x.dist <= ATTACH_RADIUS_M)
       .sort((a, b) => a.dist - b.dist)[0]
-    setDropTargetId((prev) => (prev === (over?.id ?? null) ? prev : (over?.id ?? null)))
+    // A player's FUTURE spot receives a drop too (user 2026-08-22): the ball waits there and the
+    // player picks it up as their run arrives. Only for a ball with no authored path of its own.
+    const overMoment =
+      over || ballDragHasPath(core.getDocument())
+        ? null
+        : momentSpotAt(core.getDocument(), raw, ATTACH_RADIUS_M)
+    const litId = over?.id ?? overMoment?.entityId ?? null
+    setDropTargetId((prev) => (prev === litId ? prev : litId))
     core.update((d) => {
       const doc2 = d as TacticDocument
       if (holderId0 && holderHome0 && !g.detached) {
