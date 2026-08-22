@@ -11,10 +11,17 @@
  */
 export const NORMAL_SPEED = 1.5
 
-/** Space-HOLD multiplies the NORMAL rate by this — what the hint promises and the pill shows. */
+/**
+ * The hold factors a hand can pick: slow-motion study, brisk, fast. Chosen by grabbing the play
+ * button and sliding left/right (user 2026-08-22); Space-HOLD multiplies the normal rate by the
+ * chosen one.
+ */
+export const BOOST_FACTORS = [0.5, 2, 3] as const
+
+/** Default hold factor — what the hint promises before the user picks one. */
 export const BOOST_FACTOR = 3
 
-/** Absolute clock rate while the hold is active. */
+/** Absolute clock rate while the hold is active, for the DEFAULT factor. */
 export const BOOST_SPEED = NORMAL_SPEED * BOOST_FACTOR
 
 /** How long Space must be down before a tap (play/pause) becomes a hold. */

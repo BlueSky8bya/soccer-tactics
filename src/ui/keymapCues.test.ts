@@ -36,7 +36,7 @@ describe('contextual highlighting — every state the panel can be in has someth
 
   it('editing a movement lights the token and path rows', () => {
     const rows = lit('path')
-    expect(rows.some((l) => l.includes('흐린 토큰'))).toBe(true)
+    expect(rows.some((l) => l.includes('잔상'))).toBe(true)
     expect(rows.some((l) => l.includes('경로'))).toBe(true)
   })
 

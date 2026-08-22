@@ -12,7 +12,7 @@ import { createEmptyDocument } from '@/domain'
 import { seedDefaultTeams } from '@/editor/commands'
 import { t } from './i18n'
 import { useUiStore } from '@/editor/uiStore'
-import { BOOST_SPEED, HOLD_TO_BOOST_MS, NORMAL_SPEED } from '@/editor/playbackRates'
+import { HOLD_TO_BOOST_MS, NORMAL_SPEED } from '@/editor/playbackRates'
 import { playableEnd, returnToStart, togglePlayback } from '@/editor/usePlayback'
 import { compile } from '@/engine/compile'
 
@@ -138,7 +138,7 @@ export function useEditorKeyboard(): void {
           const timer = window.setTimeout(() => {
             const u = useUiStore.getState()
             if (u.playback.playing) {
-              u.setSpeed(BOOST_SPEED)
+              u.setSpeed(NORMAL_SPEED * u.boostFactor)
               if (spaceHold.current) spaceHold.current.boosted = true
             }
           }, HOLD_TO_BOOST_MS)

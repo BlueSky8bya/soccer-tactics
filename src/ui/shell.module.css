@@ -1471,6 +1471,80 @@
    rest of the transport sideways mid-playback. */
 .playCol {
   min-width: 62px;
+  position: relative;
+}
+
+/*
+ * Speed scrubber (user 2026-08-22): grab the play button, slide left/right through 0.5× 2× 3×.
+ * The row pops in over the button with the overshoot spring; the chip under the hand SWELLS with
+ * a bouncier spring, so each hop lands with a little "톡" — state you can feel, Apple-style.
+ */
+.speedScrub {
+  /* FIXED and mounted outside the bar: the bar scrolls horizontally (overflow clips) and its
+     backdrop-filter would trap even a fixed descendant. left/top come inline from the button. */
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 10px));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: var(--st-radius-pill);
+  background: color-mix(in srgb, var(--st-text) 82%, transparent);
+  box-shadow: var(--st-depth-overlay);
+  pointer-events: none;
+  z-index: 60;
+  animation: speedScrubIn var(--st-spring-drop-ms) var(--st-spring-drop);
+}
+
+.speedScrubOpt {
+  min-width: 40px;
+  padding: 5px 0;
+  text-align: center;
+  border-radius: var(--st-radius-pill);
+  color: color-mix(in srgb, var(--st-surface) 62%, transparent);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transform: scale(1);
+  transition:
+    transform var(--st-spring-drop-ms) var(--st-spring-drop),
+    background var(--st-motion-transition) var(--st-ease-standard),
+    color var(--st-motion-transition) var(--st-ease-standard);
+}
+
+.speedScrubOptOn {
+  background: var(--st-accent);
+  color: #fff;
+  transform: scale(1.22);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--st-accent) 45%, transparent);
+}
+
+/* the button itself leans into the grab — pressed-and-holding, not clicked */
+.playBtnScrub {
+  transform: scale(0.92);
+  transition: transform var(--st-spring-press-ms) var(--st-spring-press);
+}
+
+@keyframes speedScrubIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 2px)) scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 10px)) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speedScrub {
+    animation: none;
+  }
+  .speedScrubOpt,
+  .playBtnScrub {
+    transition: none;
+    transform: none;
+  }
 }
 
 .playBtn {

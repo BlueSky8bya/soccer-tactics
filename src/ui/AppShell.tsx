@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { removeDrawings } from '@/editor/moreCommands'
@@ -6,7 +6,7 @@ import { PEN_COLORS, PEN_WIDTHS } from './pitch/inking'
 import { ColorPicker } from './ColorPicker'
 import { downloadBlob, exportGif } from './exportGif'
 import { UiIcon } from './UiIcon'
-import { BOOST_FACTOR, NORMAL_SPEED, speedFactor } from '@/editor/playbackRates'
+import { BOOST_FACTORS, NORMAL_SPEED, speedFactor } from '@/editor/playbackRates'
 import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
@@ -105,9 +105,71 @@ export function AppShell() {
 
   const errors = compiled.issues.filter((i) => i.level === 'error')
 
-  // Space-HOLD raises the clock rate (useEditorKeyboard). Nothing said so out loud, so the board
-  // just looked jumpy — these cues name it (user 2026-08-21: 눈으로 보이게).
-  const boosted = ui.playback.playing && ui.playback.speed > NORMAL_SPEED
+  // Space-HOLD raises (or slows) the clock rate (useEditorKeyboard). Nothing said so out loud, so
+  // the board just looked jumpy — these cues name it (user 2026-08-21: 눈으로 보이게).
+  const boosted = ui.playback.playing && ui.playback.speed !== NORMAL_SPEED
+
+  /*
+   * The hold FACTOR is picked on the play button itself: grab it and slide left/right through
+   * 0.5× / 2× / 3× (user 2026-08-22). A press that never travels stays a click — play/pause is
+   * untouched. `null` = not scrubbing; `idx` follows the hand with a spring on each hop.
+   */
+  const [scrub, setScrub] = useState<{ idx: number; x: number; y: number } | null>(null)
+  const scrubRef = useRef<{
+    startX: number
+    startIdx: number
+    idx: number
+    moved: boolean
+    pointerId: number
+    anchor: { x: number; y: number }
+  } | null>(null)
+  const SCRUB_STEP_PX = 44
+  const onPlayPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return
+    const startIdx = Math.max(0, BOOST_FACTORS.indexOf(ui.boostFactor as 0.5 | 2 | 3))
+    const r = e.currentTarget.getBoundingClientRect()
+    scrubRef.current = {
+      startX: e.clientX,
+      startIdx: startIdx < 0 ? BOOST_FACTORS.length - 1 : startIdx,
+      idx: startIdx < 0 ? BOOST_FACTORS.length - 1 : startIdx,
+      moved: false,
+      pointerId: e.pointerId,
+      anchor: { x: r.x + r.width / 2, y: r.y },
+    }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onPlayPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const sc = scrubRef.current
+    if (!sc || sc.pointerId !== e.pointerId) return
+    const dx = e.clientX - sc.startX
+    if (!sc.moved && Math.abs(dx) < 10) return
+    sc.moved = true
+    const idx = Math.max(
+      0,
+      Math.min(BOOST_FACTORS.length - 1, sc.startIdx + Math.round(dx / SCRUB_STEP_PX)),
+    )
+    if (idx !== sc.idx || !scrub) {
+      sc.idx = idx
+      setScrub({ idx, x: sc.anchor.x, y: sc.anchor.y })
+    }
+  }
+  const onPlayPointerUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const sc = scrubRef.current
+    if (!sc || sc.pointerId !== e.pointerId) return
+    scrubRef.current = null
+    if (sc.moved) {
+      ui.setBoostFactor(BOOST_FACTORS[sc.idx]!)
+      // let the picked chip's pop be SEEN before the row leaves
+      window.setTimeout(() => setScrub(null), 420)
+    } else {
+      setScrub(null)
+    }
+  }
+  const onPlayClick = () => {
+    // a scrub is not a click: the press travelled, so it picked a speed instead of toggling play
+    if (scrub) return
+    pb.toggle()
+  }
 
   // Bottom mode badge (user 2026-08-21): always shows WHICH mode the board is in, and toggles it.
   const modeToggle = (
@@ -256,7 +318,7 @@ export function AppShell() {
               <UiIcon name="fastForward" size={12} filled />
               <span>
                 <span className={styles.speedHintKbd}>{KEYMAP.playback.boost.label}</span>
-                {t('tl.boostInvite', { n: BOOST_FACTOR })}
+                {t('tl.boostInvite', { n: ui.boostFactor })}
               </span>
             </div>
           )
@@ -408,10 +470,15 @@ export function AppShell() {
                 </span>
                 <button
                   type="button"
-                  className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn}`}
-                  onClick={pb.toggle}
+                  className={`${styles.btn} ${styles.btnPrimary} ${styles.playBtn} ${scrub ? styles.playBtnScrub : ''}`}
+                  onClick={onPlayClick}
+                  onPointerDown={onPlayPointerDown}
+                  onPointerMove={onPlayPointerMove}
+                  onPointerUp={onPlayPointerUp}
+                  onPointerCancel={onPlayPointerUp}
                   data-tour="play"
                   data-boost={boosted}
+                  data-boost-factor={ui.boostFactor}
                   title={
                     boosted
                       ? t('tl.boostTitle', { n: speedFactor(ui.playback.speed) })
@@ -483,6 +550,23 @@ export function AppShell() {
         <div className={styles.toast} role="status" aria-live="polite">
           {ui.toast}
         </div>
+      )}
+      {scrub && (
+        <span
+          className={styles.speedScrub}
+          role="status"
+          aria-live="polite"
+          style={{ left: scrub.x, top: scrub.y }}
+        >
+          {BOOST_FACTORS.map((f, i) => (
+            <span
+              key={f}
+              className={`${styles.speedScrubOpt} ${i === scrub.idx ? styles.speedScrubOptOn : ''}`}
+            >
+              {f}×
+            </span>
+          ))}
+        </span>
       )}
       <ShortcutsOverlay />
       <TourOverlay />

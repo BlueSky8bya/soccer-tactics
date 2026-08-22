@@ -65,7 +65,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'run',
     title: '이동 경로',
-    body: 'Alt를 누른 채 선수를 끌면 이동 경로가 그려져요. (그냥 끌면 위치만 이동해요) 흐린 토큰을 Alt+드래그하면 그 위치에서 이어서 그려요.',
+    body: 'Alt를 누른 채 선수를 끌면 이동 경로가 그려져요. (그냥 끌면 위치만 이동해요) 흐릿한 잔상을 Alt+드래그하면 이어서 그려요.',
     kbd: 'Alt+드래그',
     placement: 'side',
     avoid: () => '[data-kind="ball"]',

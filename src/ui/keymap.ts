@@ -2,7 +2,6 @@
  * Simple-mode bindings (ADR-0009 v2) — shown in the right side panel and the ? overlay.
  * The mouse does the authoring; the keyboard only plays, deletes and undoes.
  */
-import { BOOST_FACTOR } from '@/editor/playbackRates'
 import type { Cue } from './cueHighlight'
 
 export interface Binding {
@@ -46,7 +45,7 @@ export const KEYMAP = {
     boost: {
       key: ' ',
       label: 'Space 꾹',
-      hint: `누르는 동안 ${BOOST_FACTOR}배속`,
+      hint: '누르는 동안 배속 재생 — 배속은 ▶ 버튼을 좌우로 끌어 선택',
       chip: true,
       cues: ['space'],
     },
@@ -71,29 +70,29 @@ export const PLACE_BINDINGS: Binding[] = [
   { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
   { label: '드래그', hint: '옮기기 (여러 명이면 같이)' },
   { label: '빈 잔디 드래그', hint: '박스로 여러 명 선택' },
-  { label: 'Shift+잔디 드래그', hint: '기존 선택에 박스 추가', compact: true, cues: ['shift'] },
+  { label: 'Shift+잔디 드래그', hint: '지금 선택에 추가로 담기', compact: true, cues: ['shift'] },
   { label: 'Ctrl+선수 클릭', hint: '선택에 추가/빼기 (그대로 드래그 = 같이 이동)', cues: ['ctrl'] },
   {
     label: '클릭',
-    hint: '대상 선택 — 선수·공·흐린 토큰 어디든 (고른 대상이 다음 Alt의 주인공)',
+    hint: '움직일 대상 고르기 — 선수·공·잔상 어디든',
     compact: true,
     cues: ['ball', 'player', 'path'],
   },
   {
     label: '겹친 곳 다시 클릭',
-    hint: '겹쳐 있는 다음 대상 선택 (선수→고스트→경로 순환)',
+    hint: '겹쳐 있는 것들을 차례로 선택',
     compact: true,
   },
   { label: '공 → 선수 드롭', hint: '그 선수가 공 보유', cues: ['ball'] },
   {
     label: '공 휙 던지기',
-    hint: '빠르게 놓으면 관성으로 굴러감 (경계선 튕김, 선수 근처 정지 시 보유)',
+    hint: '빠르게 놓으면 관성으로 굴러감',
     compact: true,
     cues: ['ball'],
   },
   {
     label: '공 더블클릭+드래그',
-    hint: '당긴 반대 방향으로 발사 — 점선 길이는 세기 (공은 그보다 더 나감)',
+    hint: '당긴 반대 방향으로 발사 — 길게 당길수록 세게',
     compact: true,
     cues: ['ball'],
   },
@@ -110,19 +109,19 @@ export const PLACE_BINDINGS: Binding[] = [
 export const ANIM_BINDINGS: Binding[] = [
   {
     label: 'Alt+클릭',
-    hint: '고른 대상이 클릭한 곳까지 — 흐린 토큰을 찍으면 그 시점에 맞춰 도착 (스루패스)',
+    hint: '고른 대상이 찍은 곳까지 — 잔상을 찍으면 그 타이밍에 맞춰 도착',
     compact: true,
     cues: ['alt', 'ball', 'player', 'path'],
   },
   {
     label: 'Alt+드래그',
-    hint: '같은 것을 곡선으로 한 번에 — 선수는 이동 경로, 공은 패스',
+    hint: '곡선 경로를 한 번에 — 선수는 이동, 공은 패스',
     compact: true,
     cues: ['alt', 'ball', 'player', 'path'],
   },
-  { label: '흐린 토큰 드래그', hint: '그 움직임의 끝 위치 미세조정', compact: true, cues: ['path'] },
-  { label: '경로 클릭', hint: '선택 후 Delete 삭제, 숫자키로 단계 변경', compact: true, cues: ['path'] },
-  { label: '경로 드래그', hint: '잡은 지점을 당겨 곡선으로 휘기', compact: true, cues: ['path'] },
+  { label: '잔상 드래그', hint: '그 움직임의 도착 지점 조정', compact: true, cues: ['path'] },
+  { label: '경로 클릭', hint: '선택 — Delete로 삭제, 숫자키로 단계 변경', compact: true, cues: ['path'] },
+  { label: '경로 드래그', hint: '당겨서 곡선으로 휘기', compact: true, cues: ['path'] },
   { label: '단계 1~9', hint: '같은 번호는 같이, 다음 번호는 이어서' },
 ]
 

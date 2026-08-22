@@ -55,6 +55,9 @@ export interface UiState {
   snapEnabled: boolean
   reducedMotion: boolean
   playback: PlaybackState
+  /** Space-HOLD factor (0.5 / 2 / 3), picked by sliding the play button (user 2026-08-22). */
+  boostFactor: number
+  setBoostFactor: (n: number) => void
   /** True once playback was started at least once this session (getting-started checklist). */
   hasPlayed: boolean
   /** Scope of the running/last playback (PLAN-005 M1). Footer Play/Space always use 'all'. */
@@ -146,6 +149,7 @@ export const useUiStore = create<UiState>((set) => ({
   snapEnabled: true,
   reducedMotion: false,
   playback: { t: 0, playing: false, speed: NORMAL_SPEED, loop: false },
+  boostFactor: 3,
   hasPlayed: false,
   playScope: 'all',
   rangeStart: 0,
@@ -182,6 +186,7 @@ export const useUiStore = create<UiState>((set) => ({
   setActiveTeam: (activeTeamId) => set({ activeTeamId }),
   setSnapEnabled: (snapEnabled) => set({ snapEnabled }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
+  setBoostFactor: (boostFactor) => set({ boostFactor }),
   setPlayhead: (t) =>
     set((s) => ({ playback: { ...s.playback, t: Math.max(0, t) }, completion: 'idle' })),
   startRange: (scope, start, end) =>

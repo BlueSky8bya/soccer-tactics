@@ -304,9 +304,34 @@ describe('playback staging (PLAN-006 M5)', () => {
     const { container } = setup()
     const rows = [...container.querySelectorAll('aside')].map((a) => a.textContent ?? '').join(' ')
     expect(rows).toContain('Space 꾹')
-    expect(rows).toMatch(new RegExp(`${BOOST_FACTOR}배속`))
+    // the factor is CHOSEN on the play button now, so the row explains where, not a number
+    expect(rows).toMatch(/배속/)
+    expect(KEYMAP.playback.boost.hint).toMatch(/▶/)
     // the plain Space row stays about play/pause only
     expect(KEYMAP.playback.toggle.hint).not.toMatch(/배속/)
+  })
+
+  it('sliding the play button picks the hold factor (0.5 / 2 / 3)', async () => {
+    const { container } = setup()
+    expect(useUiStore.getState().boostFactor).toBe(3)
+    const btn = container.querySelector('[data-tour="play"]') as HTMLButtonElement
+    expect(btn.getAttribute('data-boost-factor')).toBe('3')
+    // a hold factor below normal is a SLOW-MOTION hold and must still count as a hold state
+    await act(async () => {
+      useUiStore.getState().setBoostFactor(0.5)
+    })
+    expect(btn.getAttribute('data-boost-factor')).toBe('0.5')
+    await act(async () => {
+      useUiStore.setState((s) => ({
+        playback: { ...s.playback, playing: true, speed: NORMAL_SPEED * 0.5 },
+      }))
+    })
+    expect(container.querySelectorAll('[data-boost="true"]').length).toBe(2)
+    await act(async () => {
+      useUiStore.getState().setPlaying(false)
+      useUiStore.getState().setSpeed(NORMAL_SPEED)
+      useUiStore.getState().setBoostFactor(3)
+    })
   })
 
   it('space-hold fast-forward is visible: pill, stage glow and transport all agree', async () => {
