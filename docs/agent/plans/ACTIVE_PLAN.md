@@ -1,7 +1,7 @@
 # ACTIVE PLAN — PLAN-20260823-014: 핵심 재현 무결성 감사, Phase 1 (개정 v2)
 
 Plan ID: PLAN-20260823-014
-Status: Phase 1 Complete (2026-08-23) — 판정 Core Closure Supported; DG-BROWSER 결정 및 후속 PLAN(C/D/E, remediation) 대기
+Status: Completed — Phase 1 (2026-08-23), 판정 Core Closure Supported; DG-BROWSER 결정 및 후속 PLAN(C/D/E, remediation) 대기
 Level: L2 — 전량 테스트 안정화 + domain/engine/editor Node/Vitest 감사
 Trigger: 사용자 2026-08-23 Claude Code 리뷰 — 기준선, 브라우저 전제, 범위, 측정 기준을 수정
 Canonical Plan: [PLAN-20260823-014-total-verification-audit.md](./PLAN-20260823-014-total-verification-audit.md)
