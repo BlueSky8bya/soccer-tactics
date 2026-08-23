@@ -14,6 +14,7 @@
  */
 import { EditorCore } from './editorCore'
 import { loadAutosave, saveAutosave, startAutosave } from './persistence'
+import { relayoutStepsInDraft } from './stepCommands'
 
 /**
  * The board to open with: the last one saved, or null for a fresh pitch.
@@ -24,7 +25,21 @@ import { loadAutosave, saveAutosave, startAutosave } from './persistence'
  */
 export function restoreCore(): EditorCore | null {
   const doc = loadAutosave()
-  return doc ? new EditorCore(doc) : null
+  if (!doc) return null
+  /*
+   * SETTLE WHAT COMES OUT OF STORAGE. `relayoutStepsInDraft` already promises that "every route in
+   * and every document out of storage arrives consistent, whatever created it" — but the load path
+   * only VALIDATED, so a document saved by an older build (whose relayout resolved things
+   * differently) came back as a non-fixed-point and was silently rewritten by the user's first
+   * edit instead: the board they left is not quite the board that moves (audit F-M2-01).
+   *
+   * Doing it here makes the correction happen once, visibly, at the moment the board appears —
+   * and for a document that IS already settled it is a no-op by construction (byte-idempotence,
+   * invariant I9).
+   */
+  const healed = structuredClone(doc)
+  relayoutStepsInDraft(healed)
+  return new EditorCore(healed)
 }
 
 /**

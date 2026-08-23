@@ -30,6 +30,7 @@ import { maxBallJump } from '@/engine/ballContinuity'
 import { board, violation } from './tacticFuzz.harness'
 import { findSegment, makePath, sceneOf } from './segmentCommands'
 import { addStepPass, addStepRun } from './stepCommands'
+import { validateDocument } from './validateDocument'
 
 // ---------------------------------------------------------------------------------------------
 // which invariant produced a violation message (mirrors the order and wording in violation())
@@ -127,7 +128,7 @@ describe('invariant mutation-kill (PLAN-014 M1)', () => {
     expectDetectedBy('I1 danglingTrigger', violation(m), 'I1')
   })
 
-  it('duplicate segment id CRASHES compile instead of reporting an issue (Finding F-M1-04)', () => {
+  it('I1 KILLED — a duplicate segment id is reported as an issue, not a crash (F-M1-04 fixed)', () => {
     const { doc, runA } = chainDoc()
     const m = mutate(doc, (d) => {
       const tr = sceneOf(d).timeline.tracks.find((t) => t.segments.some((s) => s.id === runA))!
@@ -135,11 +136,9 @@ describe('invariant mutation-kill (PLAN-014 M1)', () => {
       ;(dup as { step?: number }).step = 3 // different step so only the id collides, not I3
       tr.segments.push(dup)
     })
-    // compile PUSHES the 'duplicate segment id' issue but then keeps compiling and dies in
-    // scheduleDuration on the clobbered pending entry. Detected loudly (a fuzz session would
-    // fail on the throw), but the I1 contract — errors come back as issues — is broken here.
-    // Remediation candidate; pinned as the current truth.
-    expect(() => violation(m)).toThrow(/keys/)
+    // Was: compile clobbered the first pending entry and died in scheduleDuration. Now the
+    // duplicate is reported and skipped, so I1 sees it as the compile error it always was.
+    expectDetectedBy('I1 duplicateSegmentId', violation(m), 'I1')
   })
 
   it('I2 KILLED — non-finite LAST waypoint', () => {
@@ -151,7 +150,7 @@ describe('invariant mutation-kill (PLAN-014 M1)', () => {
     expectDetectedBy('I2a lastWaypointNaN', violation(m), 'I2')
   })
 
-  it('I2 MASKED by I9 — non-finite INTERIOR waypoint (I2 only reads first/last)', () => {
+  it('I2 KILLED — non-finite INTERIOR waypoint (F-M1-01 fixed: I2 reads every waypoint)', () => {
     const { doc, runA } = chainDoc()
     const m = mutate(doc, (d) => {
       const wps = pathSeg(d, runA).path.waypoints
@@ -159,10 +158,10 @@ describe('invariant mutation-kill (PLAN-014 M1)', () => {
       const b = wps[wps.length - 1]!.p
       wps.splice(1, 0, { id: 'wp-mut', p: { x: (a.x + b.x) / 2, y: Number.NaN } })
     })
-    // Defended, but not by I2: relayout recomputes the timing from the (NaN-poisoned) length and
-    // the clone diverges — idempotence fires. Widening I2 to every waypoint would make this
-    // independent (Finding F-M1-01, remediation candidate).
-    expectDetectedBy('I2b interiorWaypointNaN', violation(m), 'I9')
+    // Was MASKED by I9: relayout recomputed the timing from the NaN-poisoned length and only
+    // idempotence noticed, naming a duration rather than the cause. I2 now walks every waypoint
+    // and both handles, so the detector written for this class catches it.
+    expectDetectedBy('I2b interiorWaypointNaN', violation(m), 'I2')
   })
 
   it('I3 KILLED — two movements for one entity in one step', () => {
@@ -230,7 +229,7 @@ describe('invariant mutation-kill (PLAN-014 M1)', () => {
     expectDetectedBy('I5b junctionTear1m', violation(m), 'I9')
   })
 
-  it('B1 budget masking — a short-duration segment inflates the global allowance (characterization)', () => {
+  it('B1 budget is per-instant — an unrelated short run cannot hide a tear (F-M1-02 fixed)', () => {
     // The B1 budget is GLOBAL: allowed = topBallSpeed·dt + slack, and topBallSpeed grows with
     // 1/shortest-run-duration (the legitimate carry swing). So one extreme segment ANYWHERE
     // raises the allowance for every junction. Measure it: the same 1.2m landing tear, with and
@@ -263,13 +262,13 @@ describe('invariant mutation-kill (PLAN-014 M1)', () => {
       if (seg.timing) seg.timing.duration = 0.06
     })
     const jumpMasked = maxBallJump(tornWithDistractor)
-    // CHARACTERIZATION (Finding F-M1-02): the tear detected on a quiet board is invisible next to
-    // one 0.06s segment — the budget more than doubles. The full violation() still flags the
-    // DOCUMENT (relayout restores the crushed duration → I9), so the mutant does not survive the
-    // suite; but B1 alone is honest only while the board has no extreme segment.
+    // The budget is now derived from what is happening to THIS ball at THIS instant, so a brief
+    // run by an uninvolved player leaves the junction's allowance untouched and the tear is still
+    // reported. Before the fix the same distractor more than doubled the allowance and B1 went
+    // quiet (F-M1-02).
     expect(jumpAlone!.allowed).toBeLessThan(1.2)
-    expect(jumpMasked, 'B1 budget inflated past the tear by the distractor').toBeNull()
-    expect(detectorOf(violation(tornWithDistractor))).toBe('I9')
+    expect(jumpMasked, 'the distractor must not hide the tear').not.toBeNull()
+    expect(jumpMasked!.allowed).toBeCloseTo(jumpAlone!.allowed, 2)
   })
 
   it('I8 — overlap predicate (not reachable by document mutation; unit-test the rule itself)', () => {
@@ -332,9 +331,11 @@ describe('invariant mutation-kill (PLAN-014 M1)', () => {
       const f = findSegment(d, passId)!
       ;(f.segment as { receiverId?: string }).receiverId = 'player-ghost'
     })
-    // relayout resolves the dead receiver (pass → loose) so the clone differs — idempotence
-    // fires. The validator does not check receiverId liveness (Finding F-M1-03, gap candidate:
-    // a dead receiver in a SAVED file would import, then change meaning on first relayout).
+    // Relayout resolves the dead receiver (pass → loose) so the clone differs and I9, which is
+    // checked BEFORE I10, reports first. The validator is NOT blind to it — an earlier reading of
+    // this result claimed a validator gap (F-M1-03); it is an ordering artefact, and the direct
+    // call below is the proof. A dead receiver in a saved FILE is refused at import.
     expectDetectedBy('I10b deadReceiver', violation(m), 'I9')
+    expect(validateDocument(m), 'the validator itself rejects a dead receiver').not.toHaveLength(0)
   })
 })

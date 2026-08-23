@@ -429,7 +429,15 @@ export function syncTravelReceiverInDraft(
     )
     .map((p) => ({ ...p, dist: Math.hypot(p.pos.x - end.x, p.pos.y - end.y) }))
     .filter((x) => x.dist <= radius)
-    .sort((a, b) => a.dist - b.dist)[0]
+    /*
+     * Nearest wins, and an exact tie is broken by ID — a STATED rule rather than whatever order
+     * the players array happens to be in. Distance-only sorting is stable, so a tie silently
+     * inherited array position: reversing `doc.players` handed the ball to the other player
+     * (audit R12-E / F-M2-02). Array order carries no meaning — it changes with formation edits
+     * and re-imports — so a tactic must not depend on it. Ties are rare in a hand-drawn board and
+     * common in a generated fixture, which is exactly where determinism has to hold.
+     */
+    .sort((a, b) => a.dist - b.dist || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0]
   const receiver = near?.id
   // Carry spot after the catch = the side the ball ARRIVES from (first touch), NOT wherever the
   // release scattered (user 2026-08-20: releasing past the token parked the ball on the FAR side,

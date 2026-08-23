@@ -13,8 +13,8 @@
  *
  * Also measured, not gated (M2 measurement-first policy): per-fixture relayout wall time,
  * external applications to reach a byte fixed point (must be 0 extra — commands leave the
- * document settled), and the receiver-tie order dependence (R12-E) is pinned as a
- * characterization: an EXACT distance tie resolves by players-array order.
+ * document settled), and the receiver tie-break (R12-E): an exact distance tie goes to the lower
+ * id, so a tactic never depends on the order of the players array.
  */
 import { describe, expect, it } from 'vitest'
 import type { Id, TacticDocument, Vec2 } from '@/domain/types'
@@ -262,7 +262,7 @@ describe('junction parity (PLAN-014 M2)', () => {
     expect(JSON.stringify(loaded), 'a saved committed document is already a fixed point').toBe(json)
   })
 
-  it('R12-E characterization — an EXACT receiver tie resolves by players-array order', () => {
+  it('R12-E — an EXACT receiver tie is broken by id, not by players-array order (F-M2-02 fixed)', () => {
     const core = board()
     const { d0, holder } = fixture(core)
     // two teammates placed mirror-symmetric around the pass end → exactly equal distances
@@ -302,13 +302,12 @@ describe('junction parity (PLAN-014 M2)', () => {
     orderB.players.reverse()
     resolvePassReceiverInDraft(orderB, passId)
     const recB = (findSegment(orderB, passId)!.segment as { receiverId?: Id }).receiverId
-    // PINNED CHARACTERIZATION (Finding F-M2-02): the stable distance sort breaks exact ties by
-    // array position, so reversing the players array flips the receiver. Real documents rarely
-    // hold an exact float tie, and the array order is stable through save/load — but the rule is
-    // order-dependent, not a stated tie-break. If this pin goes red, the rule changed: re-audit.
-    expect(recA).toBe(pa.id)
-    expect(recB).toBe(pb.id)
-    expect(recB).not.toBe(recA)
+    // The rule is now stated: nearest wins, an exact tie goes to the lower id. Array order is
+    // meaningless — it changes with formation edits and re-imports — so the same geometry must
+    // name the same receiver whichever way the array is turned.
+    const lower = [pa.id, pb.id].sort()[0]
+    expect(recA).toBe(lower)
+    expect(recB).toBe(lower)
   })
 
   it('reports the measurements', () => {

@@ -140,9 +140,19 @@ export function violation(doc: TacticDocument): string | null {
 
   const segs = authored(doc)
 
-  // I2 — no NaN anywhere the user can see
-  for (const s of segs) {
-    if (!finite(s.first) || !finite(s.last)) return `non-finite waypoint on ${s.kind} ${s.id}`
+  // I2 — no NaN anywhere the user can see. EVERY waypoint and handle, not just the ends: an
+  //      interior NaN poisons the path LENGTH, so the timing derived from it is NaN too, and the
+  //      only thing that noticed was relayout idempotence complaining about a duration (audit
+  //      F-M1-01). A detector should name the cause, not a downstream symptom.
+  for (const tr of sceneOf(doc).timeline.tracks) {
+    for (const s of tr.segments) {
+      if (!('path' in s) || s.id.startsWith('gen-')) continue
+      for (const w of s.path.waypoints) {
+        if (!finite(w.p)) return `non-finite waypoint on ${s.kind} ${s.id}`
+        if (w.handleIn && !finite(w.handleIn)) return `non-finite handleIn on ${s.kind} ${s.id}`
+        if (w.handleOut && !finite(w.handleOut)) return `non-finite handleOut on ${s.kind} ${s.id}`
+      }
+    }
   }
 
   // I3 — ONE entity, ONE movement per step (a player in two places is a contradiction, not a

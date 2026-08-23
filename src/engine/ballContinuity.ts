@@ -55,23 +55,36 @@ const DEFAULT_SLACK = 0.3
  */
 const CARRY_SWING_M = 2 * DRIBBLE_AHEAD_M + 1.0
 
-function topBallSpeed(compiled: CompiledTimeline, doc: TacticDocument): number {
-  let travel = 0
-  const ball = compiled.tracks[doc.ball.id]
-  for (const seg of ball?.segments ?? []) {
+/**
+ * How fast the ball may move AT ONE INSTANT (m/s).
+ *
+ * This used to be one number for the whole document: the fastest pass anywhere, plus a carry-swing
+ * term derived from the SHORTEST run on the board. One brief run by an uninvolved player therefore
+ * raised the allowance at every junction — a measured 0.06 s segment more than doubled it and hid a
+ * 1.2 m tear on the other side of the pitch (audit F-M1-02). The budget now asks what is happening
+ * to THIS ball at THIS moment:
+ *
+ *   · carried  — the holder's own run speed, plus the swing their own shortest run can produce
+ *   · in flight / loose — the fastest authored ball travel, which is a property of the ball itself
+ *
+ * A junction sample straddles both states, so the caller takes the larger of the two ends.
+ */
+function ballSpeedBudget(compiled: CompiledTimeline, doc: TacticDocument) {
+  let travelTop = 0
+  for (const seg of compiled.tracks[doc.ball.id]?.segments ?? []) {
     if (seg.kind !== 'travel') continue
     const dur = seg.end - seg.start
-    if (dur > 1e-6) travel = Math.max(travel, seg.schedule.lut.length / dur)
+    if (dur > 1e-6) travelTop = Math.max(travelTop, seg.schedule.lut.length / dur)
   }
-  let runner = 0
-  /**
-   * The carry blend finishes inside its own run (see `carryAheadFor`), so a run SHORTER than the
-   * ramp swings the ball proportionally faster. The budget has to know the shortest run in the
-   * document or it flags that legitimate swing as a tear.
-   */
-  let shortest = DRIBBLE_RAMP_S
-  for (const p of doc.players) {
-    for (const seg of compiled.tracks[p.id]?.segments ?? []) {
+  const carryCache = new Map<string, number>()
+  const carryTop = (holderId: string): number => {
+    const hit = carryCache.get(holderId)
+    if (hit !== undefined) return hit
+    let runner = 0
+    // The carry blend finishes inside its own run (`carryAheadFor`), so a run SHORTER than the
+    // ramp swings the ball proportionally faster — but only that holder's runs can swing it.
+    let shortest = DRIBBLE_RAMP_S
+    for (const seg of compiled.tracks[holderId]?.segments ?? []) {
       if (seg.kind !== 'move') continue
       const dur = seg.end - seg.start
       if (dur > 1e-6) {
@@ -79,8 +92,12 @@ function topBallSpeed(compiled: CompiledTimeline, doc: TacticDocument): number {
         shortest = Math.min(shortest, dur)
       }
     }
+    const v = runner + CARRY_SWING_M / Math.max(0.05, shortest)
+    carryCache.set(holderId, v)
+    return v
   }
-  return Math.max(travel, runner + CARRY_SWING_M / Math.max(0.05, shortest))
+  return (holderId: string | undefined): number =>
+    holderId ? Math.max(carryTop(holderId), travelTop) : travelTop
 }
 
 /**
@@ -92,12 +109,14 @@ export function ballJumps(doc: TacticDocument, opts: ContinuityOptions = {}): Ba
   const dt = opts.dt ?? DEFAULT_DT
   const slack = opts.slack ?? DEFAULT_SLACK
   const compiled = compile(doc)
-  const allowed = topBallSpeed(compiled, doc) * dt + slack
+  const budget = ballSpeedBudget(compiled, doc)
   const out: BallJump[] = []
   let prev = stateAt(compiled, doc, 0)
   for (let t = dt; t <= compiled.duration + 1e-9; t += dt) {
     const now = stateAt(compiled, doc, t)
     const d = Math.hypot(now.ball.pos.x - prev.ball.pos.x, now.ball.pos.y - prev.ball.pos.y)
+    // the interval straddles both states, so whichever end allows more sets the bar
+    const allowed = Math.max(budget(prev.ball.holderId), budget(now.ball.holderId)) * dt + slack
     if (d > allowed) {
       out.push({
         t: Math.round(t * 1000) / 1000,

@@ -221,12 +221,21 @@ export function compile(doc: TacticDocument, sceneIndex = 0): CompiledTimeline {
   for (const track of scene.timeline.tracks) {
     const list: Pending[] = []
     track.segments.forEach((seg, i) => {
-      if (pend.has(seg.id))
+      if (pend.has(seg.id)) {
+        /*
+         * A duplicate id is reported and then SKIPPED. It used to overwrite the first segment's
+         * pending entry while the track list kept the original, so the compile carried on with a
+         * half-registered segment and died in `scheduleDuration` on a schedule that was never
+         * built — a throw instead of the issue this very line raises (audit F-M1-04). Errors are
+         * data here; nothing in this file may take the caller down with it.
+         */
         issues.push({
           level: 'error',
           segmentId: seg.id,
           message: `duplicate segment id ${seg.id}`,
         })
+        return
+      }
       const p: Pending = {
         trackId: track.id,
         entityId: track.entityId,

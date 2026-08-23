@@ -35,6 +35,10 @@ module.exports = {
         },
         {
           name: 'lostpointercapture mid-drag',
+          // NOT a cancel signal: this event also fires at the end of every SUCCESSFUL drag, so
+          // treating it as a cancel would abort normal editing. What it must guarantee is only
+          // that the app is not corrupted by it — the pointerup that follows still decides.
+          mayCommit: true,
           fire: async () => {
             await page.evaluate(() => {
               const svg =
@@ -96,16 +100,26 @@ module.exports = {
         out.push(
           h.check(`${step.name}: document still valid`, problems.length === 0, problems[0] ?? ''),
         )
-        // A cancelled gesture may legitimately leave the drag committed OR reverted depending on
-        // the app's contract; what must NEVER happen is a document that fails validation or a
-        // stuck transaction. Record which one it is.
-        out.push(
-          h.check(
-            `${step.name}: outcome recorded`,
-            true,
-            after === before ? 'document reverted' : 'document kept the drag (committed)',
-          ),
-        )
+        // Every interruption REVERTS: a gesture cannot outlive the window, the pointer capture or
+        // an Escape. blur used to be the exception, committing the drag at whatever the pointer
+        // last touched after the user had already looked away (F-D-03).
+        if (step.mayCommit) {
+          out.push(
+            h.check(
+              `${step.name}: outcome is coherent (commit allowed)`,
+              true,
+              after === before ? 'reverted' : 'committed via the following pointerup — by design',
+            ),
+          )
+        } else {
+          out.push(
+            h.check(
+              `${step.name}: the interrupted drag is reverted`,
+              after === before,
+              after === before ? '' : 'document kept the drag — the gesture outlived the interruption',
+            ),
+          )
+        }
 
         // the next edit must still work — proves no transaction was left open
         // eslint-disable-next-line no-await-in-loop

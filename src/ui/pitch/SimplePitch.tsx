@@ -1353,6 +1353,14 @@ export function SimplePitch() {
     const blur = () => {
       setDrawKeyHeld(false)
       chain.current = null
+      /*
+       * A gesture cannot outlive the window it is being made in. Blur only dropped the Alt/chain
+       * decorations, so a drag interrupted by Alt-Tab stayed live and committed at whatever the
+       * pointer last touched when the button was eventually released — somewhere the user was no
+       * longer looking (audit F-D-03). Every other interruption (Escape, pointercancel, lost
+       * capture) already cancels; this makes blur say the same thing.
+       */
+      if (gesture.current) endGestureRef.current(false)
     }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
