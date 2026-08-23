@@ -2109,6 +2109,23 @@
   border-color: var(--st-accent-text, var(--st-accent));
 }
 
+/* The play button is the way OUT of playback: it never recedes with the rest. */
+.shell[data-playing='true'] .playCol {
+  opacity: 1;
+}
+
+/* An accent wash survives a dim almost intact, so three cued hint rows became three glowing
+   rectangles during the play. While the board is running, nothing in a panel is "active". */
+.shell[data-playing='true'] .shortcutRowOn {
+  background: transparent;
+  box-shadow: none;
+}
+
+.shell[data-playing='true'] .shortcutRowOn .kbd,
+.shell[data-playing='true'] .shortcutRowOn .shortcutLabel {
+  color: inherit;
+}
+
 /* faint shortcut hint on panel buttons */
 .btnKbd {
   margin-left: auto;
@@ -2207,11 +2224,19 @@
   min-width: 74px;
 }
 
-/* M5: while the play runs, the stage takes over — chrome recedes without moving */
+/*
+ * M5: while the play runs, the stage takes over — chrome recedes without moving.
+ *
+ * Two corrections from the lab review (2026-08-24). The FOOTER was exempt, so the busiest strip on
+ * screen — nine chips, four buttons, four key hints — stayed at full strength exactly when the
+ * pitch should own attention. And 0.45 took panel text to ~2.1:1, which reads as *disabled* rather
+ * than as deliberately quiet; 0.6 keeps it above 3:1 while still stepping clearly back.
+ */
 .shell[data-playing='true'] .sideLeft,
 .shell[data-playing='true'] .sideRight,
+.shell[data-playing='true'] .simpleBar,
 .shell[data-playing='true'] .top {
-  opacity: 0.45;
+  opacity: 0.6;
   transition: opacity var(--st-motion-transition) var(--st-ease-standard);
 }
 
@@ -2366,8 +2391,11 @@
   gap: 6px;
   padding: 5px 12px;
   border-radius: var(--st-radius-pill);
-  background: color-mix(in srgb, var(--st-text) 62%, transparent);
-  color: var(--st-surface);
+  /* A fixed dark scrim, NOT `--st-text`: keyed to the text colour it inverted with the theme and
+     turned into the brightest object on a dark page — an invitation out-shouting the play it is
+     inviting you to watch (lab review, 2026-08-24). */
+  background: rgba(20, 22, 26, 0.72);
+  color: #f5f6f8;
   font-size: 11.5px;
   letter-spacing: 0.01em;
   box-shadow: var(--st-depth-overlay);

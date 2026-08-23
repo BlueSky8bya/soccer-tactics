@@ -3057,7 +3057,7 @@ export function SimplePitch() {
             aria-label={t('simple.badge', { n: b.step })}
           >
             {/* the badge labels ONE entity's movement — same rule as its path and waypoints */}
-            <circle r={1.35} />
+            <circle r={0.95} />
             <text textAnchor="middle" dominantBaseline="central">
               {b.step}
             </text>

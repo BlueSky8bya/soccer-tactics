@@ -232,9 +232,18 @@ async function main() {
             .catch(() => {})
           await page.screenshot({ path: path.join(OUT, 's' + seed + '-step' + s + '.png') })
         }
+        /*
+         * Catch the play MID-flight. The first version waited `playEnd * 400`ms, which for most
+         * tactics overshot the end — so 30 of 40 "-playing" frames were actually the held result,
+         * with all the authoring decoration back on screen. Aim at a third of the way in, and say
+         * so in the filename when the clock proves we missed.
+         */
         await page.getByRole('button', { name: '재생', exact: true }).click()
-        await page.waitForTimeout(Math.max(400, info.playEnd * 400))
-        await page.screenshot({ path: path.join(OUT, 's' + seed + '-playing.png') })
+        await page.waitForTimeout(Math.max(180, Math.min(900, info.playEnd * 330)))
+        const running = await page.evaluate(() => window.__stClock().playing)
+        await page.screenshot({
+          path: path.join(OUT, 's' + seed + (running ? '-playing.png' : '-result.png')),
+        })
         await page.keyboard.press('Space')
         await settle(page, 200)
       }

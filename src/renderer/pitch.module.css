@@ -658,14 +658,20 @@
  * presses land, and it ate all of them (pw probes: bend-path resolved to nothing). The badge is a
  * board mark, not chrome; the floor is for controls, and the path it labels outranks it.
  */
+/*
+ * A badge is a LABEL on a path, and it was drawn at exactly the player token's radius (1.35m) with
+ * a number in it — the same mark as a player, in grey. Reviewers read them as extra players on the
+ * pitch, repeatedly (lab review, 2026-08-24). Smaller, and with a ring rather than a filled disc,
+ * so a glance separates "a piece" from "a note about a line".
+ */
 .stepBadge circle {
-  fill: rgba(255, 255, 255, 0.85);
+  fill: rgba(255, 255, 255, 0.92);
   stroke: var(--st-entity-chip, #3a4150);
-  stroke-width: 0.16;
+  stroke-width: 0.2;
 }
 
 .stepBadge text {
-  font-size: 1.5px;
+  font-size: 1.15px;
   font-weight: 700;
   fill: var(--st-entity-chip, #3a4150);
   user-select: none;

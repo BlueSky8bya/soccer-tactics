@@ -384,7 +384,11 @@ export function AppShell() {
             </div>
           )
         )}
-        {ui.selectedSegmentId ? <SelectionActionBar /> : <PlayerCard />}
+        {/* An authoring form has no business being the brightest object on the board while the play
+            runs — and the boost pill is anchored to the same top-centre slot, so it landed across
+            the name field (lab review, 2026-08-24). Playback owns the board; the inspector waits. */}
+        {!ui.playback.playing &&
+          (ui.selectedSegmentId ? <SelectionActionBar /> : <PlayerCard />)}
         {errors.length > 0 && (
           <div className={styles.emptyHint} role="alert">
             ⚠ {t('tl.issue.cycle')}

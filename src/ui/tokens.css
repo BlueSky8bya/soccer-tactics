@@ -151,9 +151,16 @@
   --st-warn: #f0b25c;
   --st-warn-soft: color-mix(in srgb, #f5a623 16%, var(--st-surface));
   --st-success: #4ad07f;
-  --st-pitch-grass: #2f8a50;
-  --st-pitch-grass-alt: #2b804a;
-  --st-pitch-surround: #246b3f;
+  /*
+   * The pitch is the one surface that must stay green in both themes — it is a football pitch.
+   * But the first dark pass only took it ~12% darker while the chrome dropped from near-white to
+   * near-black, so the board glared like a lightbox in a dark room (lab review, 2026-08-24).
+   * Darker and less saturated: still unmistakably grass, no longer the brightest thing in the app.
+   */
+  --st-pitch-grass: #1f5e38;
+  --st-pitch-grass-alt: #1c5533;
+  --st-pitch-surround: #17472a;
+  --st-pitch-line: rgba(255, 255, 255, 0.72);
   /* A near-black chip on a near-black panel has no edge — the ball's filled chip lifts instead. */
   --st-ball-chip: #3a3d44;
   --st-depth-rest: 0 0 0 1px var(--st-border), 0 1px 2px rgba(0, 0, 0, 0.4);
