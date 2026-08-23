@@ -2633,3 +2633,24 @@ E3(화면과 시계 일치)를 핵심 여정에서 검증. 화면-시계 오차�
 (ISSUE-002·009 Resolved, ISSUE-003 Not Reproduced, ISSUE-008에 player fling 제거 주석).
 
 Validation: ux-core 14 PASS, harness:verify PASS. (commit 8d31458)
+
+## CHG-20260823-193 — 다른 엔티티의 경로를 한 번에 잡을 수 있게 (포커스 격리의 사각지대)
+
+Problem: 사용자 보고 — "경로 수정하다가 다른 엔티티를 눌렀을 때 더블클릭을 해야 그 엔티티의 경로를
+수정할 수 있다". 재현해보니 보고보다 나빴다: 46m 떨어진 다른 선수의 경로를 눌렀는데 `marquee`(빈 잔디
+드래그 선택)로 해석됐다. 첫 press는 포커스를 벗어나는 데 쓰이고 두 번째가 비로소 경로를 잡는다.
+
+Change: 포커스 격리(2026-08-21, "편집 중인 움직임이 있으면 남의 스트로크가 press를 뺏지 못한다")가
+**무조건 필터**였다. 포커스된 엔티티가 커서 근처에 아무것도 없어도 다른 엔티티의 경로·고스트를 후보에서
+통째로 제거해, 앱이 그 지점을 빈 잔디로 인식했다. `applyFocus()`로 바꿔 **포커스가 잡을 것이 사정권에
+있을 때만** 격리한다. 겹침(규칙이 존재하는 이유)은 그대로 보호된다 — 겹치면 포커스된 후보가 정의상
+사정권 안이다. 호버와 프레스가 같은 함수를 쓰므로 R5 계약도 유지된다.
+
+같은 파일에서 발견된 전량-실행 flake도 함께 닫았다: `accessibility.test.tsx`(간헐 실패 재현)와
+`tour.test.tsx`(스토어 리셋 없음)에 G0와 동일한 처방(프레임 삼킴 큐 + `getInitialState` 전체 리셋).
+세 jsdom suite가 이제 같은 규율을 따른다.
+
+Files: src/ui/pitch/pickTarget.ts(+test), SimplePitch.tsx, ui/accessibility.test.tsx, ui/tour/tour.test.tsx, pw/focus-switch.cjs
+
+Validation: `pw/focus-switch` 13 checks PASS(떨어진 경로 1회 press로 편집 + 겹침에서 포커스 우선 보존),
+브라우저 115 checks ALL PASS, 329 tests 전량 3회 연속 + serial 1회, typecheck/lint/build/harness PASS.

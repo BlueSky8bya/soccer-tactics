@@ -61,6 +61,13 @@
       "describe": "feedforward promises the subject, one gesture is one undo, the painted board agrees with the clock at rest, mid-playback and on the held result"
     },
     {
+      "id": "focus-switch",
+      "file": "focus-switch.cjs",
+      "status": "present",
+      "covers": "focus isolation friction (user 2026-08-23)",
+      "describe": "one press moves editing from one entity path to another; the anti-steal protection survives where strokes overlap"
+    },
+    {
       "id": "historical-22",
       "status": "missing",
       "covers": "2026-08-22 session",

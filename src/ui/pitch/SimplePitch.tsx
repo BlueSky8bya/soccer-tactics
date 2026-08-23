@@ -41,6 +41,7 @@ import {
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
 import {
+  applyFocus,
   distToPolyline,
   ghostYieldTarget,
   pickTargets,
@@ -1684,11 +1685,9 @@ export function SimplePitch() {
     // FOCUS isolation (user 2026-08-21): while an entity is focused, only ITS ghosts and paths
     // are grabbable — an overlapping stroke of another entity can never steal the press. Live
     // tokens stay clickable (that is how focus switches).
-    const inFocus = focusIds.size > 0
-    const ghostTop =
-      (inFocus ? ov.ghosts.filter((g) => focusIds.has(g.entityId)) : ov.ghosts)[0] ?? null
-    const segTop =
-      (inFocus ? ov.segments.filter((c) => focusIds.has(c.entityId)) : ov.segments)[0] ?? null
+    const focused = applyFocus(ov.ghosts, ov.segments, focusIds)
+    const ghostTop = focused.ghosts[0] ?? null
+    const segTop = focused.segments[0] ?? null
     // Possession pair (golden G1): the historical .9/1.8 comparator, with the t=0 initial-holder
     // fallback (a step-1 pass makes the resolved status 'travel' at rest).
     const pressHolderId =
@@ -2792,10 +2791,9 @@ export function SimplePitch() {
          * `pressSubject` the same question with the same inputs.
          */
         const ov = pickNowRef.current(hp).overlaps
-        const inFocus = focusIds.size > 0
-        const gTop = (inFocus ? ov.ghosts.filter((g) => focusIds.has(g.entityId)) : ov.ghosts)[0] ?? null
-        const sTop =
-          (inFocus ? ov.segments.filter((c) => focusIds.has(c.entityId)) : ov.segments)[0] ?? null
+        const hoverFocused = applyFocus(ov.ghosts, ov.segments, focusIds)
+        const gTop = hoverFocused.ghosts[0] ?? null
+        const sTop = hoverFocused.segments[0] ?? null
         const hoverHolderId =
           resolved.ball.holderId ?? (ui.playback.t === 0 ? doc.ball.initialHolderId : undefined)
         let tokenId: Id | null

@@ -30,10 +30,16 @@ beforeAll(() => {
       disconnect() {}
     }
   }
-  if (!window.requestAnimationFrame) {
-    window.requestAnimationFrame = (cb) =>
-      setTimeout(() => cb(performance.now()), 16) as unknown as number
-    window.cancelAnimationFrame = (h) => clearTimeout(h)
+  // Same reason as AppShell.test (G0, PLAN-014): vitest's jsdom is pretendToBeVisual, so this
+  // guard never fired and a REAL rAF drove the playback controller during `await act(...)`.
+  const rafQueue = new Map<number, FrameRequestCallback>()
+  let rafId = 0
+  window.requestAnimationFrame = (cb) => {
+    rafQueue.set(++rafId, cb)
+    return rafId
+  }
+  window.cancelAnimationFrame = (h) => {
+    rafQueue.delete(h)
   }
 })
 
@@ -46,7 +52,12 @@ beforeEach(() => {
     tool: 'select',
   })
 })
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+  // These tests set up in beforeEach, but they left the shared store dirty for whatever file ran
+  // next — the same leak that made the AppShell failure move around (G0, PLAN-014).
+  useUiStore.setState(useUiStore.getInitialState(), true)
+})
 
 function mount() {
   const core = new EditorCore(

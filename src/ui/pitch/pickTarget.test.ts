@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BALL_HIT_M,
   GHOST_PLAYER_HIT_M,
+  applyFocus,
   GHOST_YIELD_BALL_M,
   GHOST_YIELD_PLAYER_M,
   PLAYER_HIT_M,
@@ -213,5 +214,55 @@ describe('pressSubject — the halo and the press share one answer (audit R5)', 
         }
       }
     }
+  })
+})
+
+describe('applyFocus — isolation that does not create a dead zone', () => {
+  const g = (entityId: string, d = 0.5): Extract<Candidate, { kind: 'ghost' }> => ({
+    kind: 'ghost',
+    entityId,
+    segId: `seg-${entityId}`,
+    pos: { x: 0, y: 0 },
+    step: 1,
+    d,
+    norm: d / GHOST_PLAYER_HIT_M,
+  })
+  const s = (entityId: string, d = 0.1): Extract<Candidate, { kind: 'segment' }> => ({
+    kind: 'segment',
+    segId: `seg-${entityId}`,
+    entityId,
+    step: 1,
+    d,
+    norm: d / 0.35,
+  })
+
+  it('no focus changes nothing', () => {
+    const r = applyFocus([g('b')], [s('b')], new Set())
+    expect(r.ghosts).toHaveLength(1)
+    expect(r.segments).toHaveLength(1)
+  })
+
+  it('THE PROTECTION: where strokes overlap, the focused entity keeps the press', () => {
+    // A is focused and its path is under the cursor together with B's — B must not steal it.
+    const r = applyFocus([], [s('A'), s('B')], new Set(['A']))
+    expect(r.segments.map((c) => c.entityId)).toEqual(['A'])
+  })
+
+  it('THE PROTECTION: a focused GHOST also holds the press against another path', () => {
+    const r = applyFocus([g('A')], [s('B')], new Set(['A']))
+    expect(r.ghosts.map((c) => c.entityId)).toEqual(['A'])
+    expect(r.segments).toHaveLength(0)
+  })
+
+  it('THE FIX: with nothing of the focused entity in reach, the board answers normally', () => {
+    // The user is pointing squarely at B's path, far from anything of A's. Filtering here made
+    // the press read as bare grass and start a marquee (user 2026-08-23: 더블클릭을 해야 …).
+    const r = applyFocus([], [s('B')], new Set(['A']))
+    expect(r.segments.map((c) => c.entityId)).toEqual(['B'])
+  })
+
+  it('the fallback is joint: it does not mix a focused ghost with a stranger path', () => {
+    const r = applyFocus([g('A')], [s('B')], new Set(['A']))
+    expect(r.segments).toHaveLength(0) // B is not smuggled in beside A's ghost
   })
 })

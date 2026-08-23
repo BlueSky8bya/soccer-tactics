@@ -22,22 +22,25 @@ beforeAll(() => {
       disconnect() {}
     }
   }
-  if (!window.requestAnimationFrame) {
-    window.requestAnimationFrame = (cb) =>
-      setTimeout(() => cb(performance.now()), 16) as unknown as number
-    window.cancelAnimationFrame = (h) => clearTimeout(h)
+  // Same reason as AppShell.test (G0, PLAN-014): vitest's jsdom is pretendToBeVisual, so a REAL
+  // rAF exists and fires during `await act(...)` under full-suite load — the playback controller
+  // then advances a clock no test here asked to run. Swallow frames into a queue nothing pumps.
+  const rafQueue = new Map<number, FrameRequestCallback>()
+  let rafId = 0
+  window.requestAnimationFrame = (cb) => {
+    rafQueue.set(++rafId, cb)
+    return rafId
+  }
+  window.cancelAnimationFrame = (h) => {
+    rafQueue.delete(h)
   }
 })
 
 afterEach(() => {
   cleanup()
-  useUiStore.setState({
-    selection: [],
-    selectedSegmentId: null,
-    shortcutsOpen: false,
-    tour: { active: false, step: 0, set: 'main' as const },
-    playback: { t: 0, playing: false, speed: 1, loop: false },
-  })
+  // Full reset: the field list forgot playScope/rangeEnd/completion/boostFactor/hasPlayed, so a
+  // stray frame in one test leaked playback state into the next (G0, PLAN-014).
+  useUiStore.setState(useUiStore.getInitialState(), true)
 })
 
 function setup() {

@@ -246,3 +246,36 @@ export function subjectKey(
   if (s.kind === 'token') return `${s.id === ballId ? 'ball' : 'player'}:${s.id}`
   return `${s.kind}:${s.id}`
 }
+
+/**
+ * FOCUS ISOLATION, without the dead zone.
+ *
+ * While one movement is being edited its entity is focused, so an overlapping stroke belonging to
+ * someone else cannot steal the press (2026-08-21). That filter used to be unconditional: every
+ * other entity's paths and ghosts were removed from the candidates outright, even when nothing of
+ * the focused entity was anywhere near the cursor. Pressing another player's path then read as
+ * bare grass — the press started a marquee, and only after a second press (which dropped focus)
+ * could that path be grabbed. That is the "I have to double-click to edit another entity's path"
+ * report (user 2026-08-23), measured at 46 m of separation.
+ *
+ * Focus now holds the press only while it has something IN REACH to hold it with. If the focused
+ * entity has neither a ghost nor a path in range, the board answers normally. Overlap — the case
+ * the rule exists for — is unaffected, because there the focused candidate is in range by
+ * definition.
+ */
+export function applyFocus(
+  ghosts: Extract<Candidate, { kind: 'ghost' }>[],
+  segments: Extract<Candidate, { kind: 'segment' }>[],
+  focusIds: ReadonlySet<Id>,
+): {
+  ghosts: Extract<Candidate, { kind: 'ghost' }>[]
+  segments: Extract<Candidate, { kind: 'segment' }>[]
+} {
+  if (focusIds.size === 0) return { ghosts, segments }
+  const mineG = ghosts.filter((c) => focusIds.has(c.entityId))
+  const mineS = segments.filter((c) => focusIds.has(c.entityId))
+  // Something of the focused entity is under the cursor: it keeps the press, as designed.
+  if (mineG.length > 0 || mineS.length > 0) return { ghosts: mineG, segments: mineS }
+  // Nothing of it is in reach — isolating here would only hide what the user is pointing at.
+  return { ghosts, segments }
+}
