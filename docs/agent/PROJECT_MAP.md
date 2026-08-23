@@ -43,5 +43,6 @@
 | 공이 튄다 / 경로가 어긋난다        | **불변식부터**: `engine/ballContinuity.ts`(B1), `editor/tacticFuzz.harness.ts`(결과 기준 불변식 I1~I10 + 조작 순서 퍼즈), `editor/invariantMutation.test.ts`(그 불변식들이 실제로 잡는지 mutation-kill), `editor/junctionParity.test.ts`(정션 parity). 재현은 시드로 |
 | 편집 조작 조합 회귀                | `editor/tacticFuzz.test.ts`(커맨드 층 360세션, `ST_FUZZ_SHORT`/`ST_FUZZ_LONG`로 증량) |
 | 브라우저·클릭·화면 회귀            | `pw/` — `node pw/run.cjs [probeId]` (dev 서버 필요). `pw/audit-manifest.json`이 현재 probe와 소멸한 과거 probe(historical)를 구분해 기록 |
+| 디자인·가독성·감성이 의심될 때      | `pw/lab/` — `tactic-lab.cjs`(시드 랜덤 전술 수백 개 + 결과 기준 점검 + 스크린샷), `feel-lab.cjs`(대비·히트 크기·모션 어휘를 양 테마에서 측정). **게이트가 아니라 단서** |
 | 출고 예시가 이상하다               | `presets/scenarios.ts` + `presets/scenarioContinuity.test.ts`(B1) + `scenarios.test.ts`(구조)                   |
 | "왜 이렇게 했지?"                  | `docs/agent/decisions/DECISION_INDEX.md`                                                                        |

@@ -7,3 +7,6 @@ coverage/
 .env.*
 !.env.example
 .vite/
+
+# Tactic-lab output: hundreds of PNGs per run, regenerated on demand (pw/lab/tactic-lab.cjs)
+pw/lab/out*/
