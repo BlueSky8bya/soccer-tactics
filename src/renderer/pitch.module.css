@@ -210,7 +210,11 @@
   stroke: rgba(255, 255, 255, 0.95);
   stroke-width: 0.26;
   stroke-dasharray: 0.72 0.5;
-  vector-effect: non-scaling-stroke;
+  /*
+   * NO non-scaling-stroke here. With it, the width and the dash lengths are read as pixels while
+   * these values are metres — so a 0.26m ring became a 0.26px hairline and 0.72px dashes read as
+   * a continuous line. The ring was solid in every screenshot (verification review, 2026-08-24).
+   */
 }
 
 /* Where the ball has just been. Interface motion, never tactical: it is derived from the clock and
@@ -218,6 +222,12 @@
 .ballTrail circle {
   fill: #fff;
   pointer-events: none;
+}
+
+/* On the darkened dark pitch a 0.34-alpha white dot composited to a grey-green smudge rather than
+   to motion (verification review, 2026-08-24), so the trail carries its own floor. */
+:global([data-theme='dark']) .ballTrail circle {
+  fill: #f2f6ff;
 }
 
 .ballPattern {
@@ -728,6 +738,18 @@
 .ghostToken circle {
   stroke: rgba(255, 255, 255, 0.8);
   stroke-width: 0.16;
+}
+
+/* Later than `.ghostToken circle`, and it has to be: that rule was overriding the ring's width
+   back down to a 0.16 hairline, which is why the dashes could not be seen at all. */
+.ghostToken .ghostDisc {
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.3;
+  stroke-dasharray: 0.78 0.52;
+}
+
+.ghostToken .ghostPlate {
+  stroke: none;
 }
 
 .ghostToken text {

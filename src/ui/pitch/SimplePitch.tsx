@@ -3100,117 +3100,23 @@ export function SimplePitch() {
                   key={p.id + i}
                   cx={q.x}
                   cy={q.y}
-                  r={0.62 - i * 0.13}
+                  r={0.75 - i * 0.14}
                   style={{ fill: teamColorOf(doc, p.id) }}
-                  opacity={0.3 - i * 0.08}
+                  opacity={0.46 - i * 0.11}
                 />
               )
             })
           })}
         </g>
       )}
-      {doc.players.map((p, pi) => {
-        const rp = resolved.players[p.id]
-        // Bouncy run feel (user 2026-08-20): a tiny deterministic bob derived from TACTICAL time —
-        // pure f(t), so scrubbing/replay stay exact and the engine stays untouched.
-        // A-03 compromise: amplitude auto-attenuates when MANY players run at once (22-player calm).
-        const bobAmp = movingCount <= 4 ? 0.22 : Math.max(0.08, 0.22 * (4 / movingCount))
-        const bob =
-          rp?.moving && isPlaying ? -Math.abs(Math.sin(ui.playback.t * 6.5 + pi * 1.3)) * bobAmp : 0
-        const pos0 = rp?.pos ?? p.home
-        return (
-          <g
-            key={p.id}
-            className={focusIds.size > 0 && !focusIds.has(p.id) ? styles.tokenFocusDim : undefined}
-          >
-            <AnimatedToken
-              id={p.id}
-              kind="player"
-              pos={bob ? { x: pos0.x, y: pos0.y + bob } : pos0}
-              awayKeyline={p.teamId === doc.teams[1]?.id}
-              color={teamColorOf(doc, p.id)}
-              number={p.number}
-              label={p.label && p.role ? `${p.label}(${p.role})` : (p.label ?? p.role)}
-              selected={selection.includes(p.id) || dropTargetId === p.id}
-              hovered={hoverKey === `player:${p.id}`}
-              dragging={drag?.id === p.id}
-              pressed={pressedId === p.id && drag?.id !== p.id}
-              heading={rp?.heading}
-              moving={!!rp?.moving && isPlaying}
-              dropFrom={null}
-              dropKey={0}
-              pulseKey={pulses[p.id]}
-            />
-          </g>
-        )
-      })}
       {/*
-        A ball in flight, with the arrows hidden, is a white dot alone on grass — nothing on screen
-        says it is travelling rather than sitting there (lab review, 2026-08-24). Four fading marks
-        along where it has just been read as speed instantly, and cost nothing at rest: they exist
-        only while a travel is actually running.
-      */}
-      {isPlaying && resolved.ball.status === 'travel' && (
-        <g className={styles.ballTrail} aria-hidden="true">
-          {[0.05, 0.1, 0.16, 0.23].map((back, i) => {
-            const at = ui.playback.t - back
-            if (at <= 0) return null
-            const p = stateAt(compiled, doc, at).ball
-            if (p.status !== 'travel') return null
-            return (
-              <circle
-                key={i}
-                cx={p.pos.x}
-                cy={p.pos.y}
-                r={0.55 - i * 0.09}
-                opacity={0.34 - i * 0.07}
-              />
-            )
-          })}
-        </g>
-      )}
-      <AnimatedToken
-        id={doc.ball.id}
-        kind="ball"
-        pos={flingPos?.pos ?? detachPos ?? resolved.ball.pos}
-        height={resolved.ball.height}
-        spin={flingPos ? flingPos.spin : resolved.ball.spin}
-        ballStatus={
-          detachPos
-            ? 'loose'
-            : resolved.ball.status === 'travel' && ui.playback.t === 0 && !isPlaying
-              ? 'possessed'
-              : resolved.ball.status
-        }
-        holderColor={(() => {
-          if (detachPos) return undefined // off his feet the moment the ring is crossed
-          const hid =
-            resolved.ball.holderId ??
-            (ui.playback.t === 0 && !isPlaying ? doc.ball.initialHolderId : undefined)
-          return hid ? teamColorOf(doc, hid) : undefined
-        })()}
-        selected={selection.includes(doc.ball.id) || dropTargetId === doc.ball.id}
-        hovered={hoverKey === `ball:${doc.ball.id}`}
-        dragging={drag?.id === doc.ball.id}
-        pressed={pressedId === doc.ball.id && drag?.id !== doc.ball.id}
-        dropFrom={ballDrop?.from ?? null}
-        dropKey={ballDrop?.key ?? 0}
-        pulseKey={pulses[doc.ball.id]}
-      />
-      {snapPos && ui.pathDraft && (
-        <g className={styles.snapRing} transform={`translate(${snapPos.x}, ${snapPos.y})`}>
-          <circle r={2.3} />
-        </g>
-      )}
-      {marquee && (
-        <rect
-          x={Math.min(marquee.a.x, marquee.b.x)}
-          y={Math.min(marquee.a.y, marquee.b.y)}
-          width={Math.abs(marquee.a.x - marquee.b.x)}
-          height={Math.abs(marquee.a.y - marquee.b.y)}
-          className={styles.marquee}
-        />
-      )}
+       * GHOSTS BELOW THE LIVE PIECES. They used to paint last, which was fine while a ghost never
+       * shared a spot with its own token — until the held-result frame, where every entity stands
+       * exactly on the ghost it was heading for. The plan was drawn over the piece, so the arrived
+       * player wore the ghost's thin ring and read as a ghost in the one frame a coach studies
+       * longest (verification review, 2026-08-24). Picking is geometric (pickTargets), not DOM, so
+       * paint order is free to say the true thing: a real piece covers a planned one.
+       */}
       {/* ghosts: future positions - kept mounted, faded while viewing a frame (D-02) */}
       <g className={viewingFrame ? styles.decorHidden : styles.decorShown}>
         {visibleGhosts.map((g) => {
@@ -3275,6 +3181,108 @@ export function SimplePitch() {
           )
         })}
       </g>
+      {doc.players.map((p, pi) => {
+        const rp = resolved.players[p.id]
+        // Bouncy run feel (user 2026-08-20): a tiny deterministic bob derived from TACTICAL time —
+        // pure f(t), so scrubbing/replay stay exact and the engine stays untouched.
+        // A-03 compromise: amplitude auto-attenuates when MANY players run at once (22-player calm).
+        const bobAmp = movingCount <= 4 ? 0.22 : Math.max(0.08, 0.22 * (4 / movingCount))
+        const bob =
+          rp?.moving && isPlaying ? -Math.abs(Math.sin(ui.playback.t * 6.5 + pi * 1.3)) * bobAmp : 0
+        const pos0 = rp?.pos ?? p.home
+        return (
+          <g
+            key={p.id}
+            className={focusIds.size > 0 && !focusIds.has(p.id) ? styles.tokenFocusDim : undefined}
+          >
+            <AnimatedToken
+              id={p.id}
+              kind="player"
+              pos={bob ? { x: pos0.x, y: pos0.y + bob } : pos0}
+              awayKeyline={p.teamId === doc.teams[1]?.id}
+              color={teamColorOf(doc, p.id)}
+              number={p.number}
+              label={p.label && p.role ? `${p.label}(${p.role})` : (p.label ?? p.role)}
+              selected={selection.includes(p.id) || dropTargetId === p.id}
+              hovered={hoverKey === `player:${p.id}`}
+              dragging={drag?.id === p.id}
+              pressed={pressedId === p.id && drag?.id !== p.id}
+              heading={rp?.heading}
+              moving={!!rp?.moving && isPlaying}
+              dropFrom={null}
+              dropKey={0}
+              pulseKey={pulses[p.id]}
+            />
+          </g>
+        )
+      })}
+      {/*
+        A ball in flight, with the arrows hidden, is a white dot alone on grass — nothing on screen
+        says it is travelling rather than sitting there (lab review, 2026-08-24). Four fading marks
+        along where it has just been read as speed instantly, and cost nothing at rest: they exist
+        only while a travel is actually running.
+      */}
+      {isPlaying && resolved.ball.status === 'travel' && (
+        <g className={styles.ballTrail} aria-hidden="true">
+          {[0.05, 0.1, 0.16, 0.23].map((back, i) => {
+            const at = ui.playback.t - back
+            if (at <= 0) return null
+            const p = stateAt(compiled, doc, at).ball
+            if (p.status !== 'travel') return null
+            return (
+              <circle
+                key={i}
+                cx={p.pos.x}
+                cy={p.pos.y}
+                r={0.6 - i * 0.09}
+                opacity={0.46 - i * 0.09}
+              />
+            )
+          })}
+        </g>
+      )}
+      <AnimatedToken
+        id={doc.ball.id}
+        kind="ball"
+        pos={flingPos?.pos ?? detachPos ?? resolved.ball.pos}
+        height={resolved.ball.height}
+        spin={flingPos ? flingPos.spin : resolved.ball.spin}
+        ballStatus={
+          detachPos
+            ? 'loose'
+            : resolved.ball.status === 'travel' && ui.playback.t === 0 && !isPlaying
+              ? 'possessed'
+              : resolved.ball.status
+        }
+        holderColor={(() => {
+          if (detachPos) return undefined // off his feet the moment the ring is crossed
+          const hid =
+            resolved.ball.holderId ??
+            (ui.playback.t === 0 && !isPlaying ? doc.ball.initialHolderId : undefined)
+          return hid ? teamColorOf(doc, hid) : undefined
+        })()}
+        selected={selection.includes(doc.ball.id) || dropTargetId === doc.ball.id}
+        hovered={hoverKey === `ball:${doc.ball.id}`}
+        dragging={drag?.id === doc.ball.id}
+        pressed={pressedId === doc.ball.id && drag?.id !== doc.ball.id}
+        dropFrom={ballDrop?.from ?? null}
+        dropKey={ballDrop?.key ?? 0}
+        pulseKey={pulses[doc.ball.id]}
+      />
+      {snapPos && ui.pathDraft && (
+        <g className={styles.snapRing} transform={`translate(${snapPos.x}, ${snapPos.y})`}>
+          <circle r={2.3} />
+        </g>
+      )}
+      {marquee && (
+        <rect
+          x={Math.min(marquee.a.x, marquee.b.x)}
+          y={Math.min(marquee.a.y, marquee.b.y)}
+          width={Math.abs(marquee.a.x - marquee.b.x)}
+          height={Math.abs(marquee.a.y - marquee.b.y)}
+          className={styles.marquee}
+        />
+      )}
       {/* The white drag guide is gone with the gesture that produced it: it only ever appeared
           when possession pinned the ball's render away from the pointer, and a held ball no longer
           drags at all (user 2026-08-21: 흰색 안내선 안 나오게). A loose ball follows the cursor, so

@@ -1097,7 +1097,8 @@
   height: 18px;
   border-radius: var(--st-radius-pill);
   background: var(--st-surface-3);
-  box-shadow: 0 0 0 1px var(--st-border) inset;
+  /* a stronger keyline: on the cream page the track alone barely read as a control */
+  box-shadow: 0 0 0 1px var(--st-border-strong) inset;
   transition: background-color var(--st-motion-feedback) var(--st-ease-standard);
 }
 
@@ -1833,8 +1834,10 @@
  */
 .stepCount {
   position: absolute;
-  top: -5px;
-  right: -7px;
+  top: -4px;
+  /* inside its own chip, not straddling the next one: at -7px the badge sat on the boundary and
+     genuinely read as belonging to either (verification review, 2026-08-24) */
+  right: -2px;
   box-shadow: 0 0 0 2px var(--st-surface);
   min-width: 15px;
   height: 15px;
