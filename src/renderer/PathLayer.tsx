@@ -217,8 +217,12 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
                 x2={axis.b.x}
                 y2={axis.b.y}
               >
-                <stop offset="0" stopColor="#000" />
-                <stop offset="0.55" stopColor="#9a9a9a" />
+                {/* A FLOOR, not zero. Fading the first stretch to nothing erased the one mark
+                    that says which token a leg grows out of, so a still could not answer "who is
+                    moving here" (lab review, 2026-08-24). 30% keeps the soft emergence and keeps
+                    the anchor. */}
+                <stop offset="0" stopColor="#4d4d4d" />
+                <stop offset="0.55" stopColor="#b4b4b4" />
                 <stop offset="1" stopColor="#fff" />
               </linearGradient>
               <mask id={maskId} maskUnits="userSpaceOnUse" x={-20} y={-20} width={160} height={120}>

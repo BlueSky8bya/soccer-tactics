@@ -214,7 +214,10 @@ async function main() {
       if (info.maxBallSpeed > 60) bad.push('ball reached ' + info.maxBallSpeed + ' m/s (teleport?)')
       if (info.worstTokenDrift > 0.05)
         bad.push('token drawn ' + info.worstTokenDrift + 'm from the clock')
-      if (info.authored === 0) bad.push('the whole script authored nothing')
+      // Only a finding if the hand actually TRIED: the dice can legitimately roll a session with
+      // no runs and no pass, and flagging that is the lab reporting on itself.
+      if (info.authored === 0 && log.some((l) => l.startsWith('run') || l.startsWith('pass')))
+        bad.push('gestures were made but nothing was authored')
       if (bad.length) {
         row.ok = false
         findings.push({ seed, dark, bad, log })

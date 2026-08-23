@@ -2825,7 +2825,20 @@ export function SimplePitch() {
   const badgeSpots = new Map(
     placeStepBadges(badgeAnchors, 2.6, badgeObstacles).map((b) => [b.id, b.at]),
   )
-  const badges = badgeAnchors.map((b) => ({ ...b, end: badgeSpots.get(b.id) ?? b.at }))
+  /*
+   * ONE BADGE AT A TIME while a step is isolated.
+   *
+   * The badge names its movement's step — and under isolation every drawn path IS the current step,
+   * so every badge on the pitch shows the identical digit while sitting on the busiest pixels each
+   * path has (lab review, 2026-08-24: 세 개 배지가 전부 "1"). Zero information, maximum clutter.
+   * The footer chip already says which step this is.
+   *
+   * The selected movement keeps its badge, because the badge is also the in-place step picker and
+   * that affordance has to stay reachable for the thing being edited.
+   */
+  const badges = badgeAnchors
+    .filter((b) => !isolating || b.id === ui.selectedSegmentId)
+    .map((b) => ({ ...b, end: badgeSpots.get(b.id) ?? b.at }))
 
   // PLAN-007: pick with the CURRENT render's inputs (hover rAF + cycling reuse this).
   const pickNowRef = useRef<(pt: Vec2) => ReturnType<typeof pickTargets>>(() => ({
@@ -3099,6 +3112,31 @@ export function SimplePitch() {
           </g>
         )
       })}
+      {/*
+        A ball in flight, with the arrows hidden, is a white dot alone on grass — nothing on screen
+        says it is travelling rather than sitting there (lab review, 2026-08-24). Four fading marks
+        along where it has just been read as speed instantly, and cost nothing at rest: they exist
+        only while a travel is actually running.
+      */}
+      {isPlaying && resolved.ball.status === 'travel' && (
+        <g className={styles.ballTrail} aria-hidden="true">
+          {[0.05, 0.1, 0.16, 0.23].map((back, i) => {
+            const at = ui.playback.t - back
+            if (at <= 0) return null
+            const p = stateAt(compiled, doc, at).ball
+            if (p.status !== 'travel') return null
+            return (
+              <circle
+                key={i}
+                cx={p.pos.x}
+                cy={p.pos.y}
+                r={0.55 - i * 0.09}
+                opacity={0.34 - i * 0.07}
+              />
+            )
+          })}
+        </g>
+      )}
       <AnimatedToken
         id={doc.ball.id}
         kind="ball"
@@ -3185,11 +3223,16 @@ export function SimplePitch() {
                 <BallMark />
               </g>
             ) : (
-              <circle
-                r={1.5}
-                style={{ fill: g.color }}
-                className={hinted ? styles.ghostDropLift : undefined}
-              />
+              <g className={hinted ? styles.ghostDropLift : undefined}>
+                {/*
+                 * An OPAQUE underlay, then the tint. A single translucent disc composites straight
+                 * onto the grass, and red over green is mud: measured rgb(156,110,83) — a flat
+                 * brown — while blue ghosts stayed blue (lab review, 2026-08-24). Two stacked
+                 * layers at the group's alpha keep the hue the token's hue.
+                 */}
+                <circle r={1.5} className={styles.ghostPlate} />
+                <circle r={1.5} className={styles.ghostDisc} style={{ fill: g.color }} />
+              </g>
             )}
             {g.number !== undefined && (
               <text textAnchor="middle" dominantBaseline="central">

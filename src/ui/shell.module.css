@@ -1158,11 +1158,17 @@
  * is a colour change only — never a size or position one — so a row cannot nudge its neighbours
  * as it comes and goes. The anti-flicker gate lives in cueHighlight.ts; this is just the look.
  */
+/*
+ * A hint is not a control. Three of these lit at once out-shouted every real button on screen, and
+ * the 6px bleed welded neighbouring rows into one block (lab review, 2026-08-24). Half the wash,
+ * and a rule down the left instead of a halo — it marks the row without claiming the row's area.
+ */
 .shortcutRowOn,
 .shortcutRowOn.shortcutRowInline {
-  background: var(--st-accent-soft);
-  box-shadow: 0 0 0 6px var(--st-accent-soft);
+  background: color-mix(in srgb, var(--st-accent-soft) 55%, transparent);
+  box-shadow: inset 2px 0 0 var(--st-accent);
   border-radius: 4px;
+  padding-left: 8px;
 }
 
 .shortcutRowOn .shortcutHint {
@@ -1759,10 +1765,16 @@
   color: var(--st-entity-ink, #fff);
 }
 
+/*
+ * The count sits ON the chip, not IN it. Without a halo the chip's ring simply stopped where the
+ * badge overlapped and resumed below, so it read as a bite taken out of the circle (lab review,
+ * 2026-08-24). The ring of surface colour is what makes it a sticker rather than a hole.
+ */
 .stepCount {
   position: absolute;
   top: -5px;
   right: -7px;
+  box-shadow: 0 0 0 2px var(--st-surface);
   min-width: 15px;
   height: 15px;
   border-radius: 8px;
@@ -2307,8 +2319,10 @@
  */
 .stepPanel {
   position: absolute;
-  right: var(--st-space-4);
-  top: var(--st-space-4);
+  /* clear of the board's rounded corner: 16px left it 8px from the radius, so its square corner
+     nearly collided with the curve (lab review, 2026-08-24) */
+  right: var(--st-space-6);
+  top: var(--st-space-6);
   display: flex;
   flex-direction: column;
   gap: 3px;

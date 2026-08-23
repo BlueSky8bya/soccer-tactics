@@ -187,6 +187,34 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* The ghost's opaque ground: without it a translucent tint composites with the grass and a red
+   ghost renders brown (measured rgb(156,110,83) — lab review 2026-08-24). */
+.ghostPlate {
+  fill: #fff;
+  stroke: none;
+}
+
+/*
+ * DASHED, like the paths. A ghost was a solid disc the size of a player, so a board could show a
+ * token, a ghost and a badge as three interchangeable numbered circles. Dash is already this app's
+ * word for "planned, not yet" — the ring says the same thing about the position that the arrow
+ * says about the movement, and the shape carries it where a tint could not.
+ */
+.ghostDisc {
+  fill-opacity: 0.9;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.26;
+  stroke-dasharray: 0.72 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Where the ball has just been. Interface motion, never tactical: it is derived from the clock and
+   drawn only while a travel is running, so it can never reach the document. */
+.ballTrail circle {
+  fill: #fff;
+  pointer-events: none;
+}
+
 .ballPattern {
   fill: #1d1d1f;
   pointer-events: none;
@@ -642,9 +670,14 @@
   stroke-linecap: round;
 }
 
+/*
+ * 0.35 over grass took the whole mark — disc and glyph — to 1.4:1, i.e. invisible (lab review,
+ * 2026-08-24, measured). A note on a line should be quiet, not absent: it is opaque now, and small
+ * enough (0.95m against a token's 1.35m) that quietness comes from SIZE rather than from fading.
+ */
 .stepBadge {
   cursor: pointer;
-  opacity: 0.35;
+  opacity: 0.92;
   transition: opacity var(--st-motion-feedback) var(--st-ease-standard);
 }
 

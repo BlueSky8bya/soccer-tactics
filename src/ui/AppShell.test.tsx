@@ -102,6 +102,15 @@ describe('AppShell (simple mode, ADR-0009)', () => {
     })
     expect(container.querySelectorAll('[data-segment]').length).toBeGreaterThan(0)
     const rev = core.getRevision()
+    /*
+     * Under step isolation every drawn path is the current step, so every badge would show the
+     * same digit — they are hidden there and only the SELECTED movement keeps its badge (the badge
+     * is the in-place picker, so that one has to stay reachable). This test is about the picker,
+     * so it asks for the all-steps view first, exactly as a user would.
+     */
+    await act(async () => {
+      screen.getByRole('button', { name: /보기: 이 단계/ }).click()
+    })
     const badge = screen.getByRole('button', { name: /단계 1/ })
     await act(async () => {
       badge.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
