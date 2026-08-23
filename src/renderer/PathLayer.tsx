@@ -49,6 +49,12 @@ export interface PathLayerProps {
  */
 const FLOW_SPEED = 26 // stroke units per second
 
+/** Full-size head, and one for paths too short to carry it. */
+const ARROW_SIZES = [
+  { prefix: '', size: 1.9 },
+  { prefix: 'sm-', size: 1.2 },
+]
+
 function dashFor(seg: Segment): { dash: string; period: number } {
   if (seg.kind === 'travel') {
     if (seg.implicit) return { dash: '2 4', period: 6 }
@@ -181,7 +187,17 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
       if (layer === 'hidden') continue
       const mutedClass = layer === 'muted' ? styles.pathStepMuted : ''
       const flow = dashFor(seg)
-      const markerId = isBall ? 'arrow-ball' : `arrow-${track.entityId}`
+      /*
+       * A SHORT path is nearly all arrowhead otherwise. The head is 1.9 user units wide, so on a
+       * three-metre run it swallowed the dashes and the movement read as a floating triangle
+       * (lab review, 2026-08-24). Below ~5.5m it switches to a head sized for the line it ends.
+       */
+      const short = buildPathLUT(shown).length < 5.5
+      const markerId = isBall
+        ? short
+          ? 'arrow-ball-sm'
+          : 'arrow-ball'
+        : `arrow-${short ? 'sm-' : ''}${track.entityId}`
       const axis = entryAxis(shown, isBall ? ENTRY_FADE_M.ball : ENTRY_FADE_M.player)
       const maskId = axis ? `entry-${seg.id}` : null
       items.push(
@@ -304,48 +320,56 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
           화살표 디자인 애플 형식으로). Rounded joins keep every corner soft at any zoom, and the
           concave back lets the stroke flow into it without a visible seam.
         */}
-        {p.doc.players.map((pl) => (
+        {p.doc.players.flatMap((pl) =>
+          ARROW_SIZES.map(({ prefix, size }) => (
+            <marker
+              key={prefix + pl.id}
+              id={`arrow-${prefix}${pl.id}`}
+              viewBox="0 0 10 10"
+              refX="8.7"
+              refY="5"
+              markerWidth={size}
+              markerHeight={size}
+              markerUnits="userSpaceOnUse"
+              orient="auto-start-reverse"
+            >
+              <path
+                d={ARROW_D}
+                style={{ fill: p.teamColorOf(pl.id), stroke: p.teamColorOf(pl.id) }}
+                strokeWidth="0.7"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            </marker>
+          )),
+        )}
+        {[
+          { id: 'arrow-ball', size: 1.65 },
+          { id: 'arrow-ball-sm', size: 1.05 },
+        ].map((m) => (
           <marker
-            key={pl.id}
-            id={`arrow-${pl.id}`}
+            key={m.id}
+            id={m.id}
             viewBox="0 0 10 10"
             refX="8.7"
             refY="5"
-            markerWidth="1.9"
-            markerHeight="1.9"
+            markerWidth={m.size}
+            markerHeight={m.size}
             markerUnits="userSpaceOnUse"
             orient="auto-start-reverse"
           >
             <path
               d={ARROW_D}
-              style={{ fill: p.teamColorOf(pl.id), stroke: p.teamColorOf(pl.id) }}
+              style={{
+                fill: 'var(--st-ball-path, #f5f5f7)',
+                stroke: 'var(--st-ball-path, #f5f5f7)',
+              }}
               strokeWidth="0.7"
               strokeLinejoin="round"
               strokeLinecap="round"
             />
           </marker>
         ))}
-        <marker
-          id="arrow-ball"
-          viewBox="0 0 10 10"
-          refX="8.7"
-          refY="5"
-          markerWidth="1.65"
-          markerHeight="1.65"
-          markerUnits="userSpaceOnUse"
-          orient="auto-start-reverse"
-        >
-          <path
-            d={ARROW_D}
-            style={{
-              fill: 'var(--st-ball-path, #f5f5f7)',
-              stroke: 'var(--st-ball-path, #f5f5f7)',
-            }}
-            strokeWidth="0.7"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        </marker>
       </defs>
       {items}
       {p.draft && p.draft.points.length > 1 && (

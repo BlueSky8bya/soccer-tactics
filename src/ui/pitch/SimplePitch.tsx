@@ -2781,9 +2781,14 @@ export function SimplePitch() {
   const ghostLayers = deriveGhostLayers(ghosts, ui.currentStep, ui.selectedSegmentId, isolating)
   const visibleGhosts = ghosts
     .filter((g) => ghostLayers[g.id] !== 'hidden')
-    // Isolating flattens the rank fade: with one step on the board there is no queue of later
-    // steps to rank against, so this step's destinations all read at full ghost strength.
-    .map((g) => (isolating ? { ...g, opacity: ghostOpacityForStep(0, selection.includes(g.entityId)) } : g))
+    /*
+     * Isolating flattens the rank fade: with one step on the board there is no queue of later steps
+     * to rank against. It also has to be STRONG — a group opacity multiplies through the ghost's
+     * white underlay too, so at 0.55 a red ghost still composited to brown against the grass
+     * (lab review, 2026-08-24, second pass). The dashed ring is what says "planned" now, so the
+     * fill no longer has to whisper.
+     */
+    .map((g) => (isolating ? { ...g, opacity: selection.includes(g.entityId) ? 0.95 : 0.85 } : g))
 
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
   // placeStepBadges nudges overlapping badges apart deterministically (B-03).
