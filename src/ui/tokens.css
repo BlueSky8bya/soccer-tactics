@@ -11,9 +11,18 @@
   --st-border: rgba(72, 60, 32, 0.12);
   --st-border-strong: rgba(72, 60, 32, 0.22);
   --st-text: #26221a;
-  --st-text-2: #6f6a5c;
-  --st-text-3: #9c968a;
+  /* Measured, not guessed (pw/lab/feel-lab.cjs): on --st-surface these now clear WCAG AA for body
+     text at 4.5:1 — the old text-2 sat at 4.49 and text-3 at 2.74, which put every section label,
+     keycap and hint below the line. The hierarchy between them is preserved, just moved down. */
+  --st-text-2: #514c3e; /* ~6.9:1 on --st-surface, 5.9:1 on --st-surface-3 */
+  --st-text-3: #64604f; /* ~5.3:1 on --st-surface, 4.8:1 on --st-surface-3 */
   --st-accent: #0a7aff; /* selection / playhead / primary action only */
+  /*
+   * The accent as INK. #0a7aff is a fill colour — as 12px text on a cream panel it measures 3.7:1,
+   * under the 4.5 floor, and it is exactly what an active shortcut row and a pressed toggle are
+   * painted with (pw/lab/feel-lab.cjs). Same hue, taken down until it can be read.
+   */
+  --st-accent-text: #0b62cc; /* ~5.4:1 on --st-surface */
   --st-accent-soft: rgba(10, 122, 255, 0.12);
   --st-danger: #e5484d;
   /* Status roles. They used to live only as inline fallbacks (`var(--st-warn, #9a5b00)`), which
@@ -132,9 +141,11 @@
   --st-border: rgba(255, 255, 255, 0.08);
   --st-border-strong: rgba(255, 255, 255, 0.16);
   --st-text: #f2f3f5;
-  --st-text-2: #9aa0a8;
-  --st-text-3: #6c7380;
+  --st-text-2: #a9b0b9; /* ~7.0:1 on the dark surface */
+  --st-text-3: #8a919b; /* ~5.3:1 — was #6c7380 at 3.5:1 */
   --st-accent: #3b8cff;
+  /* on a near-black panel the fill colour is already legible as ink — no separate value needed */
+  --st-accent-text: #6aa8ff;
   --st-accent-soft: rgba(59, 140, 255, 0.18);
   --st-danger: #ff6b6e;
   --st-warn: #f0b25c;

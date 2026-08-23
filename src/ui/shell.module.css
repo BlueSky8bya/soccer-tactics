@@ -139,7 +139,7 @@
 
 .btnActive {
   background: var(--st-accent-soft);
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
 }
 
 .kbd {
@@ -210,7 +210,7 @@
 }
 
 .btnActive .railLabel {
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
 }
 
 .railSep {
@@ -330,7 +330,7 @@
   appearance: none;
   border: 0;
   background: transparent;
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
   font: inherit;
   font-weight: 600;
   font-size: 13px;
@@ -371,7 +371,7 @@
 
 .input:focus {
   outline: none;
-  border-color: var(--st-accent);
+  border-color: var(--st-accent-text, var(--st-accent));
   box-shadow: 0 0 0 3px var(--st-accent-soft);
 }
 
@@ -547,8 +547,8 @@
 }
 
 .formationBtnActive {
-  border-color: var(--st-accent);
-  color: var(--st-accent);
+  border-color: var(--st-accent-text, var(--st-accent));
+  color: var(--st-accent-text, var(--st-accent));
 }
 
 /* ---------- overlays ---------- */
@@ -666,7 +666,7 @@
 
 .popover input[type='range'] {
   width: 100%;
-  accent-color: var(--st-accent);
+  accent-color: var(--st-accent-text, var(--st-accent));
 }
 
 /* ---------- focus-visible (M5) ---------- */
@@ -789,7 +789,7 @@
 
 .startDone .startMark {
   background: var(--st-accent);
-  border-color: var(--st-accent);
+  border-color: var(--st-accent-text, var(--st-accent));
   color: #fff;
 }
 
@@ -1068,7 +1068,7 @@
 }
 
 .headerSwitch[aria-checked='true'] {
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
   font-weight: 600;
 }
 
@@ -1171,7 +1171,7 @@
 
 .shortcutRowOn .kbd,
 .shortcutRowOn .shortcutLabel {
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
   border-color: color-mix(in srgb, var(--st-accent) 35%, transparent);
 }
 
@@ -1466,7 +1466,7 @@
 
 .cpHex:focus {
   outline: none;
-  border-color: var(--st-accent);
+  border-color: var(--st-accent-text, var(--st-accent));
   box-shadow: 0 0 0 3px var(--st-accent-soft);
 }
 
@@ -1778,9 +1778,12 @@
 
 /* On the active chip the count sits on the filled ground, so it picks up the same identity the
    button just took. */
+/* The count sits on white INSIDE a filled chip, so it is accent-on-white — the one place the raw
+   accent is used as small text, and at 10px it lands near 3.3:1. Darkening it keeps the identity
+   (it is still that entity's hue) and clears the floor. */
 .stepChipActive .stepCount {
   background: #fff;
-  color: var(--st-entity-chip, var(--st-accent));
+  color: color-mix(in srgb, var(--st-entity-chip, var(--st-accent)) 74%, #000);
 }
 
 .panelField {
@@ -1824,7 +1827,7 @@
 
 .panelSelect:focus-visible {
   outline: none;
-  border-color: var(--st-accent);
+  border-color: var(--st-accent-text, var(--st-accent));
   box-shadow: 0 0 0 3px var(--st-accent-soft);
 }
 
@@ -1869,7 +1872,7 @@
 
 .selectBtn:focus-visible {
   outline: none;
-  border-color: var(--st-accent);
+  border-color: var(--st-accent-text, var(--st-accent));
   box-shadow: 0 0 0 3px var(--st-accent-soft);
 }
 
@@ -2000,7 +2003,7 @@
 
 .selectItemOn {
   background: var(--st-accent-soft);
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
   font-weight: 600;
 }
 
@@ -2058,8 +2061,9 @@
   width: 104px;
 }
 
+/* 28px is the hit-target floor (ADR-0006 D3); 26 was below it for no reason worth the two pixels. */
 .playerRoleField .selectBtn {
-  height: 26px;
+  height: 28px;
   font-size: 12.5px;
   padding: 0 8px;
 }
@@ -2102,7 +2106,7 @@
 /* Step running right now during playback (M4) */
 .stepChip[aria-current='step'] {
   box-shadow: 0 0 0 3px var(--st-accent-soft);
-  border-color: var(--st-accent);
+  border-color: var(--st-accent-text, var(--st-accent));
 }
 
 /* faint shortcut hint on panel buttons */
@@ -2141,7 +2145,8 @@
   color: var(--st-text-3);
   box-shadow: inset 0 0 0 1px var(--st-border-strong);
   border-style: none;
-  opacity: 0.75;
+  /* quiet, but not below the contrast floor: 0.75 dragged an already-muted grey to 2.4:1 */
+  opacity: 0.9;
   gap: 1px;
   transition:
     opacity var(--st-motion-fast) var(--st-ease-out),
@@ -2152,7 +2157,7 @@
 .variantSegEmpty:hover {
   opacity: 1;
   background: var(--st-accent-soft);
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
   box-shadow: inset 0 0 0 1px var(--st-accent);
 }
 
@@ -2315,7 +2320,7 @@
 
 .stepPanelBtn:hover {
   background: var(--st-accent-soft);
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
 }
 
 .stepPanelBtn:active {
@@ -2336,7 +2341,7 @@
 }
 
 .stepViewBtn[aria-pressed='true'] {
-  color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
   font-weight: 600;
 }
 

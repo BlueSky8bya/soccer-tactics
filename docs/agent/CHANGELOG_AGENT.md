@@ -2859,3 +2859,40 @@ Validation: `node pw/run.cjs` → **143 checks ALL PASS**(신규: 빈 단계에�
 346 tests, typecheck/lint/build/harness PASS.
 
 Related: CHG-20260824-196·197, PLAN-20260824-015
+
+## CHG-20260824-199 — 계측 랩(feel-lab) + 측정으로 드러난 대비·타깃·모션 결함 수정
+
+Trigger: 사용자 2026-08-24 — "수정된 사이트로 수백 가지 전술을 직접 실험해보고 문제점·의도 위반·
+행동 인지 가능성·애플다운 애니메이션과 가독성을 점검하라". 그 중 **숫자로 판정 가능한 절반**을 먼저.
+
+Change — 도구:
+
+- `pw/lab/tactic-lab.cjs`: 시드 기반 랜덤 스크립트로 실제 포인터 제스처를 써서 전술을 수백 개 작성하고,
+  매 세션 끝에 보드가 여전히 진실을 말하는지 묻는다(문서 유효성, 콘솔, 고아 relay arc, 공 순간이동,
+  배지 충돌, **화면 대 시계 오차**). 게이트가 아니라 **단서** 생산기 — 잡힌 것은 이해된 뒤 probe가 된다.
+- `pw/lab/feel-lab.cjs`: 폴리시 중 숫자인 넷 — **대비·히트 크기·모션 어휘·레이아웃 안정성** — 을
+  **두 테마 모두**에서 측정한다.
+
+Change — 측정이 드러낸 것(전부 수정):
+
+- **대비**: `--st-text-3`가 light 2.74:1, dark 3.53:1 — 섹션 라벨·키캡·힌트 전부가 AA 미만이었다.
+  `--st-text-2`도 4.49로 문턱 바로 아래. 두 값을 내리고(라이트) 올려(다크) 위계는 그대로 유지.
+- **액센트를 잉크로 쓸 때**: `#0a7aff`는 채움 색이다. 12px 텍스트로 쓰면 크림 패널 위에서 3.7:1인데,
+  활성 단축키 행과 눌린 토글이 정확히 그 색으로 칠해져 있었다. 같은 색조를 읽힐 때까지 내린
+  **`--st-accent-text`** 신설(테두리·채움은 `--st-accent` 그대로).
+- **등번호**: 흰 글씨 on 팀 색은 축구 다이어그램 관례이고 팀 색은 사용자 것이라 팔레트를 못 건드린다.
+  이름 라벨이 이미 쓰던 처방(`paint-order: stroke`)으로 글리프 밑에 그림자 실선 한 겹.
+- **모션 어휘**: `.stepBadge`의 `120ms ease` — 토큰 밖 유일한 값. `--st-motion-feedback`로.
+- **히트 크기**: 포지션 셀렉트 26→28px. 결과: light 175→207/208, dark 186→207/208 통과.
+- **되돌린 것**: 단계 배지에 28px 히트 원을 붙였더니 그 원이 **경로 중점**(= "경로를 잡아 휘기"
+  프레스가 떨어지는 바로 그 지점)에 앉아 프레스를 전부 삼켰다. probe 7건이 즉시 실패해서 되돌렸다.
+  배지는 컨트롤이 아니라 보드 마크이고, 그것이 라벨하는 경로가 우선한다. 주석으로 못박음.
+
+Files: pw/lab/{tactic-lab,feel-lab}.cjs(신규), src/ui/tokens.css, src/ui/shell.module.css,
+src/renderer/pitch.module.css, src/ui/pitch/SimplePitch.tsx
+
+Validation: `node pw/run.cjs` **143 checks ALL PASS**, feel-lab 대비 **207/208**(양 테마) ·
+모션 어휘 이탈 0 · 히트 미달 2(버전 배지·투어 링크, 텍스트 링크라 유지), 346 tests,
+typecheck/lint/build/harness PASS.
+
+Related: PLAN-20260824-015

@@ -129,6 +129,12 @@
   filter: drop-shadow(0 0.15px 0.35px rgba(0, 0, 0, 0.35));
 }
 
+/*
+ * White on the shirt colour is the football-diagram convention and the team hue is the user's, so
+ * the palette cannot be tuned for contrast here. A hairline of shadow under the glyph does the same
+ * job without touching it — the same treatment the name label already uses (measured: the number
+ * was the last thing under the floor, pw/lab/feel-lab.cjs).
+ */
 .tokenNumber {
   fill: #fff;
   font-family: inherit;
@@ -138,6 +144,9 @@
   dominant-baseline: central;
   pointer-events: none;
   letter-spacing: -0.02em;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.34);
+  stroke-width: 0.13px;
 }
 
 .tokenLabel {
@@ -636,13 +645,19 @@
 .stepBadge {
   cursor: pointer;
   opacity: 0.35;
-  transition: opacity 120ms ease;
+  transition: opacity var(--st-motion-feedback) var(--st-ease-standard);
 }
 
 .stepBadge:hover {
   opacity: 1;
 }
 
+/*
+ * NO invisible hit halo here, deliberately. Widening the badge to the 28px control floor put a 2m
+ * transparent disc at every path MIDPOINT — which is exactly where "grab the path and bend it"
+ * presses land, and it ate all of them (pw probes: bend-path resolved to nothing). The badge is a
+ * board mark, not chrome; the floor is for controls, and the path it labels outranks it.
+ */
 .stepBadge circle {
   fill: rgba(255, 255, 255, 0.85);
   stroke: var(--st-entity-chip, #3a4150);
