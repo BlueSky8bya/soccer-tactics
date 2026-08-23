@@ -1,14 +1,11 @@
 /**
- * What a step is worth on the CLOCK.
+ * WHERE a step sits on the clock — the three questions the board asks of the timeline.
  *
- * The first version of the board caption narrated the step in words — "10번 보유 · 10번→7번 패스".
- * The user threw it out for the right reason (2026-08-24: 전혀 의미있는 정보가 아닌데? 눈으로 봐도
- * 충분히 알 수 있잖아): every one of those facts is drawn on the pitch already, in colour, at
- * full size. A caption that repeats the picture is noise wearing a label.
- *
- * Timing is the opposite case. This is a SEQUENCER — how long a step takes, when it starts, how
- * much of the play it is — and none of it is visible anywhere. Two seconds and five seconds draw
- * the identical arrow. So the caption carries the clock, and nothing else.
+ * Both attempts at a board caption died here and left the useful part behind. First it narrated
+ * the step in words, which the pitch already draws in colour (2026-08-24: 눈으로 봐도 충분히 알 수
+ * 있잖아). Then it reported durations, which turned out to be no more wanted (2026-08-24: 2.7초
+ * 걸림 1/5번째 이런 정보 아무짝에도 쓸모 없어). What survives is what the INTERACTION needs: where
+ * to park the clock for a step, which step is running, and which step a grabbed instant belongs to.
  *
  * Pure: document + compiled timeline in, numbers out.
  */
@@ -22,22 +19,6 @@ function tracksOf(doc: TacticDocument) {
   return doc.scenes[0]?.timeline.tracks ?? []
 }
 
-export interface StepTiming {
-  step: number
-  /** Does this step hold any authored movement? */
-  used: boolean
-  /** 1-based position among the steps that ARE used; null when this one is empty. */
-  index: number | null
-  /** How many steps the play actually uses. */
-  total: number
-  /** Clock window of the step (seconds); zero-length when empty. */
-  start: number
-  end: number
-  /** End of the whole play. */
-  playEnd: number
-  /** Authored movements in this step. */
-  count: number
-}
 
 /**
  * The clock time a step OPENS at.
@@ -108,50 +89,4 @@ export function completedStepAt(
       if (s > last) last = s
     }
   return last
-}
-
-/** Everything the caption shows, in one pass over the timeline. */
-export function stepTiming(
-  doc: TacticDocument,
-  compiled: CompiledTimeline,
-  step: number,
-): StepTiming {
-  const usedSteps = new Set<number>()
-  let start = Infinity
-  let end = 0
-  let prevEnd = 0
-  let playEnd = 0
-  let count = 0
-  for (const tr of tracksOf(doc))
-    for (const seg of tr.segments) {
-      if (!isAuthoredPath(seg)) continue
-      const tm = compiled.segmentTimes[seg.id]
-      if (!tm) continue
-      const s = stepOf(seg as { step?: number })
-      usedSteps.add(s)
-      if (tm.end > playEnd) playEnd = tm.end
-      if (s === step) {
-        count++
-        start = Math.min(start, tm.start)
-        end = Math.max(end, tm.end)
-      } else if (s < step) prevEnd = Math.max(prevEnd, tm.end)
-    }
-  const used = count > 0
-  const sorted = [...usedSteps].sort((a, b) => a - b)
-  const at = used ? start : prevEnd
-  return {
-    step,
-    used,
-    index: used ? sorted.indexOf(step) + 1 : null,
-    total: sorted.length,
-    start: at,
-    end: used ? end : at,
-    playEnd,
-    count,
-  }
-}
-
-/** One decimal, no trailing ".0" noise beyond what a stopwatch would show. */
-export function secs(n: number): string {
-  return (Math.round(n * 10) / 10).toFixed(1)
 }

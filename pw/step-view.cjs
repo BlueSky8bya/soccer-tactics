@@ -85,11 +85,24 @@ module.exports = {
 
       // ---- step isolation -------------------------------------------------
       await h.fillTeams(page)
-      const caption = page.locator('[class*=stepStatus]').first()
-      const capText = async () => (await caption.innerText()).replace(/\n/g, ' | ')
-      out.push(
-        h.check('the caption is there on an untouched board', await caption.isVisible(), await capText()),
-      )
+      /*
+       * The footer must not breathe. Its width used to depend on state — the scoped-replay pair
+       * appeared only for a used step, and the view toggle's label is four characters shorter in
+       * one position than the other — so every step chip slid sideways under the cursor
+       * (user 2026-08-24: 단계 선택하는 버튼이 계속 좌우로 왔다갔다거리는게 불편해).
+       */
+      const barWidth = () =>
+        page.evaluate(() =>
+          Math.round(document.querySelector('[class*=simpleBar]').getBoundingClientRect().width),
+        )
+      const chipX = () =>
+        page.evaluate(() =>
+          Math.round(
+            document
+              .querySelectorAll('[class*=stepBar] button[aria-pressed]')[0]
+              .getBoundingClientRect().x,
+          ),
+        )
 
       const d0 = await h.doc(page)
       const a = d0.players[9]
@@ -160,15 +173,37 @@ module.exports = {
           `${drawn.length} of ${segs.length} in the tree`,
         ),
       )
-      const cap = await capText()
-      out.push(h.check('the caption names the step it is showing', /1단계/.test(cap), cap))
+      const replay = page.locator('[class*=stepPanel]').first()
       out.push(
         h.check(
-          'and reports the clock, which the picture cannot',
-          /초/.test(cap),
-          cap,
+          'a used step offers its scoped replay beside the board',
+          (await page.getByRole('button', { name: /단계만 재생/ }).count()) === 1,
+          (await replay.innerText()).split(String.fromCharCode(10)).join(' / '),
         ),
       )
+
+      // width/position must be identical for a used step, an empty step and either view mode
+      const w1 = await barWidth()
+      const x1 = await chipX()
+      await chip(page, 7).click()
+      await page.waitForTimeout(200)
+      const w7 = await barWidth()
+      const x7 = await chipX()
+      out.push(
+        h.check(
+          'an empty step does not resize the footer',
+          w1 === w7 && x1 === x7,
+          `width ${w1} vs ${w7}, chip x ${x1} vs ${x7}`,
+        ),
+      )
+      out.push(
+        h.check(
+          'and its scoped replay is simply absent (the view switch stays)',
+          (await page.getByRole('button', { name: /단계만 재생/ }).count()) === 0,
+        ),
+      )
+      await chip(page, 1).click()
+      await page.waitForTimeout(200)
 
       /*
        * One direction language: a run and a pass are both dashed, both marching, and the white
@@ -180,6 +215,13 @@ module.exports = {
       drawn = await drawnPaths(page)
       out.push(
         h.check('turning isolation off brings every path back', drawn.length === segs.length, `${drawn.length} of ${segs.length}`),
+      )
+      out.push(
+        h.check(
+          'and the shorter label does not move the chips either',
+          (await barWidth()) === w1 && (await chipX()) === x1,
+          `width ${await barWidth()} vs ${w1}, chip x ${await chipX()} vs ${x1}`,
+        ),
       )
       const flow = await page.evaluate(() =>
         [...document.querySelectorAll('g[data-segment]')].map((g) => {
@@ -238,7 +280,16 @@ module.exports = {
           `landed on ${made ? made.step : 'nothing'}, inTree=${inTree}`,
         ),
       )
-      out.push(h.check('and the bar/caption moved with it', /2단계/.test(await capText()), await capText()))
+      out.push(
+        h.check(
+          'and the bar moved with it',
+          (await page.evaluate(() =>
+            [...document.querySelectorAll('[class*=stepBar] button[aria-pressed]')].findIndex(
+              (b) => b.getAttribute('aria-pressed') === 'true',
+            ),
+          )) === 1,
+        ),
+      )
 
       /*
        * REGRESSION (user 2026-08-24: 같은 선수한테 또 공을 2번 이상 주면 반응을 안 해). The live ball
@@ -315,6 +366,33 @@ module.exports = {
             (await page.getByText('빠르게 놓으면 굴러감').count()) > 0,
         ),
       )
+
+      /*
+       * The speed row is the only thing that says the play button can be SLID. Opening it after the
+       * first millimetre of travel taught nobody (user 2026-08-24: 마우스를 누르고 있을때부터
+       * 보여야지) — it opens on the press, and a press that never travels still toggles play.
+       */
+      // a toast is a floating element over the footer; let it clear before pressing through it
+      await page
+        .waitForFunction(() => !document.querySelector('[class*=toast]'), null, { timeout: 4000 })
+        .catch(() => {})
+      const playBtn = page.getByRole('button', { name: /^(재생|일시정지)$/ }).first()
+      const box = await playBtn.boundingBox()
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await page.mouse.down()
+      await page.waitForTimeout(90)
+      const scrubCount = await page.locator('[class*=speedScrub]').count()
+      out.push(
+        h.check('the speed row opens on the press, before any movement', scrubCount > 0, `count=${scrubCount}`),
+      )
+      await page.mouse.up()
+      await page.waitForTimeout(120)
+      const playingAfterClick = await page.evaluate(() => window.__stClock().playing)
+      out.push(
+        h.check('a press that never travels is still play/pause', playingAfterClick === true, `playing=${playingAfterClick}`),
+      )
+      await page.keyboard.press('Space')
+      await page.waitForTimeout(150)
 
       const problems = await h.validate(page)
       out.push(h.check('document valid throughout', problems.length === 0, problems[0] ?? ''))

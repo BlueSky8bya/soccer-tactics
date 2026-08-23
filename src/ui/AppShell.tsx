@@ -19,7 +19,7 @@ import { KEYMAP } from './keymap'
 import { prefersReducedMotion } from './motion/spring'
 import { SimplePitch } from './pitch/SimplePitch'
 import styles from './shell.module.css'
-import { StepStatus } from './StepStatus'
+import { StepPanel } from './StepPanel'
 import { nextTheme, type ThemePref } from './theme'
 import { TourOverlay } from './tour/TourOverlay'
 import { hasSeenTour } from './tour/tourStorage'
@@ -129,6 +129,12 @@ export function AppShell() {
    * untouched. `null` = not scrubbing; `idx` follows the hand with a spring on each hop.
    */
   const [scrub, setScrub] = useState<{ idx: number; x: number; y: number } | null>(null)
+  /**
+   * Did the press that just ended actually travel? The click handler needs the answer BEFORE React
+   * has re-rendered, and `scrub` is state — reading it there would see the row that pointerdown
+   * has only just opened and swallow every play/pause.
+   */
+  const scrubMovedRef = useRef(false)
   const scrubRef = useRef<{
     startX: number
     startIdx: number
@@ -142,14 +148,24 @@ export function AppShell() {
     if (e.button !== 0) return
     const startIdx = Math.max(0, BOOST_FACTORS.indexOf(ui.boostFactor as 0.5 | 2 | 3))
     const r = e.currentTarget.getBoundingClientRect()
+    const idx = startIdx < 0 ? BOOST_FACTORS.length - 1 : startIdx
+    const anchor = { x: r.x + r.width / 2, y: r.y }
     scrubRef.current = {
       startX: e.clientX,
-      startIdx: startIdx < 0 ? BOOST_FACTORS.length - 1 : startIdx,
-      idx: startIdx < 0 ? BOOST_FACTORS.length - 1 : startIdx,
+      startIdx: idx,
+      idx,
       moved: false,
       pointerId: e.pointerId,
-      anchor: { x: r.x + r.width / 2, y: r.y },
+      anchor,
     }
+    scrubMovedRef.current = false
+    /*
+     * The speed row opens on the PRESS, not on the first millimetre of travel (user 2026-08-24:
+     * 마우스를 누르고 있을때부터 보여야지). It is the thing that tells you sliding is possible at
+     * all, so showing it only once you already slid taught nothing. A press that never travels
+     * closes it again on release and stays an ordinary play/pause.
+     */
+    setScrub({ idx, x: anchor.x, y: anchor.y })
     e.currentTarget.setPointerCapture(e.pointerId)
   }
   const onPlayPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
@@ -171,6 +187,7 @@ export function AppShell() {
     const sc = scrubRef.current
     if (!sc || sc.pointerId !== e.pointerId) return
     scrubRef.current = null
+    scrubMovedRef.current = sc.moved
     if (sc.moved) {
       ui.setBoostFactor(BOOST_FACTORS[sc.idx]!)
       // let the picked chip's pop be SEEN before the row leaves
@@ -181,7 +198,7 @@ export function AppShell() {
   }
   const onPlayClick = () => {
     // a scrub is not a click: the press travelled, so it picked a speed instead of toggling play
-    if (scrub) return
+    if (scrubMovedRef.current) return
     pb.toggle()
   }
 
@@ -335,7 +352,7 @@ export function AppShell() {
         <div className={styles.pitchFrame} data-boost={boosted}>
           <SimplePitch />
         </div>
-        {!ui.annotate.on && <StepStatus />}
+        {!ui.annotate.on && <StepPanel />}
         {/* Zen hid every surface that named the key that undoes it, so the only way back was
             knowing F already (user 2026-08-22: 다시 펼치는 F 단축키 안내가 어디에도 없어서).
             A button, not a caption — a pointer user must not need the keyboard to get out. */}
@@ -574,7 +591,7 @@ export function AppShell() {
                 </span>
                 <button
                   type="button"
-                  className={styles.btn}
+                  className={`${styles.btn} ${styles.gifBtn}`}
                   onClick={exportPlayGif}
                   disabled={gifBusy || playEnd < 0.3}
                   title={t('gif.button')}

@@ -135,8 +135,8 @@ export const MINI_TOUR_STEPS: TourStep[] = [
   {
     id: 'mini-step-replay',
     title: '바꾼 단계만 다시 보기',
-    body: '아래 단계 칩 옆 [▶ 이 단계만]을 누르면 그 단계만 재생돼요. 전체를 기다릴 필요가 없어요.',
-    target: () => '[class*="stepActions"] button',
+    body: '보드 오른쪽 위 [▶ N단계만 재생]을 누르면 그 단계만 재생돼요. 전체를 기다릴 필요가 없어요.',
+    target: () => '[class*="stepPanel"] button',
     done: (ctx) => ctx.hasPlayed && ctx.playScope === 'step',
   },
   {

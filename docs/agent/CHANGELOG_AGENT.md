@@ -2823,3 +2823,39 @@ Validation: `node pw/run.cjs` → **140 checks ALL PASS**(신규: 라이브 공�
 대체하지 않고 확장 — travels 1→2, steps 2,3), 348 tests, typecheck/lint/build/harness PASS.
 
 Related: CHG-20260824-196, PLAN-20260824-015
+
+## CHG-20260824-198 — 단계 패널을 보드 위로(3행) · 푸터 너비 고정 · 배속 창은 누르는 순간 · 플링 민감도
+
+Trigger: 사용자 2026-08-24 3차 — (1) 우상단 단계 시계는 쓸모없으니 "이 단계만/여기부터" 버튼을 그
+자리에 2행으로, (2) 도구창 너비가 상태에 따라 변해 **단계 칩이 좌우로 움직이는 게 불편**, (3) 이어서
+"보기: 이 단계" 토글도 같은 자리에 합쳐 **3행**으로, (4) ▶ 버튼은 **누르고 있을 때부터** 배속 창이
+보여야지 드래그를 시작해야 보이면 안 됨, (5) 공 휙 던지기가 잘 안 됨 — 더 예민하게.
+
+Change:
+
+- **StepPanel(보드 우상단, 3행)**: `보기: 이 단계/전체` + `N단계만 재생` + `N단계부터 재생`.
+  셋 다 원래 푸터 바에 있었고 그중 둘은 **단계에 움직임이 있을 때만** 나타났다. 푸터는 가운데 정렬
+  flex 행이라 바 너비가 상태를 따라 숨 쉬었고, 커서 밑에서 칩이 좌우로 밀렸다. 옆 컨트롤을 움직이는
+  컨트롤은 자리가 틀린 것이다 — 보드 위로 띄우면 나타나고 사라져도 아무것도 밀지 않는다.
+  푸터에는 **단계를 고르는 일 하나만** 남았고, 칩은 언제나 같은 픽셀에 있다.
+  그 자리에 있던 단계 시계 캡션은 폐기(사용자: 쓸모없음). 누를 수 있는 것 셋이 못 누르는 숫자 셋보다 낫다.
+- **푸터 잔여 가변폭 제거**: GIF 버튼이 인코딩 중 "…"로 바뀌며 좁아지던 것 `min-width`로 고정.
+- **배속 창은 press에서 연다**: 슬라이드가 가능하다는 걸 알려주는 유일한 신호인데, 이미 슬라이드한
+  뒤에 보여줘선 아무것도 가르치지 못한다. 이동 없이 뗀 press는 그대로 play/pause —
+  판정은 `scrubMovedRef`로, 상태(`scrub`)를 읽으면 방금 연 창을 보고 클릭을 삼킨다.
+- **플링 게이트 완화**(옵트인이므로 의심할 이유가 사라졌다): `MIN_SPEED 10→6`,
+  `MIN_SWEEP_M 5→2.5`, `MIN_TRAVEL_M 2.5→1.2`, `STALE_MS 120→150`, 굴림 저항 `ROLL_K 3.2→2.4`,
+  `STOP_SPEED 1.5→1.1`. 관련 테스트는 **숫자가 아니라 상수 기준**으로 다시 써서, 문턱을 옮겨도
+  테스트가 지키려는 규칙 자체는 그대로 남게 했다.
+- `.stepReplayBtn` → `.replayScopeBtn`: 앞 이름은 문자열 `playBtn`을 부분 문자열로 포함해
+  `[class*=playBtn]` 셀렉터가 재생 버튼과 함께 잡혔다. 클래스명도 인터페이스다.
+
+Files: src/ui/{StepPanel.tsx(신규, StepStatus/StepReplay 대체),StepBar.tsx,AppShell.tsx,UiIcon.tsx,
+shell.module.css,i18n/ko.ts,stepTiming.ts(+test),tour/tourSteps.ts,AppShell.test.tsx},
+src/ui/pitch/ballFling.ts(+test), pw/{step-view,ux-core}.cjs
+
+Validation: `node pw/run.cjs` → **143 checks ALL PASS**(신규: 빈 단계에서도 푸터 너비·첫 칩 x좌표
+불변 882/748, 라벨이 짧아져도 불변, 배속 창이 press에서 열림, 이동 없는 press는 여전히 play/pause),
+346 tests, typecheck/lint/build/harness PASS.
+
+Related: CHG-20260824-196·197, PLAN-20260824-015

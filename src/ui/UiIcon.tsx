@@ -19,6 +19,9 @@ const PATHS: Record<string, string> = {
   // theme trio: sun (light), moon (dark), bisected disc (follow the system)
   sun: 'M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8 M12 2.5v2 M12 19.5v2 M4.6 4.6l1.4 1.4 M18 18l1.4 1.4 M2.5 12h2 M19.5 12h2 M4.6 19.4L6 18 M18 6l1.4-1.4',
   moon: 'M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1z',
+  // one sheet vs a stack of sheets: showing this step only, or every step at once
+  layers: 'M12 3.5 3.5 8l8.5 4.5L20.5 8 12 3.5z',
+  layersAll: 'M12 3.5 3.5 8l8.5 4.5L20.5 8 12 3.5z M3.5 12.5 12 17l8.5-4.5 M3.5 16.5 12 21l8.5-4.5',
   themeAuto:
     'M12 3.2a8.8 8.8 0 1 0 0 17.6 8.8 8.8 0 0 0 0-17.6z M12 3.2v17.6 M12 6.4h5 M12 12h6 M12 17.6h5',
 }

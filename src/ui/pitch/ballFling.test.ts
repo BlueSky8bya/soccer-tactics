@@ -33,16 +33,17 @@ describe('ball fling physics (pure, deterministic)', () => {
   })
 
   it('a short twitch is a PLACEMENT however quick it was', () => {
-    // the reported bug: nudging the ball ~1.5m fast read as 15 m/s and launched it
-    const twitch = [
+    // the reported bug: nudging the ball a little, fast, read as a throw and launched it.
+    // Written against the CONSTANT, not a number, so loosening the gate cannot silently
+    // reclassify the case this test exists to pin (the floor moved on 2026-08-24).
+    const at = (d: number) => [
       { t: 0, x: 0, y: 0 },
-      { t: 50, x: 0.75, y: 0 },
-      { t: 100, x: 1.5, y: 0 },
+      { t: 50, x: d / 2, y: 0 },
+      { t: 100, x: d, y: 0 },
     ]
-    expect(flingVelocity(twitch, 105)).toBeNull()
+    expect(flingVelocity(at(FLING_MIN_TRAVEL_M * 0.6), 105)).toBeNull()
     // just past the floor it becomes a throw again
-    const sweep = twitch.map((s) => ({ ...s, x: s.x * ((FLING_MIN_TRAVEL_M + 0.5) / 1.5) }))
-    expect(flingVelocity(sweep, 105)).not.toBeNull()
+    expect(flingVelocity(at(FLING_MIN_TRAVEL_M + 0.5), 105)).not.toBeNull()
   })
 
   it('a fast flick that never left the ball’s neighbourhood is a PLACEMENT', () => {
@@ -52,13 +53,15 @@ describe('ball fling physics (pure, deterministic)', () => {
      * 잡고 옮겨도 지 혼자 슉 지나가고). Whether the hand THREW this is a property of the whole
      * drag, not of its last frame — so the gate measures against where the ball was grabbed.
      */
+    const reach = FLING_MIN_SWEEP_M * 0.7
     const flick = [
       { t: 0, x: 0, y: 0 },
-      { t: 25, x: 1.6, y: 0 },
-      { t: 50, x: 3.2, y: 0 },
+      { t: 25, x: reach / 2, y: 0 },
+      { t: 50, x: reach, y: 0 },
     ]
     const grab = { x: 0, y: 0 }
-    // 3.2m of travel at 64 m/s — fast enough for every other gate, and still a nudge
+    // fast enough for every other gate — the window travel clears its own floor — and still a nudge
+    expect(reach).toBeGreaterThan(FLING_MIN_TRAVEL_M)
     expect(flingVelocity(flick, 55)).not.toBeNull() // no grab point → old behaviour
     expect(flingVelocity(flick, 55, grab)).toBeNull()
 

@@ -6,21 +6,28 @@
  */
 import type { Vec2 } from '@/domain/types'
 
-/** Release speed (m/s) below which a drop is just a drop. */
-export const FLING_MIN_SPEED = 10
+/**
+ * Release speed (m/s) below which a drop is just a drop.
+ *
+ * These gates were tightened twice in 2026-08 because the throw kept firing unasked. It is OPT-IN
+ * now (uiStore.ballFling), which removes the reason to be suspicious of the gesture: a hand that
+ * turned it on is a hand that wants it. Loosened accordingly (user 2026-08-24: 공이 잘 안 던져지던데
+ * 이거 좀 더 예민하게 … 지금은 너무 저항이 큰 것 같아서).
+ */
+export const FLING_MIN_SPEED = 6
 /** If the pointer rested longer than this before release, it is a PLACE, not a throw. */
-export const FLING_STALE_MS = 120
+export const FLING_STALE_MS = 150
 /** Speed cap — a wild swipe still lands on the pitch, not in the car park. */
 export const FLING_MAX_SPEED = 40
 /** Two-phase drag (user 2026-08-21: 세게 던지면 또르륵 말고 쭉 날아가게):
  *  above the transition speed the ball CARRIES with little drag, below it the grass grabs it. */
 export const FLING_FLIGHT_K = 1.2
-export const FLING_ROLL_K = 3.2
+export const FLING_ROLL_K = 2.4
 export const FLING_TRANSITION_SPEED = 12
 /** Net absorption drag once inside a goal — the catch. */
 export const FLING_NET_K = 16
-/** Rolling stops below this speed. */
-export const FLING_STOP_SPEED = 1.5
+/** Rolling stops below this speed. Lower = the ball keeps trickling instead of parking early. */
+export const FLING_STOP_SPEED = 1.1
 /** Wall bounce energy retention (pitch boundary). */
 export const FLING_RESTITUTION = 0.55
 const DT = 1 / 120
@@ -38,14 +45,14 @@ export const FLING_WINDOW_MS = 110
  * A throw is a SWEEP, not a twitch. Without a distance floor, nudging a ball 1.5m in 100ms reads
  * as 15 m/s and launched it across the pitch (user 2026-08-21: 조금 움직였는데도 공이 급발진).
  */
-export const FLING_MIN_TRAVEL_M = 2.5
+export const FLING_MIN_TRAVEL_M = 1.2
 /**
  * …and the DRAG AS A WHOLE has to have been a sweep, not a nudge. The window test above only sees
  * the last ~110 ms, so picking a ball up and flicking it two metres still read as a throw and sent
  * it across the pitch (user 2026-08-22: 공 조금만 잡고 옮겨도 지 혼자 슉 지나가고). Distance from
  * where the ball was grabbed is the honest measure of "did the hand actually throw this".
  */
-export const FLING_MIN_SWEEP_M = 5
+export const FLING_MIN_SWEEP_M = 2.5
 
 /**
  * Release velocity from the drag's recent samples. Direction comes from the window's net

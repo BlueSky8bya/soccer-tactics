@@ -6,10 +6,8 @@ import {
   setSegmentStep,
   stepCounts,
   stepRangeFor,
-  stepWindow,
 } from '@/editor/stepCommands'
 import { activeStepAt, stepOpensAt } from './stepTiming'
-import { playWindow } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { entityChipOf } from './teamColor'
 import { t } from './i18n'
@@ -17,8 +15,12 @@ import styles from './shell.module.css'
 
 /**
  * Step chips ①-⑨ (ADR-0009, PLAN-005 M1). A chip NEVER changes the document: it picks the step new
- * movements get and — when the step is already used — previews its starting frame. Scoped replay
- * ("이 단계만" / "여기부터") lives next to the chips as context actions.
+ * movements get and previews the frame that step opens at.
+ *
+ * ONE job, and therefore one constant width. Scoped replay and the view switch used to sit here
+ * as context actions, appearing and disappearing with the state — which made this centred row grow
+ * and shrink and slid every chip sideways under the cursor (user 2026-08-24). They live over the
+ * board now (StepPanel), where nothing they do can move anything else.
  */
 export function StepBar() {
   const core = useEditor()
@@ -30,10 +32,7 @@ export function StepBar() {
   const selectedSegmentId = useUiStore((s) => s.selectedSegmentId)
   const flashToast = useUiStore((s) => s.flashToast)
   const counts = stepCounts(doc)
-  const currentUsed = counts[currentStep - 1]! > 0
   const compiled = useCompiled()
-  const stepIsolate = useUiStore((s) => s.stepIsolate)
-  const setStepIsolate = useUiStore((s) => s.setStepIsolate)
   const playingT = useUiStore((s) => (s.playback.playing ? s.playback.t : null))
   // Which step is running NOW (aria-current, M4). Shared with the board caption via
   // activeStepAt — two places answering "which step is this" separately is how they drift.
@@ -61,15 +60,6 @@ export function StepBar() {
      */
     setPlaying(false)
     setPlayhead(stepOpensAt(doc, compiled, n))
-  }
-
-  const replayStep = () => {
-    const w = stepWindow(doc, currentStep)
-    if (w) playWindow('step', w.start, w.end)
-  }
-  const replayFrom = () => {
-    const w = stepWindow(doc, currentStep)
-    if (w) playWindow('from-step', w.start, null)
   }
 
   // With a movement selected the bar RETARGETS it (number keys change its step), so the active
@@ -109,37 +99,6 @@ export function StepBar() {
           {counts[n - 1]! > 0 && <span className={styles.stepCount}>{counts[n - 1]}</span>}
         </button>
       ))}
-      {/* The view switch lives WITH the chips: it changes what picking a chip shows, and a
-          preference explained anywhere else is a preference nobody finds. */}
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.stepActionBtn} ${styles.stepViewBtn}`}
-        onClick={() => setStepIsolate(!stepIsolate)}
-        title={t('step.isolateHint')}
-        aria-pressed={stepIsolate}
-      >
-        {stepIsolate ? t('step.isolateOn') : t('step.isolateOff')}
-      </button>
-      {currentUsed && (
-        <span className={styles.stepActions}>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.stepActionBtn}`}
-            onClick={replayStep}
-            title={t('simple.playStepHint', { n: currentStep })}
-          >
-            {t('simple.playStep')}
-          </button>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.stepActionBtn}`}
-            onClick={replayFrom}
-            title={t('simple.playFromHint', { n: currentStep })}
-          >
-            {t('simple.playFrom')}
-          </button>
-        </span>
-      )}
     </div>
   )
 }

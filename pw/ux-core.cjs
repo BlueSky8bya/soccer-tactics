@@ -163,7 +163,8 @@ module.exports = {
       out.push(await sampleAgreement('at rest', ballId))
 
       // play, sample mid-flight, then pause and sample the held frame
-      await page.getByRole('button', { name: '재생' }).click()
+      // exact: the step panel's buttons ('N단계만 재생') also contain this word
+      await page.getByRole('button', { name: '재생', exact: true }).click()
       await page.waitForTimeout(400)
       out.push(await sampleAgreement('mid-playback', ballId))
       const playingFlag = await page.evaluate(() => window.__stClock().playing)

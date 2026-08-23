@@ -179,8 +179,9 @@ describe('AppShell (simple mode, ADR-0009)', () => {
     expect(ui.playback.t).toBeGreaterThan(0) // preview seeks to the step-2 start
     expect(ui.playback.playing).toBe(false)
     expect(core.getRevision()).toBe(rev) // chip never mutates the document
-    // scoped replay actions appear for a used step
-    const stepOnly = screen.getByRole('button', { name: /이 단계만/ })
+    // scoped replay lives beside the board now, not in the footer (PLAN-015 v3): the footer used
+    // to grow and shrink with it and slide every chip sideways.
+    const stepOnly = screen.getByRole('button', { name: /2단계만 재생/ })
     await act(async () => {
       stepOnly.click()
     })

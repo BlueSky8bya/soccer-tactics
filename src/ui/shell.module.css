@@ -1742,14 +1742,6 @@
   justify-content: center;
 }
 
-.stepActions {
-  display: inline-flex;
-  gap: 4px;
-  margin-left: 6px;
-  padding-left: 8px;
-  border-left: 1px solid var(--st-border);
-}
-
 /* "This step already holds movements" is a DOCUMENT fact spanning every entity, so it claims
    neither one entity's colour nor the accent — the accent is for selection and system actions. It
    just reads as filled-in (user 2026-08-22: 버튼은 색깔 구분하는데 왜 작은 숫자는 파란색 그대로야). */
@@ -2205,36 +2197,9 @@
   color: #c62a22;
 }
 
-.stepActionBtn {
-  height: 28px;
-  font-size: 12px;
-  color: var(--st-text-2);
-  border: 1px solid var(--st-border);
-  border-radius: var(--st-radius-pill);
-  padding: 0 10px;
-}
-
-.stepActionBtn:hover:not(:disabled) {
-  color: var(--st-accent);
-  border-color: var(--st-accent);
-  background: var(--st-accent-soft);
-}
-
-/*
- * The step VIEW toggle (PLAN-015). It needs its own pressed style rather than `.btnActive`: this
- * rule comes after `.stepActionBtn`, which resets the colour and would otherwise win, and the
- * shared hover tint is the same accent — so an un-pressed button under the cursor looked exactly
- * like a pressed one. The border carries the state; hover keeps only the wash.
- */
-.stepViewBtn[aria-pressed='true'] {
-  color: var(--st-accent);
-  border-color: var(--st-accent);
-  background: var(--st-accent-soft);
-  font-weight: 600;
-}
-
-.stepViewBtn[aria-pressed='false']:hover:not(:disabled) {
-  border-color: var(--st-border-strong);
+/* "내보내기" becomes "…" while the encoder runs, and the bar must not twitch. */
+.gifBtn {
+  min-width: 74px;
 }
 
 /* M5: while the play runs, the stage takes over — chrome recedes without moving */
@@ -2301,74 +2266,78 @@
 }
 
 /*
- * Step clock (PLAN-015 v2). Top-RIGHT by request, which also keeps it clear of the boost pill in
- * the centre and of the left half where a build-up usually starts. Non-interactive: it reports on
- * the board, the board is still operated directly.
+ * The step's own controls, floating at the board's top-right (PLAN-015 v3): what the board shows
+ * of this step, and the two ways to replay it. Three rows, one action each.
+ *
+ * Absolutely positioned on purpose. Two of the three appear only when the step holds movements, and
+ * back in the footer that made the whole bar breathe and slid every step chip sideways
+ * (user 2026-08-24). Out here the same appearing and disappearing costs the layout nothing.
+ *
+ * SOLID, not translucent: the pitch moves behind this corner, and A-04a rules out text over motion.
  */
-.stepStatus {
+.stepPanel {
   position: absolute;
   right: var(--st-space-4);
   top: var(--st-space-4);
   display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  max-width: min(46ch, 60%);
-  padding: 7px 12px 7px 8px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px;
   border-radius: var(--st-radius-card);
-  /* SOLID, unlike the footer bar it resembles. A-04a: the pitch moves behind this corner during
-     playback, and translucent text over motion is the case that rule exists to forbid. */
   background: var(--st-surface);
   border: 1px solid var(--st-border);
   box-shadow: var(--st-depth-raised);
-  color: var(--st-text);
-  pointer-events: none;
   z-index: 30;
-  transition: opacity var(--st-motion-transition) var(--st-ease-standard);
 }
 
-/* While the play runs the caption is commentary, not a control panel — it steps back. */
-.stepStatus[data-running='true'] {
-  opacity: 0.82;
-}
-
-.stepStatusBadge {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  height: 34px;
-  padding: 0 8px;
-  border-radius: var(--st-radius-s);
-  background: var(--st-accent);
-  color: #fff;
-  font-size: 12.5px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.stepStatusBody {
+.stepPanelBtn {
+  appearance: none;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-/* The number is the headline — how long this step lasts — with its context under it. */
-.stepStatusMain {
-  font-size: 13px;
+  align-items: center;
+  gap: 8px;
+  /* one width for all three, so the column has a single straight edge whatever the labels say */
+  min-width: 138px;
+  height: 30px;
+  padding: 0 12px 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--st-radius-s);
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
   font-weight: 600;
-  line-height: 1.3;
+  color: var(--st-text);
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    transform var(--st-spring-press-ms) var(--st-spring-press);
 }
 
-.stepStatusSub {
-  font-size: 11px;
-  line-height: 1.3;
-  color: var(--st-text-3);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+.stepPanelBtn:hover {
+  background: var(--st-accent-soft);
+  color: var(--st-accent);
+}
+
+.stepPanelBtn:active {
+  transform: scale(0.97);
+  transition: transform var(--st-motion-instant) var(--st-ease-out);
+}
+
+/* The view switch is a MODE, not an action: it stays lit while it is on, and a hairline separates
+   it from the two one-shot buttons below. */
+.stepViewBtn {
+  margin-bottom: 3px;
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--st-border);
+  border-radius: var(--st-radius-s) var(--st-radius-s) 0 0;
+  height: 33px;
+  color: var(--st-text-2);
+  font-weight: 500;
+}
+
+.stepViewBtn[aria-pressed='true'] {
+  color: var(--st-accent);
+  font-weight: 600;
 }
 
 .speedPillRate {

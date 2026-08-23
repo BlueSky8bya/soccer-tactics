@@ -208,14 +208,6 @@ export const ko = {
   'start.done': '기본 요소가 다 갖춰졌어요. 선수나 공을 선택하면 여기서 정밀 조정할 수 있어요.',
   'simple.steps': '단계',
 
-  // 단계 시계 (PLAN-015 v2) — 그림이 말할 수 없는 것만
-  'step.badge': '{n}단계',
-  'step.takes': '{d}초 걸림',
-  'step.window': '{i}/{n}번째 · {from}초에 시작 · 전체 {all}초',
-  'step.startsAt': '{from}초 지점 — 지금 그리면 여기서 시작',
-  'step.empty': '아직 비어 있음',
-  'step.clock': '{t}초 / {all}초',
-  'step.ofTotal': '{i}/{n}번째 단계',
   'step.isolateOn': '보기: 이 단계',
   'step.isolateOff': '보기: 전체',
   'step.isolateHint': '고른 단계의 시작 프레임에 서고 그 단계만 그립니다 (끄면 모든 단계 표시)',
@@ -267,10 +259,11 @@ export const ko = {
   'simple.stepPick':
     '{n}단계 — 지금부터 그리는 움직임이 이 단계에 들어가요. 이미 쓰인 단계면 시작 장면 미리보기 (움직임 {c}개)',
   'simple.stepAssign': '선택한 움직임을 {n}단계로',
-  'simple.playStep': '▶ 이 단계만',
-  'simple.playStepHint': '{n}단계만 재생',
-  'simple.playFrom': '▶ 여기부터',
+  'simple.playStep': '{n}단계만 재생',
+  'simple.playStepHint': '{n}단계 구간만 반복 재생',
+  'simple.playFrom': '{n}단계부터 재생',
   'simple.playFromHint': '{n}단계부터 끝까지 재생',
+  'simple.stepPanel': '단계 보기·재생',
   'simple.stepLimit':
     '9단계가 마지막이에요 — 이 동작은 추가되지 않았어요. 단계를 정리하거나 기존 단계(1~9)에 그리세요.',
   'variant.label': '전술안',
