@@ -686,6 +686,12 @@
   pointer-events: none;
 }
 
+/* Casing + line + head lift off the grass together, the way a route line does on a map: one soft
+   shadow under the whole body, never per-part (user 2026-08-23: 애플 형식으로). */
+.pathBody {
+  filter: drop-shadow(0 0.35px 0.7px rgba(0, 0, 0, 0.28));
+}
+
 .pathCasing {
   fill: none;
   stroke: rgba(255, 255, 255, 0.45);
