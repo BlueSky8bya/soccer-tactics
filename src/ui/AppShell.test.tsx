@@ -319,7 +319,9 @@ describe('playback staging (PLAN-006 M5)', () => {
     // the factor is CHOSEN on the play button now: the hold row stays one line, and the pick
     // lives in its own gesture row (a wrapped hint hangs indented under the keycap)
     expect(rows).toMatch(/배속/)
-    expect(rows).toMatch(/▶/)
+    // the row names the play button in words; the ▶ glyph is reserved for the button itself,
+    // because a play triangle in a panel row reads as "press me" (lab review, 2026-08-24)
+    expect(rows).toMatch(/재생 버튼 좌우 드래그/)
     expect(KEYMAP.playback.boost.hint.length).toBeLessThan(16)
     // the plain Space row stays about play/pause only
     expect(KEYMAP.playback.toggle.hint).not.toMatch(/배속/)

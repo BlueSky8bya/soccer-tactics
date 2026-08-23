@@ -41,7 +41,7 @@ export function StepPanel() {
     <div className={styles.stepPanel} role="group" aria-label={t('simple.stepPanel')}>
       <button
         type="button"
-        className={`${styles.stepPanelBtn} ${styles.stepViewBtn}`}
+        className={`${styles.stepPanelBtn} ${styles.stepViewBtn} ${used ? styles.stepViewBtnLeads : ''}`}
         onClick={() => setStepIsolate(!stepIsolate)}
         title={t('step.isolateHint')}
         aria-pressed={stepIsolate}

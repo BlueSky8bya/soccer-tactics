@@ -162,7 +162,8 @@ export const GUIDE_ANIM_BINDINGS: Binding[] = ANIM_BINDINGS.filter((b) => b.comp
 export const GUIDE_PLAY_BINDINGS: Binding[] = [
   KEYMAP.playback.toggle,
   KEYMAP.playback.boost,
-  { label: '▶ 좌우 드래그', hint: '꾹 눌러서 배속 선택', cues: ['space'] },
+  // no ▶ glyph: it means "play" everywhere else in the app, and this row is a drag, not a button
+  { label: '재생 버튼 좌우 드래그', hint: '꾹 눌러서 배속 선택', cues: ['space'] },
   KEYMAP.playback.zen,
 ]
 

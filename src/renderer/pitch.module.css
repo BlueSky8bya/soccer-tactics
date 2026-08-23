@@ -187,6 +187,11 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* A runner's recent past, in their own colour. Interface motion only — derived from the clock. */
+.runTrail circle {
+  pointer-events: none;
+}
+
 /* The ghost's opaque ground: without it a translucent tint composites with the grass and a red
    ghost renders brown (measured rgb(156,110,83) — lab review 2026-08-24). */
 .ghostPlate {
@@ -408,22 +413,6 @@
   cursor: crosshair;
 }
 
-/* ---------- ball & motion cues (round 2) ---------- */
-
-.ballShadow {
-  fill: rgba(0, 0, 0, 0.45);
-  pointer-events: none;
-}
-
-.ballSpecular {
-  fill: rgba(255, 255, 255, 0.75);
-  pointer-events: none;
-}
-
-.headingWedge {
-  opacity: 0.85;
-  pointer-events: none;
-}
 
 .trailDot {
   fill: rgba(255, 255, 255, 0.9);

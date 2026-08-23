@@ -3082,6 +3082,33 @@ export function SimplePitch() {
           </g>
         ))}
       </g>
+      {/* Where each running player has just been — the ball's trail, spoken for players too, so one
+          mark means "moving" for both kinds of piece. Four samples of the SAME past frames the ball
+          uses, taken once here rather than per player. */}
+      {isPlaying && (
+        <g className={styles.runTrail} aria-hidden="true">
+          {[0.06, 0.12, 0.19].map((back, i) => {
+            const at = ui.playback.t - back
+            if (at <= 0) return null
+            const past = stateAt(compiled, doc, at)
+            return doc.players.map((p) => {
+              if (!resolved.players[p.id]?.moving) return null
+              const q = past.players[p.id]?.pos
+              if (!q) return null
+              return (
+                <circle
+                  key={p.id + i}
+                  cx={q.x}
+                  cy={q.y}
+                  r={0.62 - i * 0.13}
+                  style={{ fill: teamColorOf(doc, p.id) }}
+                  opacity={0.3 - i * 0.08}
+                />
+              )
+            })
+          })}
+        </g>
+      )}
       {doc.players.map((p, pi) => {
         const rp = resolved.players[p.id]
         // Bouncy run feel (user 2026-08-20): a tiny deterministic bob derived from TACTICAL time —

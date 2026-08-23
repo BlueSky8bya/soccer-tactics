@@ -45,6 +45,11 @@
   /* The ball on a FILLED control. White is its colour on grass, but a white chip on a light panel
      has no edge — so a control that belongs to the ball goes dark with white type. */
   --st-ball-chip: #1d1d1f;
+  /* A switch thumb is the ELEVATED element, so it is lighter than its track — in BOTH themes.
+     Keying it to --st-surface mirrored the value instead of the role, and in dark that made the
+     thumb darker than the track it slides in: the header's only stateful control had no legible
+     state (lab review, 2026-08-24, measured knob rgb(28,29,33) inside track rgb(45,48,54)). */
+  --st-switch-knob: #ffffff;
 
   /* Spacing — fine at the small end, coarse at the top (IBM Carbon's shape, not a pure 8pt grid).
      A strict 8-multiple scale bloats a dense professional tool: Apple's own desktop control
@@ -163,6 +168,7 @@
   --st-pitch-line: rgba(255, 255, 255, 0.72);
   /* A near-black chip on a near-black panel has no edge — the ball's filled chip lifts instead. */
   --st-ball-chip: #3a3d44;
+  --st-switch-knob: #c9cdd4;
   --st-depth-rest: 0 0 0 1px var(--st-border), 0 1px 2px rgba(0, 0, 0, 0.4);
   --st-depth-raised: 0 6px 18px rgba(0, 0, 0, 0.42);
   --st-depth-drag: 0 12px 28px rgba(0, 0, 0, 0.55);

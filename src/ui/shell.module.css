@@ -53,7 +53,8 @@
   border: 1px solid var(--st-border);
   border-radius: 999px;
   padding: 2px 8px;
-  opacity: 0.55;
+  /* it copies the deploy hash on click, so it has to be readable: 0.55 took it to 1.7:1 */
+  opacity: 0.9;
   cursor: pointer;
   white-space: nowrap;
   transition: opacity var(--st-motion-instant) var(--st-ease-standard);
@@ -1090,7 +1091,7 @@
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  background: var(--st-surface);
+  background: var(--st-switch-knob, #fff);
   box-shadow: var(--st-depth-rest);
   /* the knob rides the same press spring the board tokens use — one physics for the whole app */
   transition: transform var(--st-spring-press-ms) var(--st-spring-press);
@@ -1483,6 +1484,17 @@
 }
 
 /* Bottom mode badge: segmented 애니메이션/그리기 toggle — always says which mode you're in. */
+/*
+ * The tool columns carry a key-hint row above their button, so the bar's OTHER groups have to
+ * reserve the same height or they float 6-8px above the shared centre line and the footer stops
+ * reading as one object (lab review, 2026-08-24, measured 1696.0 / 1696.5 / 1707.5).
+ */
+.modeToggle,
+.stepBar,
+.barDivider {
+  margin-top: var(--st-toolkey-row);
+}
+
 .modeToggle {
   display: inline-flex;
   align-items: center;
@@ -1552,7 +1564,9 @@
   font-size: 9.5px;
   line-height: var(--st-toolkey-row);
   color: var(--st-text-3);
-  opacity: 0.8;
+  /* these NAME the shortcut beside its button — functional text, not decoration (measured 2.2:1
+     with the old 0.8, lab review 2026-08-24) */
+  opacity: 1;
   user-select: none;
   align-self: end;
   white-space: nowrap;
@@ -2357,9 +2371,15 @@
     transform var(--st-spring-press-ms) var(--st-spring-press);
 }
 
+.stepPanelBtn:not(.stepViewBtn) {
+  background: var(--st-surface-2);
+  border-color: var(--st-border);
+}
+
 .stepPanelBtn:hover {
   background: var(--st-accent-soft);
   color: var(--st-accent-text, var(--st-accent));
+  border-color: color-mix(in srgb, var(--st-accent) 40%, transparent);
 }
 
 .stepPanelBtn:active {
@@ -2368,15 +2388,19 @@
 }
 
 /* The view switch is a MODE, not an action: it stays lit while it is on, and a hairline separates
-   it from the two one-shot buttons below. */
+   it from the two one-shot buttons below — but only when there ARE buttons below, or the panel
+   ends on a divider with nothing under it (lab review, 2026-08-24). */
 .stepViewBtn {
+  height: 33px;
+  color: var(--st-text-2);
+  font-weight: 500;
+}
+
+.stepViewBtnLeads {
   margin-bottom: 3px;
   padding-bottom: 0;
   border-bottom: 1px solid var(--st-border);
   border-radius: var(--st-radius-s) var(--st-radius-s) 0 0;
-  height: 33px;
-  color: var(--st-text-2);
-  font-weight: 500;
 }
 
 .stepViewBtn[aria-pressed='true'] {

@@ -17,7 +17,13 @@ export interface TokenProps {
   selected: boolean
   hovered: boolean
   dragging: boolean
-  /** Player heading (radians) while moving — draws a subtle direction wedge. */
+  /**
+   * Heading and moving are still passed for the caller's own decoration (the run trail, the bob).
+   * The token itself no longer draws a direction wedge: a solid triangle at the disc's edge read as
+   * a stray arrowhead that had come loose from a path — two independent reviewers called it debris
+   * (2026-08-24). Motion is said the same way for players as for the ball now: a fading trail
+   * behind the thing, drawn by the board.
+   */
   heading?: number
   moving?: boolean
   /** Ball: lofted flight height (m) and rolling spin (rad). Deterministic from the engine. */
@@ -90,14 +96,6 @@ export const Token = memo(function Token(p: TokenProps) {
         {/* soft ground shadow — lifts the piece off the grass (design polish 2026-08-20) */}
         <ellipse cx={0.22} cy={0.3} rx={r * 1.02} ry={r * 0.62} className={styles.tokenShadow} />
         {p.hovered && <circle r={r + 0.62} className={styles.hoverHalo} />}
-        {p.moving && p.heading !== undefined && (
-          <path
-            d={`M ${r + 0.2} -0.55 L ${r + 1.1} 0 L ${r + 0.2} 0.55 Z`}
-            className={styles.headingWedge}
-            transform={`rotate(${(p.heading * 180) / Math.PI})`}
-            style={{ fill: p.color }}
-          />
-        )}
         {/* selection = the token's own border thickens (no extra outer ring — user 2026-08-21) */}
         <circle
           r={r}
