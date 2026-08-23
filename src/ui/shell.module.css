@@ -509,6 +509,23 @@
   pointer-events: none;
 }
 
+/*
+ * The footer spans all three columns, so it centred on the VIEWPORT while the board centres in the
+ * middle column — and the two side columns are deliberately unequal (the guide needs more width
+ * than the team setup), so the bar sat ~8px right of the pitch it belongs to (lab review,
+ * 2026-08-24, measured board centre 1423.5 vs bar centre 1439.5). Matching the columns' own clamps
+ * makes the bar's content box the pitch column, and centring inside it centres on the board.
+ */
+.shell[data-simple='true'] .bottomWrap {
+  padding-left: clamp(222px, 14vw, 244px);
+  padding-right: clamp(238px, 15vw, 268px);
+}
+
+.shell[data-simple='true'][data-zen='true'] .bottomWrap {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
 /* ---------- formation picker ---------- */
 
 .popover {
