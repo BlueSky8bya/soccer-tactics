@@ -20,7 +20,11 @@ Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness
 - **다크모드**: 헤더 버튼 시스템 → 라이트 → 다크 순환, localStorage, React 마운트 전 도색.
   다크 토큰 보강(depth 4단, status 색, tint 잉크).
 
-증거: `pw/step-view.cjs` 16 checks ALL PASS. 상세: CHG-20260824-194.
+**회귀 1건 즉시 수정(CHG-195)**: 커맨드가 엔티티 체인 때문에 단계를 자동으로 밀어낼 때
+(한 선수의 두 번째 런, 런 뒤의 패스) 칩이 따라가지 않아 **방금 그린 움직임이 렌더에서 빠졌다**
+— 사용자 "1단계 이상으로 경로가 안 그려져". 커밋 직후 칩을 착지한 단계로 옮긴다.
+
+증거: `pw/step-view.cjs` 18 checks ALL PASS. 상세: CHG-20260824-194, -195.
 
 ### 이전 목표(완료): 핵심 재현 무결성 감사 Phase 1
 
@@ -256,9 +260,10 @@ PLAN-015는 구현·검증 완료다. 남은 것은 사람이 봐야 하는 것�
 - `npm test` → PASS (49 files / **346 tests**) — 2026-08-24
 - `npm run build` → PASS — 2026-08-24
 - `npm run harness:verify` → PASS (0 warnings) — 2026-08-24
-- 브라우저 probe `node pw/run.cjs step-view` → **16 checks ALL PASS**, 콘솔 클린 — 2026-08-24
+- 브라우저 probe `node pw/run.cjs step-view` → **18 checks ALL PASS**, 콘솔 클린 — 2026-08-24
   (테마 순환·리로드 유지·다크 실도색 / 2단계에서 1단계 trace / 1단계에서 2단계 **트리 제거** /
-  격리 해제 복귀 / 플링 기본 꺼짐 overshoot 1.60m / 켜면 조작법 행 복귀)
+  격리 해제 복귀 / **자동으로 밀려난 움직임이 보드에 남는다(CHG-195 회귀)** /
+  플링 기본 꺼짐 overshoot 1.60m / 켜면 조작법 행 복귀)
 - 나머지 probe 6종은 이번 세션 **NOT RUN** — 2026-08-23 결과는 그 날짜의 증거다.
 
 ### 이전 세션 (2026-08-23, 세션 20)

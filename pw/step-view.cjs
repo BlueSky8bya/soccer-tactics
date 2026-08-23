@@ -140,6 +140,38 @@ module.exports = {
       await page.getByRole('button', { name: /보기: 전체/ }).click()
       await page.waitForTimeout(120)
 
+      /*
+       * REGRESSION (user 2026-08-24: 1단계 이상으로 경로가 안 그려져). The step a movement LANDS on
+       * is often past the one the chip asked for — a player's second run cannot share a step with
+       * its first. With isolation on and the chip left behind, that movement was authored and then
+       * hidden: to the hand that drew it, nothing happened. Whatever the chip said before, the
+       * board must be showing the movement that was just made.
+       */
+      await chip(page, 1).click()
+      await page.waitForTimeout(120)
+      const before = h.authoredSegments(await h.doc(page)).map((s) => s.id)
+      const again = (await h.doc(page)).players.find((p) => p.id === a.id)
+      await h.drawFrom(
+        page,
+        { x: again.home.x + 12, y: again.home.y - 6 },
+        { x: again.home.x + 22, y: again.home.y - 12 },
+      )
+      await page.waitForTimeout(250)
+      // a's SECOND run: the chip asked for 1, the chain puts it on 2
+      const made = h.authoredSegments(await h.doc(page)).find((s) => !before.includes(s.id))
+      const inTree = made
+        ? await page.evaluate((id) => !!document.querySelector(`g[data-segment="${id}"]`), made.id)
+        : false
+      out.push(
+        h.check(
+          'a movement that auto-bumps past the chip is still on the board',
+          !!made && made.step === 2 && inTree,
+          `landed on ${made ? made.step : 'nothing'}, inTree=${inTree}`,
+        ),
+      )
+      const capAfter = await capText()
+      out.push(h.check('and the bar/caption moved with it', /2단계/.test(capAfter), capAfter))
+
       // ---- the throw ------------------------------------------------------
       const flingSwitch = page.getByRole('switch', { name: /공 휙 던지기/ })
       out.push(

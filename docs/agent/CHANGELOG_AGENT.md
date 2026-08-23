@@ -2725,3 +2725,31 @@ Rollback: 세 기능 모두 UI 플래그 뒤 — `stepIsolate` 끄기 / `ballFli
 종전 동작. 문서 스키마·엔진 불변이라 저장된 전술은 그대로 열린다.
 
 Documentation Updated: CURRENT_STATE, ACTIVE_PLAN, PROJECT_MAP, CHANGELOG_AGENT
+
+## CHG-20260824-195 — 자동으로 밀려난 단계의 움직임이 사라지던 문제 (PLAN-015 회귀)
+
+Problem: 사용자 2026-08-24 — "오류 났다 1단계 이상으로 경로가 안 그려져". 재현: 선수 하나에 런을
+그리고 **같은 선수에게 두 번째 런**을 그리면 문서에는 2단계로 들어가는데 보드에는 아무것도 안 나온다.
+공도 같다 — 런 뒤에 그린 패스가 다음 단계로 밀리면 보이지 않는다.
+
+원인: `addStepRun`/`addStepPass`는 **엔티티 체인상 불가능한 단계를 스스로 밀어낸다**
+(`step = Math.max(step, lastAuthoredStep+1, …)`). 한 선수의 두 번째 런은 첫 런과 같은 단계를 쓸 수
+없기 때문이다. 그런데 단계 칩(`currentStep`)은 그대로 1에 남아 있었다. 이건 CHG-194 전까지는 표시상의
+불일치일 뿐이었지만(토스트만 "2단계에 추가됨"이라고 말했다), **단계 격리가 켜지는 순간 치명적**이 됐다:
+칩의 단계 밖은 렌더에서 빠지므로, 방금 그린 움직임이 만들어지고 카운트되고 토스트로 announce된 뒤
+**보이지 않는다**.
+
+Change: 커밋 직후 `landed !== currentStep`이면 **칩을 착지한 단계로 옮긴다**(`SimplePitch` commit
+경로). 토스트는 원래부터 그 단계를 말하고 있었고, 이제 바가 그 말에 동의한다. 손이 방금 만든 것을
+숨기는 보드는 보기 설정이 뭐라고 하든 고장이다.
+
+부수 확인: 잔상 끝 드래그(`adjust-ghost-end`)는 이미 `selectSegment`를 하고, 선택된 움직임은 격리가
+절대 숨기지 않으므로 숨은 단계를 편집하는 경로에는 같은 구멍이 없다.
+
+Files: src/ui/pitch/SimplePitch.tsx, pw/step-view.cjs(회귀 검사 2건 추가)
+
+Validation: `node pw/run.cjs step-view` → **18 checks ALL PASS**(신규: "자동으로 밀려난 움직임이
+보드에 남는다" landed=2·inTree=true, "바/캡션이 따라간다" 2단계), 346 tests,
+typecheck/lint/build/harness PASS.
+
+Related: CHG-20260824-194, PLAN-20260824-015

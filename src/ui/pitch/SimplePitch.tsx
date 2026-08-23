@@ -566,6 +566,19 @@ export function SimplePitch() {
     const landedSeg = findSegment(core.getDocument(), made)
     const landed =
       landedSeg && 'path' in landedSeg.segment ? stepOf(landedSeg.segment) : step
+    /*
+     * THE BAR FOLLOWS THE MOVEMENT. `landed` is regularly higher than the chip asked for — a
+     * player's second run cannot share a step with its first, and a pass after a run lands after
+     * it — and the chip used to stay behind, describing a step the author had already left.
+     *
+     * That was cosmetic until step isolation (PLAN-015) started hiding everything outside the
+     * chip's step: draw a run, draw the pass that follows it, and the pass was authored, counted,
+     * announced by the toast — and invisible (user 2026-08-24: 1단계 이상으로 경로가 안 그려져).
+     * A board that hides what the hand just made is broken whatever the view setting says, so the
+     * chip moves to where the movement went. The toast has always named that step; now the bar
+     * agrees with it.
+     */
+    if (landed !== st.currentStep) st.setCurrentStep(landed)
     // commit confirmation: subject pops again as the arrow lands (M4)
     pulseKey.current++
     setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
