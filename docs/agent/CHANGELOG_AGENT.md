@@ -2568,3 +2568,26 @@ Files: docs/agent/plans/evidence/PLAN-014-M3-final-report.md, docs/agent/CURRENT
 docs/agent/plans/ACTIVE_PLAN.md, docs/agent/handoffs/2026-08-23_0724_plan-014-phase1-audit.md
 
 Validation: typecheck/lint/test/build/harness 전부 PASS. (commit ecfd7cf)
+
+## CHG-20260823-189 — D-browser: R12-D·R7 Resolved, R5는 실제 결함으로 확인 (PLAN-014)
+
+Problem: DG-BROWSER 결정(사용자 "당연히 설치해") 후, 화면·클릭 계층을 실제 브라우저로 감사.
+
+Change: Playwright 1.62.1을 tracked devDependency로 추가, `pw/`에 runner·manifest·probe 4종.
+manifest는 과거 22종 probe 이름을 **증거가 아니라 MISSING 인벤토리**로 기록한다.
+- **R12-D Resolved**: 7 viewport(1280×720/800, 1440×900, 1440×1000@DPR2, 1920×1080, ultrawide,
+  tall)에서 CTM 등방(skew 0), pick의 `view.w/rect.width` = `1/ctm.a`(소수 5자리 일치),
+  **히트 밴드 실측 6~7px**(설계 7), surround 전역 유한 좌표(dead strip 0).
+- **R7 Resolved**: blur/lostpointercapture/pointercancel/Escape 전부 열린 transaction 없음,
+  다음 편집 정상. 특성화: window blur만은 취소가 아니라 이후 pointerup에서 커밋(F-D-03, P3).
+- **R5 Confirmed (P1)**: 호버는 전역 rank 튜플의 `norm`으로 정렬해 경로를 고르고, 프레스는
+  카테고리 top + intent 우선순위(고스트 > 경로)로 고스트를 고른다. 고스트는 항상 런의 끝점이고
+  끝점은 그 경로 위에 있으므로 **모든 런 끝점 ±2m 띠에서 재현**: 경로가 강조된 채 드래그하면
+  곡선이 아니라 도착점이 끌려간다. 스캔라인(dx −3~+1m)으로 경계까지 특정.
+- production 1줄: DEV 전용 QA mirror에 `hoverKey` 노출(호버 약속은 React state라 paint로 못 읽음).
+
+Files: pw/**, src/ui/pitch/SimplePitch.tsx(DEV 훅 1줄), package.json,
+docs/agent/plans/evidence/PLAN-014-D-browser-report.md
+
+Validation: hit-scale 42 PASS, gesture-cancel 17 PASS, reduced-motion 5 PASS,
+r5-diagnose 11(mismatch 검출 = 의도된 FAIL). typecheck/lint/test(316)/build/harness PASS. (commit 5aa6c5d)

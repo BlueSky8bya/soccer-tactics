@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-08-23 (세션 20, PLAN-014 Phase 1 — G0 flake 수리 + M1 mutation-kill + M2 junction parity, 판정 **Core Closure Supported**) (직전: 세션 19, 순간 문법)
+Last Updated: 2026-08-23 (세션 20, PLAN-014 Phase 1 **Core Closure Supported** + D-browser 감사 — R12-D·R7 Resolved, **R5 Confirmed P1**) (직전: 세션 19, 순간 문법)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 
@@ -18,7 +18,15 @@ predicate 단위 검증. **M2**: semantic resolver 1개(heldBallPos), 우회 조
 Findings 6건 전부 P2(detector 계층·import 정책·tie-break) — 제품 결함 아님, remediation 후보.
 증거: `plans/evidence/PLAN-014-M1-mutation-report.md`, `PLAN-014-M2-junction-graph.md`,
 계약: `invariantMutation.test.ts` 17핀, `junctionParity.test.ts` 8. **범위 한정**: core
-document/engine/editor만 — UI gesture/render/hit/UX는 DG-BROWSER 결정 전 `NOT VERIFIED`.
+document/engine/editor만.
+
+**D-browser (2026-08-23, DG-BROWSER 1안 채택 — 사용자 "당연히 설치해")**: Playwright 1.62.1 tracked +
+`pw/` probe 4종. **R12-D Resolved** — 전 viewport(DPR2·ultrawide·tall 포함) CTM 등방, pick의 m/px가
+실제 1/ctm.a와 일치, 히트 밴드 실측 6~7px, dead strip 0. **R7 Resolved** — blur/lostcapture/cancel/Esc
+모두 열린 transaction 없음(단 blur는 취소가 아니라 이후 pointerup에서 커밋 — F-D-03 P3).
+**R5 Confirmed (P1)** — 호버는 전역 rank(norm), 프레스는 카테고리+intent 우선순위(고스트>경로)를 써서
+**모든 런 끝점 ±2m 띠에서 호버 약속≠실제 대상**: 경로를 휘려 겨눴는데 런 도착점이 끌려간다.
+증거·원인·수정 후보: `plans/evidence/PLAN-014-D-browser-report.md`, 재현: `pw/r5-diagnose.cjs`.
 
 ### 이전 목표(완료): 순간 문법
 
@@ -188,7 +196,9 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 
 ## Next Exact Steps
 
-1. (사용자) **DG-BROWSER 결정** — 브라우저 감사 방식 3택: ① Playwright devDependency + tracked `pw/`
+0. **DG-BROWSER 결정됨 (2026-08-23, 1안)** — Playwright 1.62.1 tracked devDependency + `pw/` probe.
+   D-browser 감사 완료: R12-D·R7 Resolved, **R5 Confirmed (P1)**. 다음은 R5 수정 계획.
+1. ~~(사용자) DG-BROWSER 결정~~ — 브라우저 감사 방식 3택: ① Playwright devDependency + tracked `pw/`
    (권고) ② external harness(버전·소스 고정) ③ 생략(UI/UX 폐쇄 `NOT VERIFIED` 수용).
    결정 전에는 D-browser/E 착수 불가; C 문서 drift·D-static은 결정 없이 진행 가능.
 2. (사용자) Findings remediation 우선순위 확인 — 전부 P2: F-M1-01(I2 전 waypoint 확장),
@@ -226,7 +236,7 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 - mutation-kill 스위트 (`invariantMutation.test.ts`, 17핀) → PASS, SURVIVED 0 — 2026-08-23
 - junction parity 스위트 (`junctionParity.test.ts`, 8) → PASS, 전 junction Δ=0.0000 — 2026-08-23
 - `npx vitest run src/editor/tacticFuzz.test.ts` 기본 campaign(360세션) → PASS — 2026-08-23
-- 브라우저 probe/marathon → **NOT RUN** (DG-BROWSER 미결; `pw/` 자산은 현재 checkout에 없음 —
+- 브라우저 probe 4종(`hit-scale` 42, `gesture-cancel` 17, `reduced-motion` 5, `r5-diagnose` 11) → hit-scale/gesture-cancel/reduced-motion **PASS**, r5-diagnose는 **의도된 FAIL**(R5 결함 재현). marathon은 NOT RUN(미작성) — 2026-08-23
   아래 2026-08-22 브라우저 결과는 HISTORICAL이며 현재 PASS로 재인용하지 않음)
 
 ### 이전 세션 (2026-08-22, 세션 19)
