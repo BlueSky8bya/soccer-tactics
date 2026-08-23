@@ -327,6 +327,14 @@ module.exports = {
       )
 
       // ---- the throw ------------------------------------------------------
+      /*
+       * A pathless board first. A ball that already carries an authored pass is PLACED, never
+       * thrown (2026-08-22: 경로가 있을 때는 던져지는 기능을 막고) — so testing the throw on the
+       * tactic we just built would pass for the wrong reason, with the ball refusing to move
+       * whatever the switch said.
+       */
+      await page.getByRole('button', { name: /움직임 전체 지우기/ }).click()
+      await page.waitForTimeout(300)
       const flingSwitch = page.getByRole('switch', { name: /공 휙 던지기/ })
       out.push(
         h.check(
@@ -368,6 +376,25 @@ module.exports = {
       )
 
       /*
+       * And it has to actually THROW. The gates were tightened twice while the gesture fired
+       * unasked, and once it became opt-in the same gates made it nearly unreachable
+       * (user 2026-08-24: 공이 잘 안 던져지던데 … 너무 저항이 큰 것 같아서). A moderate sweep — not a
+       * violent one — must now carry the ball past where the hand let go.
+       */
+      const ballOn = await page.evaluate(() => window.__stStateAt(window.__stClock().t).ball.pos)
+      const release = { x: ballOn.x + 12, y: ballOn.y + 1 }
+      await h.dragPitch(page, ballOn, release, { steps: 6, settleMs: 1400 })
+      const rested = (await h.doc(page)).ball.home
+      const carried = Math.hypot(rested.x - release.x, rested.y - release.y)
+      out.push(
+        h.check(
+          'a moderate sweep with the throw ON carries past the release point',
+          carried > 2,
+          `carried ${carried.toFixed(1)}m past the release`,
+        ),
+      )
+
+      /*
        * The speed row is the only thing that says the play button can be SLID. Opening it after the
        * first millimetre of travel taught nobody (user 2026-08-24: 마우스를 누르고 있을때부터
        * 보여야지) — it opens on the press, and a press that never travels still toggles play.
@@ -387,9 +414,16 @@ module.exports = {
       )
       await page.mouse.up()
       await page.waitForTimeout(120)
-      const playingAfterClick = await page.evaluate(() => window.__stClock().playing)
+      // "still play/pause" = the press RAN the play. On a board whose movements were just cleared
+      // the play is a fraction of a second long, so it can already be over by the time we look —
+      // an advanced clock is the honest evidence either way.
+      const after = await page.evaluate(() => window.__stClock())
       out.push(
-        h.check('a press that never travels is still play/pause', playingAfterClick === true, `playing=${playingAfterClick}`),
+        h.check(
+          'a press that never travels is still play/pause',
+          after.playing === true || after.t > 0,
+          `playing=${after.playing} t=${after.t}`,
+        ),
       )
       await page.keyboard.press('Space')
       await page.waitForTimeout(150)
