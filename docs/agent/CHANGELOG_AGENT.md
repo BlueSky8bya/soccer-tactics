@@ -2591,3 +2591,45 @@ docs/agent/plans/evidence/PLAN-014-D-browser-report.md
 
 Validation: hit-scale 42 PASS, gesture-cancel 17 PASS, reduced-motion 5 PASS,
 r5-diagnose 11(mismatch 검출 = 의도된 FAIL). typecheck/lint/test(316)/build/harness PASS. (commit 5aa6c5d)
+
+## CHG-20260823-190 — R5 수정: 강조된 것과 끌리는 것을 일치시킴 (P1)
+
+Problem: 경로 끝 근처(모든 런 끝점 ±2m)에서 화면은 경로를 강조하는데 드래그는 고스트 도착점을 옮겼다.
+곡선을 휘려던 조작이 목적지 변경이 됐다.
+
+Change: 호버는 전역 rank 튜플의 `norm`으로, 프레스는 카테고리 top + intent 우선순위(고스트>경로)로
+서로 다른 기준을 쓰고 있었다. `pickTarget.pressSubject()` 하나를 두 소비자가 공유하게 했다 —
+`resolvePointerIntent`는 여전히 "무엇을 의미하는가"의 권위이고, `pressSubject`는 "누구에 대한 것인가"를
+답한다. 진리표(고스트×경로×토큰 8조합) 전수 테스트로 둘의 일치를 계약화했다.
+
+Files: src/ui/pitch/pickTarget.ts, SimplePitch.tsx, pickTarget.test.ts
+
+Validation: `pw/r5-diagnose` 스캔라인 mismatch 0(수정 전 9지점 중 5), 브라우저 102 checks PASS. (commit 7d8f4b1)
+
+## CHG-20260823-191 — 감사 P2 6건 수정 + 오진 1건 정정
+
+Change:
+- **I2**: 전 waypoint·handle 검사(내부 NaN이 I9 경유로만 잡히던 것 → 직접 검출).
+- **compile**: 중복 segment id를 issue로 보고하고 skip. 기존엔 pending을 덮어쓴 뒤
+  `scheduleDuration`에서 크래시 — issue를 올리는 그 줄이 예외를 던지고 있었다.
+- **B1 예산**: 전역 → 순간별. 무관한 선수의 0.06s 런이 예산을 2배로 부풀려 1.2m tear를 가리던 문제.
+  캐리 중엔 홀더 자신의 런, 비행 중엔 공 자신의 travel 속도. 1800세션 퍼즈·프리셋 8종 전부 통과.
+- **자동저장 복원**: relayout을 거쳐 고정점 상태로 보여준다. 기존엔 validate만 해서, 구버전이 저장한
+  판이 첫 편집에서 소리 없이 재작성됐다.
+- **수신자 동률**: id tie-break 명문화. distance-only stable sort가 players 배열 순서를 물려받았다.
+- **blur**: 진행 중 제스처를 취소한다. 기존엔 Alt+Tab 후 마우스를 떼면 안 보는 곳에서 커밋됐다.
+  (`lostpointercapture`는 의도적으로 취소하지 않는다 — 정상 종료 시에도 발화하는 이벤트다.)
+- **정정**: F-M1-03 "validator가 dead receiver 미검사"는 오진이었다. 검사한다 — I9가 I10보다 먼저
+  발화한 순서 문제였고, 이제 validator 직접 호출로 증명한다.
+
+Validation: 324 tests, 브라우저 102 checks, 강화 퍼즈 1800세션, 전 게이트 PASS. (commit e566c9a)
+
+## CHG-20260823-192 — E-core UX probe + 문서 drift 정리, PLAN-014 종료
+
+Change: `pw/ux-core.cjs` 신규 — E1(피드포워드/피드백), E2(제스처 1 = undo 1, 주어 일치),
+E3(화면과 시계 일치)를 핵심 여정에서 검증. 화면-시계 오차는 정지·재생 중·결과 프레임 전부 **Δ=0.000m**
+(초기 0.64m는 왕복 지연이었고 페이지 내 단일 동기 실행으로 재측정해 정정).
+문서: 불변식 수(9→I1~I10), PROJECT_MAP에 `pw/` 라우팅, Known Issues 현재 증거로 재분류
+(ISSUE-002·009 Resolved, ISSUE-003 Not Reproduced, ISSUE-008에 player fling 제거 주석).
+
+Validation: ux-core 14 PASS, harness:verify PASS. (commit 8d31458)
