@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { compile } from '@/engine/compile'
 import { buildScenarioA } from '@/presets/scenarios'
-import { activeStepAt, secs, stepOpensAt, stepTiming } from './stepTiming'
+import { activeStepAt, completedStepAt, secs, stepOpensAt, stepTiming } from './stepTiming'
 
 const doc = buildScenarioA()
 const compiled = compile(doc)
@@ -58,5 +58,23 @@ describe('secs', () => {
     expect(secs(0)).toBe('0.0')
     expect(secs(1.24)).toBe('1.2')
     expect(secs(1.26)).toBe('1.3')
+  })
+})
+
+describe('completedStepAt', () => {
+  it('is 0 at kickoff — nothing has happened yet where the ball stands', () => {
+    expect(completedStepAt(doc, compiled, 0)).toBe(0)
+  })
+
+  it('reports the step just finished, so the next movement chains onto it', () => {
+    const s2 = stepTiming(doc, compiled, 2)
+    // parked at step 2's opening, step 1 is done and a new pass belongs on step 2
+    expect(completedStepAt(doc, compiled, s2.start)).toBe(1)
+    const s3 = stepTiming(doc, compiled, 3)
+    expect(completedStepAt(doc, compiled, s3.start)).toBe(2)
+  })
+
+  it('past the end, every step is behind us', () => {
+    expect(completedStepAt(doc, compiled, 9999)).toBe(3)
   })
 })

@@ -240,6 +240,41 @@ module.exports = {
       )
       out.push(h.check('and the bar/caption moved with it', /2단계/.test(await capText()), await capText()))
 
+      /*
+       * REGRESSION (user 2026-08-24: 같은 선수한테 또 공을 2번 이상 주면 반응을 안 해). The live ball
+       * token reported its moment as step 0 unconditionally, which was only ever true because the
+       * authoring clock was always kickoff. Parked at a step's opening, a pass drawn from the live
+       * ball therefore truncated the chain and rebuilt the FIRST pass — the board did not change,
+       * so a second pass looked like nothing at all had happened.
+       */
+      const holderNow = (await h.doc(page)).ball.initialHolderId
+      const target = (await h.doc(page)).players.find(
+        (p) => p.id !== holderNow && p.id !== a.id && p.id !== b.id,
+      )
+      const ballAt = () => page.evaluate(() => window.__stStateAt(window.__stClock().t).ball.pos)
+      await h.drawFrom(page, await ballAt(), target.home, { steps: 10 })
+      await page.waitForTimeout(320)
+      const afterFirst = h.authoredSegments(await h.doc(page)).filter((s) => s.kind === 'travel')
+      out.push(h.check('a pass can be drawn from the live ball', afterFirst.length >= 1, `${afterFirst.length} travels`))
+
+      // advance to the next step: the board stands where the ball arrived, and the NEXT pass must
+      // extend the chain rather than replace it
+      await chip(page, (afterFirst[afterFirst.length - 1]?.step ?? 1) + 1).click()
+      await page.waitForTimeout(250)
+      const target2 = (await h.doc(page)).players.find(
+        (p) => p.id !== holderNow && p.id !== a.id && p.id !== b.id && p.id !== target.id,
+      )
+      await h.drawFrom(page, await ballAt(), target2.home, { steps: 10 })
+      await page.waitForTimeout(320)
+      const afterSecond = h.authoredSegments(await h.doc(page)).filter((s) => s.kind === 'travel')
+      out.push(
+        h.check(
+          'the next pass EXTENDS the chain instead of replacing it',
+          afterSecond.length === afterFirst.length + 1,
+          `${afterFirst.length} → ${afterSecond.length} travels (steps ${afterSecond.map((s) => s.step).join(',')})`,
+        ),
+      )
+
       // ---- the throw ------------------------------------------------------
       const flingSwitch = page.getByRole('switch', { name: /공 휙 던지기/ })
       out.push(

@@ -85,7 +85,7 @@ import { playableEnd } from '@/editor/usePlayback'
 import { clientToPitch } from '@/renderer/pointer'
 import { clampToView, usePitchView } from './useSvgMetrics'
 import { t } from '../i18n'
-import { stepOpensAt } from '../stepTiming'
+import { completedStepAt, stepOpensAt } from '../stepTiming'
 import { entityChipOf, entityColorOf, teamColorOf } from '../teamColor'
 import { AnimatedToken } from './AnimatedToken'
 import {
@@ -1731,8 +1731,20 @@ export function SimplePitch() {
       ghostTop && ghostTop.entityId === doc.ball.id
         ? { step: ghostTop.step, pos: ghostTop.pos }
         : null
-    /** The live ball token: step 0 — nothing has happened yet where it stands. */
-    const startMoment = () => ({ step: 0, pos: stateAt(compiled, doc, 0).ball.pos })
+    /**
+     * The live ball token's MOMENT — the step it is standing in.
+     *
+     * Step 0 used to be hard-coded here, and it was right for exactly as long as the authoring
+     * clock was always kickoff. Step isolation parks the board at a step's opening, so the ball
+     * under the cursor is the ball AS OF that step; still calling it step 0 made every pass drawn
+     * from it truncate the chain and rebuild the first pass, and a second pass therefore changed
+     * nothing on the board at all (user 2026-08-24: 같은 선수한테 또 공을 2번 이상 주면 반응을
+     * 안 해). The grabbed instant decides, exactly as it does for a ghost.
+     */
+    const startMoment = () => {
+      const at = useUiStore.getState().playback.t
+      return { step: completedStepAt(doc, compiled, at), pos: stateAt(compiled, doc, at).ball.pos }
+    }
     const tokenMoment = tokenEntityId === doc.ball.id ? startMoment() : null
     lastPickRef.current = { pick, pt, clientX: e.clientX, clientY: e.clientY }
     const intent = resolvePointerIntent(

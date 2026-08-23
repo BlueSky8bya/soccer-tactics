@@ -2797,3 +2797,29 @@ typecheck/lint/build/harness PASS.
 Related: CHG-20260824-194·195, PLAN-20260824-015
 
 Rollback: "보기: 전체"로 종전 표시(시계 정박도 함께 해제), 헤더 스위치로 플링 복구.
+
+## CHG-20260824-197 — 라이브 공에서 그린 패스가 체인을 잇지 못하고 매번 처음부터 다시 만들던 문제
+
+Problem: 사용자 — "같은 선수한테 또 공을 2번 이상 주면 반응을 안 해". 조작은 **Alt+드래그 패스**.
+재현(프로브): 공 토큰에서 Alt+드래그로 패스를 그리면, 두 번째부터는 문서가 그대로다. 토스트만
+"이후 패스 1개는 지워졌어요"라고 말한다. 같은 선수를 겨누면 결과가 **글자 그대로 동일**해서 아무 일도
+안 일어난 것처럼 보인다. 더 나쁜 건 2단계 칩을 눌러 공이 도착해 있는 프레임에서 그려도 마찬가지라,
+**라이브 공으로는 체인을 이을 방법이 아예 없었다**.
+
+원인: `startMoment()`가 `{ step: 0, pos: stateAt(…, 0).ball.pos }`로 **하드코딩**돼 있었다. 작성용
+시계가 언제나 킥오프였을 때는 참인 문장이었지만, PLAN-015 v2가 보드를 단계 시작 시각에 세우면서
+거짓이 됐다. 커서 아래의 공은 **그 단계 시점의 공**인데 여전히 step 0이라고 보고하니,
+`atStep = 0+1 = 1` → `truncateBallFromStepInDraft(doc, 1)`이 매번 공 체인 전체를 지웠다.
+
+Change: 라이브 공의 순간을 **잡은 시각에서 파생**한다 — `completedStepAt(doc, compiled, t)`
+(그 시각까지 완료된 마지막 단계). 잔상을 잡을 때와 정확히 같은 규칙이다. 킥오프에서 잡으면 여전히
+step 0 → 기존의 "시작에서 잡으면 이후를 덮어쓴다" 규칙 그대로 보존된다.
+
+결과: 2단계 칩 → 공이 도착해 있는 프레임 → Alt+드래그 = 2단계 패스가 **이어 붙는다**.
+
+Files: src/ui/stepTiming.ts(+test), src/ui/pitch/SimplePitch.tsx, pw/step-view.cjs
+
+Validation: `node pw/run.cjs` → **140 checks ALL PASS**(신규: 라이브 공에서 그린 다음 패스가 체인을
+대체하지 않고 확장 — travels 1→2, steps 2,3), 348 tests, typecheck/lint/build/harness PASS.
+
+Related: CHG-20260824-196, PLAN-20260824-015

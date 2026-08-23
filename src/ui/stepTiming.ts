@@ -81,6 +81,35 @@ export function activeStepAt(
   return null
 }
 
+/**
+ * The last step FULLY COMPLETED by `at` — the moment the board is standing in.
+ *
+ * This is what the live ball token means when the clock is not at kickoff. Grabbing it says "the
+ * ball leaves from here, and whatever it did after this instant does not happen"; `here` is this
+ * step, and the new movement goes on the one after it.
+ *
+ * It used to be hard-coded to 0, which was true only because the authoring clock was always
+ * kickoff. Once a step could park the board mid-play, every pass drawn from the live ball
+ * truncated the chain and rebuilt the FIRST pass — so drawing a second pass changed nothing at all
+ * (user 2026-08-24: 같은 선수한테 또 공을 2번 이상 주면 반응을 안 해).
+ */
+export function completedStepAt(
+  doc: TacticDocument,
+  compiled: CompiledTimeline,
+  at: number,
+): number {
+  let last = 0
+  for (const tr of tracksOf(doc))
+    for (const seg of tr.segments) {
+      if (!isAuthoredPath(seg)) continue
+      const tm = compiled.segmentTimes[seg.id]
+      if (!tm || tm.end > at + 1e-6) continue
+      const s = stepOf(seg as { step?: number })
+      if (s > last) last = s
+    }
+  return last
+}
+
 /** Everything the caption shows, in one pass over the timeline. */
 export function stepTiming(
   doc: TacticDocument,
