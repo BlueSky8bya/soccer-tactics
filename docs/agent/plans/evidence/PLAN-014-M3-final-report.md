@@ -60,3 +60,62 @@ production 무변경). commit 73cbb00.
 1. **DG-BROWSER**: ① tracked Playwright(권고) ② external harness ③ 생략(NOT VERIFIED 수용).
 2. Findings remediation 착수 여부 — 전부 P2, 별도 소형 PLAN 1개로 묶음 가능(예상 0.5일).
 3. C 문서 drift / D-static은 결정 없이 착수 가능.
+
+---
+
+# 최종 갱신 (2026-08-23, 전 축 완주)
+
+사용자 지시("계속 이어서 해 끝까지")로 감사 범위를 넘어 **모든 Finding 수정까지 완료**했다.
+아래는 감사 시작 이후 최종 상태다.
+
+## 판정
+
+- **Core Closure Verified** — 자동 게이트 전부 PASS, B1 mutation/junction parity PASS, 미해결 P0/P1 0.
+- 계층 범위도 확장됨: core(A/B) + 문서(C) + 구조·브라우저(D) + UX 핵심 여정(E-core).
+- 남은 `NOT VERIFIED`: 사용자 체감(DELEGATED), E-polish(contrast/CLS/광범위 viewport), 포인터 마라톤.
+
+## Finding 최종 처리 — 7건 전부 Fixed 또는 Rejected
+
+| ID | 심각도 | 처리 | 회귀 방어 |
+|---|---|---|---|
+| **F-D-01 (R5)** | **P1** | **Fixed** — 호버와 프레스가 `pressSubject` 하나를 공유 | `pickTarget.test.ts` 진리표 전수 + `pw/r5-diagnose.cjs` |
+| F-M1-01 | P2 | Fixed — I2가 전 waypoint·handle 검사 | mutant 핀 `I2b` (I9→I2로 재핀) |
+| F-M1-02 | P2 | Fixed — B1 예산이 순간별(홀더 기준) | mutant 핀 `budget masking` 반전 |
+| F-M1-03 | P2 | **Rejected(오진)** — validator는 dead receiver를 이미 거부. I9가 I10보다 먼저 발화한 순서 문제였음 | `validateDocument` 직접 호출 단언 |
+| F-M1-04 | P2 | Fixed — 중복 id는 issue로 보고하고 skip(크래시 제거) | mutant 핀 `duplicateSegmentId` |
+| F-M2-01 | P2 | Fixed — 자동저장 복원 시 relayout 통과 | `autosave.test.ts` 2건 |
+| F-M2-02 | P2 | Fixed — 수신자 동률은 id로 tie-break | `junctionParity.test.ts` R12-E |
+| F-D-02 | P3 | Fixed — probe 비공허성 검사 | `reduced-motion.cjs` |
+| F-D-03 | P3 | Fixed — blur가 제스처 취소 | `gesture-cancel.cjs` |
+
+R5는 감사가 존재한 이유 그 자체다: 코어는 완벽히 일관됐지만(Δ=0.0000) **화면이 약속한 것과 손이 한 것이 달랐다.**
+core만 봤다면 절대 나오지 않았을 결함이다.
+
+## 구조 위험 최종 disposition
+
+| 항목 | 판정 | 근거 |
+|---|---|---|
+| R5 pick dispatch | **Resolved** | 단일 `pressSubject`, 스캔라인 mismatch 0 |
+| R7 gesture cancel | **Resolved** | blur/pointercancel/Esc 전부 revert, 다음 편집 정상 |
+| R12-D 7px hit | **Resolved** | 7 viewport 실측 6~7px, CTM 등방, dead strip 0 |
+| R12-E receiver tie | **Resolved** | id tie-break 명문화 |
+| S1~S5 / R1~R12 나머지 | PLAN-009에서 Resolved, 본 감사에서 반증 없음 | — |
+| D1 2안 | **비권고** | resolver 1, 우회 0, parity Δ=0 |
+
+## 최종 게이트 (2026-08-23)
+
+| Gate | 결과 |
+|---|---|
+| typecheck / lint / build / harness | 전부 exit 0, warning 0 |
+| `npm test` | **324 PASS** (46 files) |
+| 브라우저 probe 6종 `node pw/run.cjs` | **102 checks ALL PASS** |
+| tacticFuzz 기본(360) + 강화(1800세션) | 위반 0 |
+| marathon | NOT RUN (소스 미작성) |
+
+## E-core 결과 (신규)
+
+`pw/ux-core.cjs` 14 checks PASS:
+- **E1** 호버가 주어를 약속하고, 벗어나면 철회한다. 너무 짧은 드래그도 침묵하지 않는다.
+- **E2** Alt-드래그 1회 = 움직임 1개 = undo 1단계, redo 복원, 주어가 약속과 일치.
+- **E3** 화면에 칠해진 공과 시계가 말하는 공이 **정지·재생 중·결과 프레임에서 모두 Δ=0.000m**.
+  (초기 측정의 0.64m는 왕복 지연이었다 — 페이지 안 단일 동기 실행으로 재측정해 바로잡음.)

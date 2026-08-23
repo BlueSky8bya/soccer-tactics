@@ -37,7 +37,8 @@
 | 렌더 깨짐, 좌표 어긋남             | `src/renderer/` (viewBox, pointer→domain)                                                                       |
 | 패널/모션/토큰                     | `src/ui/` (spring 표: `motion/spring.ts` SPRINGS)                                                               |
 | 포메이션 내용                      | `src/presets/`                                                                                                  |
-| 공이 튄다 / 경로가 어긋난다        | **불변식부터**: `engine/ballContinuity.ts`(B1), `editor/tacticFuzz.harness.ts`(결과 기준 불변식 9개 + 조작 순서 퍼즈). 재현은 시드로 |
-| 편집 조작 조합 회귀                | `editor/tacticFuzz.test.ts`(커맨드 층 360세션) / 포인터 층은 스크래치패드 `pw/marathon.cjs`                     |
+| 공이 튄다 / 경로가 어긋난다        | **불변식부터**: `engine/ballContinuity.ts`(B1), `editor/tacticFuzz.harness.ts`(결과 기준 불변식 I1~I10 + 조작 순서 퍼즈), `editor/invariantMutation.test.ts`(그 불변식들이 실제로 잡는지 mutation-kill), `editor/junctionParity.test.ts`(정션 parity). 재현은 시드로 |
+| 편집 조작 조합 회귀                | `editor/tacticFuzz.test.ts`(커맨드 층 360세션, `ST_FUZZ_SHORT`/`ST_FUZZ_LONG`로 증량) |
+| 브라우저·클릭·화면 회귀            | `pw/` — `node pw/run.cjs [probeId]` (dev 서버 필요). `pw/audit-manifest.json`이 현재 probe와 소멸한 과거 probe(historical)를 구분해 기록 |
 | 출고 예시가 이상하다               | `presets/scenarios.ts` + `presets/scenarioContinuity.test.ts`(B1) + `scenarios.test.ts`(구조)                   |
 | "왜 이렇게 했지?"                  | `docs/agent/decisions/DECISION_INDEX.md`                                                                        |

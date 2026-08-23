@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-08-23 (세션 20, PLAN-014 Phase 1 **Core Closure Supported** + D-browser 감사 — R12-D·R7 Resolved, **R5 Confirmed P1**) (직전: 세션 19, 순간 문법)
+Last Updated: 2026-08-23 (세션 20, PLAN-014 전 축 완주 — Core Closure Supported, R5(P1)·P2 6건 전부 수정, E-core UX PASS, 문서 drift 정리) (직전: 세션 19, 순간 문법)
 Project Version: 0.1.0
 Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness.yaml`
 
@@ -42,7 +42,7 @@ ADR-0009 v27 / ADR-0010 D9 / CHG-161. 계약: `destinationMoment.test.ts` 8 + `p
 **전술 퍼즈 확립 (2026-08-22, 세션 19) — "어떠한 전술 재현에도 의도하지 않은 버그가 없도록" 검증.**
 사용자 요청으로 **조작 순서를 무작위화하는 퍼즈** 2단을 만들었다: `tacticFuzz`(커맨드 층, 360세션)와
 `pw/marathon.cjs`(포인터 층 — 의도 해석·픽·오빗·슬링까지). 둘 다 **매 조작 직후** 같은 결과 기준
-불변식 9개를 본다: 컴파일 오류 0 / NaN 없음 / 한 엔티티 한 단계 하나 / 선수 체인은 토큰에서 출발하고
+불변식 10개(I1~I10)를 본다: 컴파일 오류 0 / NaN 없음 / 한 엔티티 한 단계 하나 / 선수 체인은 토큰에서 출발하고
 이음매가 벌어지지 않음 / 공 연속성(B1) / 패스는 공이 실제로 있는 곳에서 출발 / 도착점은 공이 멎는 곳 /
 패스 비중첩 / 파이프라인 멱등. 세션의 1/3은 **내장 예시**에서 시작한다.
 
@@ -164,23 +164,24 @@ R5(pick dispatch)/R7(blur·lostpointercapture cancel)/R12-D(letterbox 7px)/R12-E
 
 ## Active Work
 
-`plans/ACTIVE_PLAN.md` PLAN-20260823-014 — **Phase 1 Complete (Core Closure Supported)**.
-후속 대기: DG-BROWSER 사용자 결정(브라우저 감사 여부), C 문서 drift, D-static/D-browser, E-core,
-Findings F-M1-01~04·F-M2-01~02 remediation. 직전 완료: `plans/completed/PLAN-20260822-013-moment-grammar.md`.
+`plans/ACTIVE_PLAN.md` PLAN-20260823-014 — **전 축 완료**(A 재현 무결성 / B 단일 진실원 / C 문서 drift /
+D 구조·브라우저 / E UX core). 모든 Finding 수정·회귀 방어 완료, 미해결 P0/P1 0.
+남은 것은 사용자 체감(DELEGATED)과 선택적 E-polish(contrast/CLS/광범위 viewport)뿐이다.
+직전 완료: `plans/completed/PLAN-20260822-013-moment-grammar.md`.
 
 ## Known Issues
 
-### ISSUE-002 — Claude hooks/deny 활성 미확인 — Open(다음 세션 확인)
+### ISSUE-002 — Claude hooks/deny 활성 — **Resolved**: 이 세션에서 SessionStart hook 출력과 harness:verify 게이트가 모두 동작 확인됨
 
-### ISSUE-003 — node 22.14 engine 경고 — Open, 무해
+### ISSUE-003 — node engine 경고 — **Not Reproduced**(2026-08-23, node v22.12.0에서 설치·빌드·테스트 전 게이트 경고 0). 재현되면 다시 연다
 
 ### ISSUE-004 — spring/pulse 강도 체감 미판정 — Open (공 1.45×, 선수 1.18×, drop b0.25)
 
 ### ISSUE-006 — 패스 경로 시작점 시각화 — Resolved (PLAN-003 M1, 잠긴 마커)
 
-### ISSUE-008 — fling 상수 — minCursorSpeed 22→**45** + stale 100ms(R2, 일반 드래그 오인 수정). ball gain 0.35/decel 4, player gain 0.22 체감 미튜닝 — Open(체감)
+### ISSUE-008 — fling 상수 — Open(체감). **주의**: player fling은 이후 결정으로 제거됨 — player gain 문구는 과거 기록이다(PLAN-014 AMB-05)
 
-### ISSUE-009 — 리드 패스: 달리는 팀원에게 패스하면 도착 시 그 자리에 없어 루즈볼 — Open(L2, 다음 계획 후보)
+### ISSUE-009 — 리드 패스 — **Resolved**(v27 목적지 순간 + PLAN-014 M2 F2/F3 parity로 확인). 달리는 수신자에게 보낸 패스는 도착 시각이 그 순간에 동기되고 수신자가 실제로 소유한다
 
 ### ISSUE-007 — 자동 대응 품질 — 연속성/coalesce/anti-shuttle 테스트로 고정(PLAN-003 M4), 트랙 팀 필터(M2). 체감 확인만 남음 → Open(체감)
 
@@ -196,16 +197,14 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 
 ## Next Exact Steps
 
-0. **DG-BROWSER 결정됨 (2026-08-23, 1안)** — Playwright 1.62.1 tracked devDependency + `pw/` probe.
-   D-browser 감사 완료: R12-D·R7 Resolved, **R5 Confirmed (P1)**. 다음은 R5 수정 계획.
-1. ~~(사용자) DG-BROWSER 결정~~ — 브라우저 감사 방식 3택: ① Playwright devDependency + tracked `pw/`
-   (권고) ② external harness(버전·소스 고정) ③ 생략(UI/UX 폐쇄 `NOT VERIFIED` 수용).
-   결정 전에는 D-browser/E 착수 불가; C 문서 drift·D-static은 결정 없이 진행 가능.
-2. (사용자) Findings remediation 우선순위 확인 — 전부 P2: F-M1-01(I2 전 waypoint 확장),
-   F-M1-02(B1 전역 예산), F-M1-03·F-M2-01(import 시 relayout/거부 정책, AMB-06),
-   F-M1-04(중복 id compile 크래시), F-M2-02(receiver tie 명문화).
-3. (사용자) `npm run dev` → 라운드 6 체크리스트(첫 방문 + 튜토리얼 + 체감) — 이전 세션에서 이월.
-4. 다음 세션 hook 출력 확인 → ISSUE-002.
+PLAN-014는 전 축 완료다. 자동으로 확인할 수 있는 것은 남아 있지 않고, 남은 것은 사람이 봐야 하는 것뿐이다.
+
+1. (사용자) `npm run dev` → 체감 확인. 특히 이번에 바뀐 두 가지:
+   - **경로 끝 근처를 겨눴을 때** 강조된 것과 실제로 끌리는 것이 같은지(R5 수정).
+   - 드래그 도중 **Alt+Tab으로 창을 옮기면** 그 드래그가 취소되는지(F-D-03 수정).
+2. (사용자) 남은 체감 항목: ISSUE-004 spring/pulse 강도, ISSUE-007 자동대응 품질, ISSUE-008 fling 상수.
+3. (선택) E-polish — contrast/CLS/광범위 viewport. 핵심 정션 감사와 분리된 별도 승인 사항.
+4. (선택) 포인터 마라톤 재작성 — 과거 `pw/marathon.cjs`는 소스가 없다. 현재 `pw/` 위에 다시 쓸 수 있다.
 
 ## DELEGATED 체크리스트 (사용자, 라운드 6 — 첫 방문)
 
@@ -230,13 +229,16 @@ ADR-0001~0007 Accepted, VDR-0001. `src/domain/types.ts` shape 불변. engine/dom
 
 - `npm run typecheck` → PASS — 2026-08-23 (세션 20)
 - `npm run lint` → PASS — 2026-08-23
-- `npm test` → PASS (46 files / 316 tests), **전량 3회 연속 + `--maxWorkers=1` 1회** — 2026-08-23
+- `npm test` → PASS (46 files / **324 tests**), 전량 3회 연속 + `--maxWorkers=1` 1회 — 2026-08-23
 - `npm run build` → PASS — 2026-08-23
 - `npm run harness:verify` → PASS (0 warnings) — 2026-08-23
 - mutation-kill 스위트 (`invariantMutation.test.ts`, 17핀) → PASS, SURVIVED 0 — 2026-08-23
 - junction parity 스위트 (`junctionParity.test.ts`, 8) → PASS, 전 junction Δ=0.0000 — 2026-08-23
 - `npx vitest run src/editor/tacticFuzz.test.ts` 기본 campaign(360세션) → PASS — 2026-08-23
-- 브라우저 probe 4종(`hit-scale` 42, `gesture-cancel` 17, `reduced-motion` 5, `r5-diagnose` 11) → hit-scale/gesture-cancel/reduced-motion **PASS**, r5-diagnose는 **의도된 FAIL**(R5 결함 재현). marathon은 NOT RUN(미작성) — 2026-08-23
+- 브라우저 probe 6종 `node pw/run.cjs` → **102 checks ALL PASS** (hit-scale 42 / gesture-cancel 17 /
+  pick-overlap 13 / reduced-motion 5 / r5-diagnose 11 / ux-core 14) — 2026-08-23
+- 강화 퍼즈 `ST_FUZZ_SHORT=1500 ST_FUZZ_LONG=300` (1800세션, 좁힌 B1 예산) → 위반 0 — 2026-08-23
+- marathon(무작위 포인터 마라톤)은 **NOT RUN** — 소스 미작성, 후속 후보
   아래 2026-08-22 브라우저 결과는 HISTORICAL이며 현재 PASS로 재인용하지 않음)
 
 ### 이전 세션 (2026-08-22, 세션 19)

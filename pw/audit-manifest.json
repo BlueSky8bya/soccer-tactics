@@ -54,6 +54,13 @@
       "describe": "scan line through the ghost: hover key, element under cursor, resolved intent"
     },
     {
+      "id": "ux-core",
+      "file": "ux-core.cjs",
+      "status": "present",
+      "covers": "E1/E2/E3 core journey",
+      "describe": "feedforward promises the subject, one gesture is one undo, the painted board agrees with the clock at rest, mid-playback and on the held result"
+    },
+    {
       "id": "historical-22",
       "status": "missing",
       "covers": "2026-08-22 session",
