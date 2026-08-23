@@ -1157,11 +1157,20 @@
   min-width: 0;
 }
 
-/* Keycap rows: cap and hint on one line, both flush to the same left edge as the stacked rows.
-   A wrapped hint hangs under itself, which is how every shortcut list sets this. */
+/*
+ * Keycap rows: cap and hint on one line, both flush to the same left edge as the stacked rows.
+ * A wrapped hint hangs under itself, which is how every shortcut list sets this.
+ *
+ * A GRID, not a flex row: with flex, each description began wherever its own cap ended, so a list
+ * that should read as a table — "Ctrl+좌클릭 → 우리팀 선수 추가", "Ctrl+Z → 되돌리기" — had a ragged
+ * second column (lab review, 2026-08-24). One column width, one left edge for every description.
+ */
 .shortcutRowInline {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  /* a floor, not a fixed width: the common caps (Space, Home, G, Ctrl+Z, Ctrl+좌클릭) all land
+     inside it and share one edge, and a rare long one still gets the room it needs */
+  grid-template-columns: minmax(86px, max-content) 1fr;
+  align-items: start;
   gap: 8px;
   min-width: 0;
 }
