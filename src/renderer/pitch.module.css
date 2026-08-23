@@ -239,29 +239,58 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.92;
+  /* The rhythm comes from the segment (PathLayer.dashFor) — one property, both kinds of path. */
+  stroke-dasharray: var(--st-dash, none);
 }
 
 .pathMove {
 }
 
 .pathPass {
-  stroke-dasharray: 6 5;
 }
 
 /* A takeaway's consequence roll: same grammar as a pass (dashed + badge) but visibly a
  * LOOSE ball — shorter dots, fainter (user 2026-08-22: 점선이랑 단계 배지도 나오게). */
 .pathLoose {
-  stroke-dasharray: 2 4;
   opacity: 0.6;
 }
 
 .pathLofted {
-  stroke-dasharray: 2 5;
   stroke-width: 3px;
 }
 
 .pathShot {
   stroke-width: 4px;
+}
+
+/*
+ * MARCHING DASHES (user 2026-08-24: 점선이 에스컬레이터처럼 이동 방향으로). The arrowhead sits at
+ * the far end, which on a crowded board is the busiest pixel there is — so direction was readable
+ * only where it was least visible. Now the dashes travel toward the destination along the whole
+ * line, at one speed for runs and passes alike.
+ *
+ * Only the path being AUTHORED flows. Everything else holds still: motion is the strongest signal
+ * on a screen and spending it on nine steps at once is how a board becomes a fairground.
+ */
+@keyframes stPathFlow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: var(--st-flow, -22);
+  }
+}
+
+.pathGroup:not(.pathStepMuted) .path,
+.pathGroup:not(.pathStepMuted) .pathCasing {
+  animation: stPathFlow var(--st-flow-ms, 850ms) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pathGroup .path,
+  .pathGroup .pathCasing {
+    animation: none;
+  }
 }
 
 .pathSelected .path {
@@ -692,12 +721,18 @@
   filter: drop-shadow(0 0.35px 0.7px rgba(0, 0, 0, 0.28));
 }
 
+/*
+ * The legibility halo under the coloured line. It MUST carry the same dash: a solid casing beneath
+ * a dashed stroke fills every gap with pale white, which is why the ball's dotted pass used to
+ * read as a smeared solid line rather than as dots.
+ */
 .pathCasing {
   fill: none;
   stroke: rgba(255, 255, 255, 0.45);
   stroke-width: 4.2px;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-dasharray: var(--st-dash, none);
   vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
@@ -851,11 +886,3 @@
   opacity: 0.55;
 }
 
-/*
- * The trace layer (PLAN-015): the step BEFORE the one being authored, kept only so the current
- * step has a "where this came from". 0.55 is a peer; this has to read as history at a glance, so
- * it sits an order of emphasis below and stops taking the eye.
- */
-.pathStepTrace {
-  opacity: 0.15;
-}

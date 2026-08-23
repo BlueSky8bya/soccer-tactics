@@ -8,7 +8,7 @@ import {
   stepRangeFor,
   stepWindow,
 } from '@/editor/stepCommands'
-import { activeStepAt, stepOpensAt } from './stepNarrative'
+import { activeStepAt, stepOpensAt } from './stepTiming'
 import { playWindow } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { entityChipOf } from './teamColor'

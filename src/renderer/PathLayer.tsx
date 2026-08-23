@@ -31,6 +31,34 @@ export interface PathLayerProps {
   stepLayer?: Readonly<Record<Id, StepLayer>>
 }
 
+/**
+ * ONE DIRECTION LANGUAGE for players and the ball (user 2026-08-24: 선수 이동 동선 표시랑 통일이면
+ * 좋으니까 더 가독성 좋은 걸로 두개 통일).
+ *
+ * A run was a solid line and a pass a dashed one, so "which way does this go" was answered only by
+ * the arrowhead at the far end — and on a crowded board the far end is the busiest pixel there is.
+ * Now every path is dashed and every dash MARCHES toward the destination at the same speed, so
+ * direction reads anywhere along the line, at a glance, for both kinds of mark.
+ *
+ * What stays different is the RHYTHM, and deliberately: a run is a long stride, a pass is quick
+ * ticks, a loose ball a dribble of dots. That is the football-diagram convention (continuous for a
+ * carry, dotted for a kick) kept as texture rather than as two unrelated grammars.
+ *
+ * `period` is the dash+gap sum; the flow distance is a whole number of periods or the loop visibly
+ * jumps. Speed is constant, so a long path does not race a short one.
+ */
+const FLOW_SPEED = 26 // stroke units per second
+
+function dashFor(seg: Segment): { dash: string; period: number } {
+  if (seg.kind === 'travel') {
+    if (seg.implicit) return { dash: '2 4', period: 6 }
+    if (seg.travelKind === 'shot') return { dash: '9 5', period: 14 }
+    if (seg.flight === 'lofted' || seg.travelKind === 'cross') return { dash: '3 6', period: 9 }
+    return { dash: '6 5', period: 11 }
+  }
+  return { dash: '11 5', period: 16 }
+}
+
 /** Display-d caches: immer keeps unchanged segments identical, so trims compute once per edit. */
 const trimCache = new WeakMap<object, string>()
 const casingCache = new WeakMap<object, string>()
@@ -151,8 +179,8 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
               : ''
       const layer = selected ? 'focus' : (p.stepLayer?.[seg.id] ?? 'focus')
       if (layer === 'hidden') continue
-      const mutedClass =
-        layer === 'muted' ? styles.pathStepMuted : layer === 'trace' ? styles.pathStepTrace : ''
+      const mutedClass = layer === 'muted' ? styles.pathStepMuted : ''
+      const flow = dashFor(seg)
       const markerId = isBall ? 'arrow-ball' : `arrow-${track.entityId}`
       const axis = entryAxis(shown, isBall ? ENTRY_FADE_M.ball : ENTRY_FADE_M.player)
       const maskId = axis ? `entry-${seg.id}` : null
@@ -164,8 +192,17 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
           data-phase={phase}
           className={`${styles.pathGroup} ${selected ? styles.pathSelected : ''} ${dim ? styles.pathDim : ''} ${phaseClass} ${mutedClass}`}
           /* every mark inside this group belongs to ONE entity, so the colour is set once here and
-             inherited — see entityColorOf for the rule */
-          style={{ '--st-entity': color } as React.CSSProperties}
+             inherited — see entityColorOf for the rule. The dash lives here too, because the white
+             casing UNDER the line has to break in exactly the same places: a solid casing beneath a
+             dashed stroke shows through every gap as a pale smear. */
+          style={
+            {
+              '--st-entity': color,
+              '--st-dash': flow.dash,
+              '--st-flow': -flow.period * 2,
+              '--st-flow-ms': `${Math.round(((flow.period * 2) / FLOW_SPEED) * 1000)}ms`,
+            } as React.CSSProperties
+          }
         >
           {/* wide invisible hit path for easy selection (full length) — NEVER masked, or the
               faded entry would be unclickable */}

@@ -2753,3 +2753,47 @@ Validation: `node pw/run.cjs step-view` → **18 checks ALL PASS**(신규: "자�
 typecheck/lint/build/harness PASS.
 
 Related: CHG-20260824-194, PLAN-20260824-015
+
+## CHG-20260824-196 — 단계 격리 v2(시계가 곧 맥락) · 경로 방향 언어 통일 · 상황판을 시계로 · 헤더 토글
+
+Trigger: 사용자 2026-08-24 2차 피드백 5건 — (1) 플링 토글은 헤더에 1행으로, (2) 단계 박스는 오른쪽,
+(3) 격리는 "이전 단계도 흐리게"가 아니라 **고른 단계 구간만**(1단계 직후는 잔상이 아니라 실체여야),
+(4) "보기: 이 단계"에서 공 경로 주변 **흰색 찌꺼기**, (5) 점선이 이동 방향으로 흐르게 + 선수/공 경로
+표기 통일. 그리고 상황판 문구는 **의미 없는 정보**니 없애거나 진짜 쓸모 있는 걸로.
+
+Change:
+
+- **격리 v2 — 시계가 맥락이다.** v1은 `현재-1` 단계를 trace로 남겼는데, 그러면 화면에 같은 플레이가
+  세 겹으로 그려진다(직전 화살표 + 직전 잔상 + 킥오프에 서 있는 실제 토큰). 이제 격리 중에는
+  **보드가 그 단계가 열리는 시각에 선다** — 이전 단계들의 결과가 잔상이 아니라 **토큰 자신**으로
+  보인다. 파생은 단순해졌다: `deriveStepLayers`/`deriveGhostLayers`는 `현재 단계 = focus`, 나머지는
+  `hidden`(격리) 또는 `muted`(전체). 엔티티별 앵커 잔상 규칙과 trace 계층 삭제.
+  - 시계 고정은 두 갈래다. `uiStore.authoringT` — 모든 press가 부르는 `returnToAuthoringStart`가
+    0 대신 여기로 돌아온다(안 그러면 손댈 때마다 킥오프로 튄다). 그리고 SimplePitch의 **핀 이펙트** —
+    편집이 타이밍을 바꿔 단계 시작 시각이 움직여도 사후에 다시 맞춘다. `held-result`는 건드리지 않는다.
+- **흰색 찌꺼기 = 고아가 된 relay arc.** 패스와 수신자를 잇는 `.passLink`는 문서에서 직접 그려서
+  레이어 맵을 안 봤다. 격리가 패스를 지워도 호는 남아 잔디 위에 흰 조각으로 떠 있었다. 경로를
+  꾸미는 것은 경로와 같은 맵을 읽는다.
+- **방향 언어 통일.** 선수=실선, 공=점선이라 "어느 쪽으로 가는가"는 맨 끝 화살촉만 답했고, 붐비는
+  보드에서 맨 끝은 제일 가려지는 픽셀이다. 이제 **둘 다 점선이고 둘 다 같은 속도로 목적지 쪽으로
+  행진**한다(`dashFor` + `stPathFlow`). 리듬은 일부러 다르게 둔다 — 런은 긴 보폭, 패스는 짧은 틱,
+  루즈볼은 점. 축구 다이어그램 관례를 문법이 아니라 질감으로 유지한다. **작성 중인 단계만** 흐른다.
+  - 곁들여 해결된 것: 흰 케이싱이 이제 **같은 대시**를 쓴다. 점선 아래 실선 케이싱은 모든 틈을 흰색으로
+    메워서, 공 점선이 뭉개진 실선처럼 보이던 원인이었다.
+- **상황판 → 단계 시계.** "10번 보유 · 10번→7번 패스"는 잔디 위에 이미 컬러로 그려져 있다. 그림이
+  말 못 하는 건 **타이밍**이다(2초 런과 5초 런은 같은 화살표를 그린다). 이제 `N단계 · {d}초 걸림 ·
+  {i}/{n}번째 · {from}초에 시작 · 전체 {all}초`, 재생 중엔 스톱워치. `stepNarrative.ts` 삭제 →
+  `stepTiming.ts`. 위치는 보드 **우상단**.
+- **헤더 토글.** 공 휙 던지기 스위치가 왼쪽 패널 카드에서 헤더 1행으로. 설명은 툴팁에.
+
+Files: src/ui/pitch/pathPresentation.ts(+stepLayers.test.ts), SimplePitch.tsx, renderer/PathLayer.tsx,
+renderer/pitch.module.css, editor/uiStore.ts, ui/{stepTiming.ts(+test),StepStatus.tsx,StepBar.tsx,
+SidePanels.tsx,AppShell.tsx,shell.module.css,i18n/ko.ts}, pw/step-view.cjs
+
+Validation: `node pw/run.cjs` → **138 checks ALL PASS**(step-view 23, 신규: 격리 중 시계가 단계 시작에
+정박 t=1.34, 고아 relay arc 0, 경로/케이싱 대시 일치, 작성 단계만 행진), 345 tests,
+typecheck/lint/build/harness PASS.
+
+Related: CHG-20260824-194·195, PLAN-20260824-015
+
+Rollback: "보기: 전체"로 종전 표시(시계 정박도 함께 해제), 헤더 스위치로 플링 복구.

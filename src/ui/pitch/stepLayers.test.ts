@@ -1,41 +1,45 @@
 /**
- * Step isolation (PLAN-015). The rules these lock are the two that a naive "show step N only"
- * gets wrong: an invisible path must not stay grabbable (so 'hidden' has to be a real state the
- * pick input can read), and hiding old steps must not erase where the players currently STAND.
+ * Step isolation (PLAN-015 v2). Two rules matter here and both are about hiding done RIGHT:
+ * 'hidden' has to be a real state the hit-testing input can read (a transparent element still
+ * catches presses), and the movement the user has selected must never disappear under them.
  */
 import { describe, expect, it } from 'vitest'
 import { deriveGhostLayers, deriveStepLayers } from './pathPresentation'
 
 const segs = [
-  { id: 's1', step: 1 },
-  { id: 's2', step: 2 },
-  { id: 's3', step: 3 },
-  { id: 's4', step: 4 },
+  { id: 'a', step: 1 },
+  { id: 'b', step: 2 },
+  { id: 'c', step: 3 },
+  { id: 'd', step: 4 },
 ]
 
 describe('deriveStepLayers', () => {
-  it('isolating: this step, a trace of the one before, nothing else', () => {
-    const l = deriveStepLayers(segs, 3, null, true)
-    expect(l).toEqual({ s1: 'hidden', s2: 'trace', s3: 'focus', s4: 'hidden' })
+  it('isolating: this step and nothing else — the rest is already standing on the board', () => {
+    expect(deriveStepLayers(segs, 3, null, true)).toEqual({
+      a: 'hidden',
+      b: 'hidden',
+      c: 'focus',
+      d: 'hidden',
+    })
   })
 
   it('not isolating: the old rest hierarchy, nothing hidden', () => {
     const l = deriveStepLayers(segs, 3, null, false)
-    expect(l).toEqual({ s1: 'muted', s2: 'muted', s3: 'focus', s4: 'muted' })
+    expect(l).toEqual({ a: 'muted', b: 'muted', c: 'focus', d: 'muted' })
     expect(Object.values(l)).not.toContain('hidden')
   })
 
   it('never hides the selected movement — the user just clicked it', () => {
-    expect(deriveStepLayers(segs, 3, 's1', true).s1).toBe('focus')
-    expect(deriveStepLayers(segs, 1, 's4', true).s4).toBe('focus')
+    expect(deriveStepLayers(segs, 3, 'a', true).a).toBe('focus')
+    expect(deriveStepLayers(segs, 1, 'd', true).d).toBe('focus')
   })
 
-  it('step 1 has no predecessor to trace', () => {
+  it('step 1 isolated shows only step 1', () => {
     expect(deriveStepLayers(segs, 1, null, true)).toEqual({
-      s1: 'focus',
-      s2: 'hidden',
-      s3: 'hidden',
-      s4: 'hidden',
+      a: 'focus',
+      b: 'hidden',
+      c: 'hidden',
+      d: 'hidden',
     })
   })
 })
@@ -49,23 +53,19 @@ const ghosts = [
 ]
 
 describe('deriveGhostLayers', () => {
-  it("keeps each entity's LAST position before this step, however old that step is", () => {
-    // Authoring step 3: a moved only in step 1 — that ghost is where a stands right now, and
-    // dropping it with the rest of step 1 would leave a's position unmarked on the board.
+  it('isolating: only this step’s destinations — earlier positions are the live tokens now', () => {
     const l = deriveGhostLayers(ghosts, 3, null, true)
-    expect(l['g-a1']).toBe('trace')
-    expect(l['g-b2']).toBe('trace') // b's newest earlier ghost
-    expect(l['g-b1']).toBe('hidden') // b's older one is superseded
-    expect(l['g-c1']).toBe('focus') // this step's destination
-    expect(l['g-a2']).toBe('hidden') // a later step's destination
+    expect(l['g-c1']).toBe('focus')
+    for (const id of ['g-a1', 'g-a2', 'g-b1', 'g-b2']) expect(l[id]).toBe('hidden')
   })
 
   it('a ghost belonging to the selected movement stays visible', () => {
     expect(deriveGhostLayers(ghosts, 3, 'a2', true)['g-a2']).toBe('focus')
   })
 
-  it('not isolating: every ghost keeps its own rank-based fade', () => {
+  it('not isolating: nothing is hidden, so the rank fade still does the work', () => {
     const l = deriveGhostLayers(ghosts, 3, null, false)
-    expect(Object.values(l).every((v) => v === 'focus')).toBe(true)
+    expect(Object.values(l)).not.toContain('hidden')
+    expect(l['g-c1']).toBe('focus')
   })
 })

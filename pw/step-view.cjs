@@ -6,8 +6,9 @@
  * or the stored value disagree. So this probe asks the DOM, not the module:
  *
  *  - the theme actually paints, cycles in one direction, and survives a reload;
- *  - step isolation actually removes a later step's path from the document tree (an element that
- *    is merely transparent still catches presses);
+ *  - step isolation actually removes the other steps from the document tree (an element that is
+ *    merely transparent still catches presses) AND parks the clock at the step's opening, which is
+ *    what makes the earlier steps' outcome visible as solid tokens instead of a pile of ghosts;
  *  - the throw is off until it is switched on, and the guide row goes with it.
  */
 const ID = 'step-view'
@@ -110,33 +111,103 @@ module.exports = {
       )
 
       await chip(page, 2).click()
-      await page.waitForTimeout(150)
+      await page.waitForTimeout(200)
       let drawn = await drawnPaths(page)
       out.push(
         h.check(
-          'at step 2 the earlier step stays as a trace',
-          drawn.length === 2 && drawn.filter((c) => /Trace/.test(c)).length === 1,
-          `${drawn.length} drawn, ${drawn.filter((c) => /Trace/.test(c)).length} trace`,
+          'at step 2 only step 2 is drawn — the rest is standing on the board already',
+          drawn.length === 1,
+          `${drawn.length} of ${segs.length} in the tree`,
+        ),
+      )
+      const clockAt2 = await page.evaluate(() => window.__stClock?.().t ?? null)
+      out.push(
+        h.check(
+          "the clock is parked at the step's opening, not at kickoff",
+          typeof clockAt2 === 'number' && clockAt2 > 0,
+          `t=${clockAt2}`,
+        ),
+      )
+
+      /*
+       * The relay arc that joins a pass to its receiver is a DECORATION on that pass. It used to
+       * be drawn from the document rather than from the layer map, so isolation removed the pass
+       * and left the arc floating on the grass beside a player with no line attached
+       * (user 2026-08-24: 이상한 흰색 찌꺼기들).
+       */
+      const orphanLinks = await page.evaluate(() => {
+        const links = document.querySelectorAll('[class*=passLink]').length
+        const passes = [...document.querySelectorAll('g[data-segment]')].filter((g) =>
+          /pathPass|pathLofted|pathShot|pathLoose/.test(g.innerHTML),
+        ).length
+        return { links, passes }
+      })
+      out.push(
+        h.check(
+          'no relay arc survives a pass that isolation removed',
+          orphanLinks.links <= orphanLinks.passes,
+          `${orphanLinks.links} arcs for ${orphanLinks.passes} drawn passes`,
         ),
       )
 
       await chip(page, 1).click()
-      await page.waitForTimeout(150)
+      await page.waitForTimeout(200)
       drawn = await drawnPaths(page)
       out.push(
         h.check(
           'at step 1 the later step is REMOVED, not merely faded',
           drawn.length === 1,
-          `${drawn.length} of 2 in the tree`,
+          `${drawn.length} of ${segs.length} in the tree`,
         ),
       )
       const cap = await capText()
       out.push(h.check('the caption names the step it is showing', /1단계/.test(cap), cap))
+      out.push(
+        h.check(
+          'and reports the clock, which the picture cannot',
+          /초/.test(cap),
+          cap,
+        ),
+      )
 
+      /*
+       * One direction language: a run and a pass are both dashed, both marching, and the white
+       * casing carries the SAME dash — a solid casing under a dashed stroke fills every gap with
+       * pale white, which is what made the ball's dotted pass read as a smear.
+       */
       await page.getByRole('button', { name: /보기: 이 단계/ }).click()
-      await page.waitForTimeout(150)
+      await page.waitForTimeout(200)
       drawn = await drawnPaths(page)
-      out.push(h.check('turning isolation off brings every path back', drawn.length === 2, `${drawn.length} of 2`))
+      out.push(
+        h.check('turning isolation off brings every path back', drawn.length === segs.length, `${drawn.length} of ${segs.length}`),
+      )
+      const flow = await page.evaluate(() =>
+        [...document.querySelectorAll('g[data-segment]')].map((g) => {
+          const stroke = getComputedStyle(g.querySelector('[class*=path_]'))
+          const casing = getComputedStyle(g.querySelector('[class*=pathCasing]'))
+          return {
+            dash: stroke.strokeDasharray,
+            casing: casing.strokeDasharray,
+            anim: stroke.animationName,
+            casingAnim: casing.animationName,
+          }
+        }),
+      )
+      out.push(
+        h.check(
+          'every path is dashed and its casing breaks in the same places',
+          flow.length > 0 && flow.every((f) => f.dash !== 'none' && f.dash === f.casing),
+          JSON.stringify(flow.map((f) => `${f.dash} / ${f.casing}`)),
+        ),
+      )
+      out.push(
+        h.check(
+          'the step being authored marches; the rest hold still',
+          flow.some((f) => f.anim !== 'none' && f.anim === f.casingAnim) &&
+            flow.some((f) => f.anim === 'none'),
+          JSON.stringify(flow.map((f) => f.anim)),
+        ),
+      )
       await page.getByRole('button', { name: /보기: 전체/ }).click()
       await page.waitForTimeout(120)
 
@@ -144,11 +215,10 @@ module.exports = {
        * REGRESSION (user 2026-08-24: 1단계 이상으로 경로가 안 그려져). The step a movement LANDS on
        * is often past the one the chip asked for — a player's second run cannot share a step with
        * its first. With isolation on and the chip left behind, that movement was authored and then
-       * hidden: to the hand that drew it, nothing happened. Whatever the chip said before, the
-       * board must be showing the movement that was just made.
+       * hidden: to the hand that drew it, nothing happened.
        */
       await chip(page, 1).click()
-      await page.waitForTimeout(120)
+      await page.waitForTimeout(150)
       const before = h.authoredSegments(await h.doc(page)).map((s) => s.id)
       const again = (await h.doc(page)).players.find((p) => p.id === a.id)
       await h.drawFrom(
@@ -156,8 +226,7 @@ module.exports = {
         { x: again.home.x + 12, y: again.home.y - 6 },
         { x: again.home.x + 22, y: again.home.y - 12 },
       )
-      await page.waitForTimeout(250)
-      // a's SECOND run: the chip asked for 1, the chain puts it on 2
+      await page.waitForTimeout(300)
       const made = h.authoredSegments(await h.doc(page)).find((s) => !before.includes(s.id))
       const inTree = made
         ? await page.evaluate((id) => !!document.querySelector(`g[data-segment="${id}"]`), made.id)
@@ -169,8 +238,7 @@ module.exports = {
           `landed on ${made ? made.step : 'nothing'}, inTree=${inTree}`,
         ),
       )
-      const capAfter = await capText()
-      out.push(h.check('and the bar/caption moved with it', /2단계/.test(capAfter), capAfter))
+      out.push(h.check('and the bar/caption moved with it', /2단계/.test(await capText()), await capText()))
 
       // ---- the throw ------------------------------------------------------
       const flingSwitch = page.getByRole('switch', { name: /공 휙 던지기/ })
@@ -188,7 +256,9 @@ module.exports = {
         ),
       )
 
-      const ball = (await h.doc(page)).ball.home
+      // The LIVE ball, not `doc.ball.home`: with a step isolated the clock sits at that step's
+      // opening, so the ball is wherever the play has carried it by then.
+      const ball = await page.evaluate(() => window.__stStateAt(window.__stClock().t).ball.pos)
       const to = { x: ball.x + 22, y: ball.y + 2 }
       await h.dragPitch(page, { x: ball.x, y: ball.y }, to, { steps: 6, settleMs: 900 })
       const rest = (await h.doc(page)).ball.home

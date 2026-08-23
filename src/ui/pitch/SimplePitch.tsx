@@ -85,6 +85,7 @@ import { playableEnd } from '@/editor/usePlayback'
 import { clientToPitch } from '@/renderer/pointer'
 import { clampToView, usePitchView } from './useSvgMetrics'
 import { t } from '../i18n'
+import { stepOpensAt } from '../stepTiming'
 import { entityChipOf, entityColorOf, teamColorOf } from '../teamColor'
 import { AnimatedToken } from './AnimatedToken'
 import {
@@ -93,7 +94,6 @@ import {
   deriveGhostLayers,
   derivePathPhase,
   deriveStepLayers,
-  GHOST_TRACE_OPACITY,
   ghostOpacityForStep,
   placeStepBadges,
 } from './pathPresentation'
@@ -2430,6 +2430,29 @@ export function SimplePitch() {
     : undefined
 
   // Geometric pick inputs (PLAN-007 M1): sampled FULL paths, cached by segment identity.
+
+  /*
+   * THE CLOCK IS THE CONTEXT (PLAN-015 v2, user 2026-08-24: 2단계에서는 1단계 직후가 잔상이면
+   * 안되겠지). While one step is isolated the board sits at the moment that step OPENS, so every
+   * entity stands where the earlier steps left it — drawn as ITSELF, not as one more ghost in a
+   * pile of them. Two mechanisms, because there are two ways the clock drifts off that anchor:
+   *
+   *   `authoringT` — every press calls `returnToAuthoringStart`, which would otherwise snap the
+   *   board to kickoff on every touch. It returns here instead, so the frame never flickers.
+   *
+   *   the pin below — an edit retimes the play and moves the step's opening under us. Re-asserting
+   *   the anchor after the fact heals that without every command having to remember to.
+   *
+   * A held result is left alone: the user asked to study that exact frame.
+   */
+  const stepAnchor = isolating ? stepOpensAt(doc, compiled, ui.currentStep) : 0
+  useEffect(() => {
+    const st = useUiStore.getState()
+    if (st.authoringT !== stepAnchor) st.setAuthoringT(stepAnchor)
+    if (st.playback.playing || st.completion === 'held-result') return
+    if (Math.abs(st.playback.t - stepAnchor) > 1e-6) st.setPlayhead(stepAnchor)
+  }, [stepAnchor, ui.playback.t, ui.playback.playing, ui.completion])
+
   const pickSegments: PickSegment[] = doc.scenes[0]
     ? sceneTracks(doc).flatMap((tr) =>
         tr.segments
@@ -2483,6 +2506,10 @@ export function SimplePitch() {
     if (!bt) return out
     for (const sg of bt.segments) {
       if (sg.kind !== 'travel' || sg.id.startsWith('gen-') || !sg.receiverId) continue
+      // The arc BELONGS to this pass. Isolation removed the pass and left its arc floating on the
+      // grass as a white sliver beside a player with no line attached (user 2026-08-24: 공 궤적
+      // 꺾이는 부분에 이상한 흰색 찌꺼기들). Anything that decorates a path reads the same map.
+      if (stepLayers?.[sg.id] === 'hidden') continue
       const tm = compiled.segmentTimes[sg.id]
       if (!tm) continue
       const rs = stateAt(compiled, doc, tm.end + 0.05)
@@ -2742,14 +2769,9 @@ export function SimplePitch() {
   const ghostLayers = deriveGhostLayers(ghosts, ui.currentStep, ui.selectedSegmentId, isolating)
   const visibleGhosts = ghosts
     .filter((g) => ghostLayers[g.id] !== 'hidden')
-    .map((g) => {
-      if (!isolating) return g
-      return ghostLayers[g.id] === 'trace'
-        ? { ...g, opacity: GHOST_TRACE_OPACITY }
-        : // isolating flattens the rank fade: with only this step on the board there is no queue
-          // of later steps to rank against, so its destinations all read at full ghost strength.
-          { ...g, opacity: ghostOpacityForStep(0, selection.includes(g.entityId)) }
-    })
+    // Isolating flattens the rank fade: with one step on the board there is no queue of later
+    // steps to rank against, so this step's destinations all read at full ghost strength.
+    .map((g) => (isolating ? { ...g, opacity: ghostOpacityForStep(0, selection.includes(g.entityId)) } : g))
 
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
   // placeStepBadges nudges overlapping badges apart deterministically (B-03).
@@ -3008,12 +3030,7 @@ export function SimplePitch() {
             className={styles.stepBadge}
             style={
               {
-                opacity:
-                  focusIds.size > 0 && !focusIds.has(b.entityId)
-                    ? 0.25
-                    : stepLayers?.[b.id] === 'trace'
-                      ? 0.28
-                      : undefined,
+                opacity: focusIds.size > 0 && !focusIds.has(b.entityId) ? 0.25 : undefined,
                 '--st-entity-chip': entityChipOf(doc, b.entityId).fill,
               } as CSSProperties
             }

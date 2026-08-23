@@ -155,24 +155,26 @@ export function placeStepBadges(
 }
 
 /**
- * STEP ISOLATION (user 2026-08-24: 2단계를 선택하면 딱 2단계만 · 처음부터 끝까지 모든걸 보여줄
- * 필욘 없음).
+ * STEP ISOLATION (user 2026-08-24: 2단계를 선택하면 딱 2단계만 · 1단계 직후가 잔상이면 안되겠지).
  *
- * The rest hierarchy this replaces (A-05a, deriveRestMutedIds) answered "which paths are not the
- * one I am authoring" by fading them to 0.55 — which on a nine-step play still prints the entire
- * match at once, and the step chips stopped meaning anything: every choice looked the same.
- * Isolation answers a different question, the one a coach actually asks of a step: **what is the
- * situation, and what happens next.** Its 'muted' layer keeps the old behaviour for the OFF case.
+ * The first cut kept the previous step as a faint "trace" so the current one had context. It was
+ * the wrong kind of context: the board already carried the previous step's arrows AND its ghosts
+ * at low opacity, on top of the live tokens still standing at kickoff — three renderings of the
+ * same play at once (user: 난잡함).
  *
- *   focus  — this step. Full strength: the movements about to happen.
- *   trace  — how we got here. Barely there, and never competes for a press.
- *   hidden — everything else. Its RESULT is already standing on the board; its line is noise.
- *   muted  — isolation OFF: the old 0.55 rest hierarchy, unchanged.
+ * The context a step actually needs is not a drawing of the past, it is the RESULT of the past.
+ * So the board is put at the moment the step opens — the clock does that, see the pin in
+ * SimplePitch — and every entity stands where the previous steps left it, as a solid token rather
+ * than a ghost. This derivation then has only one job left: show this step, hide the rest.
+ *
+ *   focus  — this step: its arrows, its badges, its destination ghosts.
+ *   hidden — every other step. Its result is already standing on the board.
+ *   muted  — isolation OFF: the old rest hierarchy (A-05a), every path visible at 0.55.
  *
  * The selected movement is never hidden — hiding what the user just clicked is a trap, and the
  * step picker on its badge has to stay reachable.
  */
-export type StepLayer = 'focus' | 'trace' | 'muted' | 'hidden'
+export type StepLayer = 'focus' | 'muted' | 'hidden'
 
 /** Paths and their step badges. */
 export function deriveStepLayers(
@@ -183,28 +185,22 @@ export function deriveStepLayers(
 ): Record<Id, StepLayer> {
   const out: Record<Id, StepLayer> = {}
   for (const s of segs) {
-    if (s.id === selectedSegmentId) {
-      out[s.id] = 'focus'
-      continue
-    }
-    if (!isolate) {
-      out[s.id] = s.step === currentStep ? 'focus' : 'muted'
-      continue
-    }
-    out[s.id] = s.step === currentStep ? 'focus' : s.step === currentStep - 1 ? 'trace' : 'hidden'
+    out[s.id] =
+      s.id === selectedSegmentId || s.step === currentStep
+        ? 'focus'
+        : isolate
+          ? 'hidden'
+          : 'muted'
   }
   return out
 }
 
 /**
- * Ghosts (the faded future positions), which need their OWN rule — and this is the part that a
- * naive "show step N only" gets wrong.
+ * Ghosts (the faded future positions) follow their movement exactly.
  *
- * A ghost is not a movement, it is a POSITION. If a winger ran in step 1 and we are authoring
- * step 4, hiding their step-1 ghost with the rest of step 1 deletes the only mark saying where
- * that winger actually stands when step 4 opens — the live token is back at kickoff. So each
- * entity keeps its LATEST ghost before the current step as a trace, however old that step is;
- * that set IS "지금 상황". Ghosts of the current step are the destinations: full strength.
+ * They used to need a rule of their own — keep each entity's last ghost so the board still said
+ * where that entity stands. With the clock pinned to the step's opening the entity is simply
+ * THERE, drawn as itself, so the rule is gone and with it the double-drawing it caused.
  */
 export function deriveGhostLayers(
   ghosts: readonly { id: Id; entityId: Id; segId: Id; step: number }[],
@@ -213,30 +209,16 @@ export function deriveGhostLayers(
   isolate: boolean,
 ): Record<string, StepLayer> {
   const out: Record<string, StepLayer> = {}
-  if (!isolate) {
-    for (const g of ghosts) out[g.id] = 'focus'
-    return out
-  }
-  /** Per entity, the newest step strictly before the current one. */
-  const anchorStep = new Map<Id, number>()
-  for (const g of ghosts) {
-    if (g.step >= currentStep) continue
-    const best = anchorStep.get(g.entityId)
-    if (best === undefined || g.step > best) anchorStep.set(g.entityId, g.step)
-  }
   for (const g of ghosts) {
     out[g.id] =
-      g.step === currentStep || g.segId === selectedSegmentId
+      g.segId === selectedSegmentId || g.step === currentStep
         ? 'focus'
-        : g.step < currentStep && anchorStep.get(g.entityId) === g.step
-          ? 'trace'
-          : 'hidden'
+        : isolate
+          ? 'hidden'
+          : 'muted'
   }
   return out
 }
-
-/** Ghost opacity while isolating: the destinations read, the trace only whispers. */
-export const GHOST_TRACE_OPACITY = 0.16
 
 /**
  * Focus set (user 2026-08-21): the entities that stay vivid while ONE movement is being edited.

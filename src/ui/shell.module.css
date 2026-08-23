@@ -1040,53 +1040,43 @@
  * Preference switch (PLAN-015). The whole row is the target — a 34px track alone is a Fitts
  * penalty for a control that already has a label sitting next to it doing nothing.
  */
-.switchRow {
+/*
+ * Header switch (user 2026-08-24: 헤드 레이아웃에 토글 버튼이랑 텍스트 이렇게만 간단히 1행으로).
+ * The explanation moved to the tooltip: a preference the user has already decided about does not
+ * need a paragraph standing next to it forever.
+ */
+.headerSwitch {
   appearance: none;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--st-space-3);
-  width: 100%;
-  padding: 6px 4px;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px 0 6px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--st-radius-s);
   font: inherit;
-  color: var(--st-text);
-  text-align: left;
+  font-size: 12.5px;
+  color: var(--st-text-2);
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color var(--st-motion-fast) var(--st-ease-out);
 }
 
-.switchRow:hover {
+.headerSwitch:hover {
   background: var(--st-surface-2);
 }
 
-.switchText {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.switchLabel {
-  font-size: 13px;
+.headerSwitch[aria-checked='true'] {
+  color: var(--st-accent);
   font-weight: 600;
-}
-
-.switchHint {
-  font-size: 11.5px;
-  line-height: 1.35;
-  color: var(--st-text-3);
-  /* Korean breaks between any two syllables by default, which snapped this hint mid-word three
-     times in a row. keep-all wraps at word boundaries instead. */
-  word-break: keep-all;
 }
 
 .switchTrack {
   position: relative;
   flex: none;
-  width: 38px;
-  height: 22px;
+  width: 30px;
+  height: 18px;
   border-radius: var(--st-radius-pill);
   background: var(--st-surface-3);
   box-shadow: 0 0 0 1px var(--st-border) inset;
@@ -1095,10 +1085,10 @@
 
 .switchKnob {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
+  top: 2.5px;
+  left: 2.5px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   background: var(--st-surface);
   box-shadow: var(--st-depth-rest);
@@ -1106,13 +1096,13 @@
   transition: transform var(--st-spring-press-ms) var(--st-spring-press);
 }
 
-.switchRow[aria-checked='true'] .switchTrack {
+.headerSwitch[aria-checked='true'] .switchTrack {
   background: var(--st-accent);
   box-shadow: none;
 }
 
-.switchRow[aria-checked='true'] .switchKnob {
-  transform: translateX(16px);
+.headerSwitch[aria-checked='true'] .switchKnob {
+  transform: translateX(12px);
 }
 
 /* Frosted section card (Apple-style): hairline border, soft depth, generous radius. */
@@ -2311,13 +2301,13 @@
 }
 
 /*
- * Step caption (PLAN-015). Top-LEFT, because the top centre already belongs to the boost pill and
- * its invitation — a caption that has to dodge another overlay is worse than one that never
- * shares a slot. Non-interactive: it explains the board, the board is still operated directly.
+ * Step clock (PLAN-015 v2). Top-RIGHT by request, which also keeps it clear of the boost pill in
+ * the centre and of the left half where a build-up usually starts. Non-interactive: it reports on
+ * the board, the board is still operated directly.
  */
 .stepStatus {
   position: absolute;
-  left: var(--st-space-4);
+  right: var(--st-space-4);
   top: var(--st-space-4);
   display: flex;
   align-items: flex-start;
@@ -2364,24 +2354,21 @@
   min-width: 0;
 }
 
-.stepStatusLine {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 12.5px;
-  line-height: 1.35;
+/* The number is the headline — how long this step lasts — with its context under it. */
+.stepStatusMain {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
-/* The two keys share one column so 지금/이번 line up and the values read as a table. */
-.stepStatusKey {
-  flex: none;
-  min-width: 3.2em;
-  color: var(--st-text-3);
+.stepStatusSub {
   font-size: 11px;
-  font-weight: 600;
+  line-height: 1.3;
+  color: var(--st-text-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .speedPillRate {

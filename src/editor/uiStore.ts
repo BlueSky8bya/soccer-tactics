@@ -84,9 +84,10 @@ export interface UiState {
   ballFling: boolean
   setBallFling: (on: boolean) => void
   /**
-   * Step isolation (user 2026-08-24: 처음부터 끝까지 모든걸 보여줄 필욘 없음). On, the board shows
-   * the step being authored plus a faint trace of where it came from; off, every authored path
-   * stays on the board as before. See deriveStepLayers.
+   * Step isolation (user 2026-08-24: 처음부터 끝까지 모든걸 보여줄 필욘 없음). On, the clock sits at
+   * the moment the current step opens and ONLY that step's arrows, badges and destination ghosts
+   * are drawn — everything earlier is already standing on the board as solid tokens. Off, every
+   * authored path stays visible as before. See deriveStepLayers and the anchor pin in SimplePitch.
    */
   stepIsolate: boolean
   setStepIsolate: (on: boolean) => void
@@ -107,11 +108,20 @@ export interface UiState {
    * (A-02). Home or any document-changing edit returns to the authoring start.
    */
   completion: 'idle' | 'held-result'
+  /**
+   * WHERE "the authoring start" IS (PLAN-015 v2). It used to be 0, full stop. With one step
+   * isolated the board has to sit at the moment that step OPENS — that frame is what makes the
+   * earlier steps' outcome visible as solid tokens instead of a pile of ghosts — and every press
+   * calls `returnToAuthoringStart`, so a hard-coded 0 would snap the board back to kickoff on
+   * every touch. The board owns this value (only it can compile the step's opening time).
+   */
+  authoringT: number
+  setAuthoringT: (t: number) => void
   /** Start playing `scope` from `start`; `end` bounds the clock (null = document duration). */
   startRange: (scope: PlaybackScope, start: number, end: number | null) => void
   /** Natural finish: freeze the frame at `t` and flag the held-result state (A-02). */
   holdResult: (t: number) => void
-  /** Explicit return to the authoring view: t=0, stopped, scope reset (Home / first edit). */
+  /** Explicit return to the authoring view: `authoringT`, stopped, scope reset (Home / first edit). */
   returnToAuthoringStart: () => void
   /** Simple mode (ADR-0009): step number newly drawn movements get. */
   currentStep: number
@@ -193,6 +203,7 @@ export const useUiStore = create<UiState>((set) => ({
   rangeStart: 0,
   rangeEnd: null,
   completion: 'idle',
+  authoringT: 0,
   tour: { active: false, step: 0, set: 'main' },
   toast: null,
   currentStep: 1,
@@ -249,9 +260,10 @@ export const useUiStore = create<UiState>((set) => ({
       playback: { ...s.playback, t: Math.max(0, t), playing: false },
       completion: 'held-result',
     })),
+  setAuthoringT: (authoringT) => set({ authoringT: Math.max(0, authoringT) }),
   returnToAuthoringStart: () =>
     set((s) => ({
-      playback: { ...s.playback, t: 0, playing: false },
+      playback: { ...s.playback, t: s.authoringT, playing: false },
       playScope: 'all',
       rangeStart: 0,
       rangeEnd: null,

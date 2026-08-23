@@ -20,51 +20,12 @@ import {
 import { useActiveCues } from './useActiveCues'
 import styles from './shell.module.css'
 
-/**
- * A preference row: what it does on the left, its state on the right.
- *
- * `role="switch"` and not a checkbox, because it takes effect immediately — there is no form to
- * submit and no confirm step, which is exactly the distinction the role carries to a screen reader.
- */
-export function SettingSwitch({
-  on,
-  onChange,
-  label,
-  hint,
-}: {
-  on: boolean
-  onChange: (on: boolean) => void
-  label: string
-  hint: string
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      className={styles.switchRow}
-      onClick={() => onChange(!on)}
-      title={hint}
-    >
-      <span className={styles.switchText}>
-        <span className={styles.switchLabel}>{label}</span>
-        <span className={styles.switchHint}>{hint}</span>
-      </span>
-      <span className={styles.switchTrack} aria-hidden="true">
-        <span className={styles.switchKnob} />
-      </span>
-    </button>
-  )
-}
-
 /** Left panel: the feature buttons (always visible). */
 export function ActionsPanel() {
   const cues = useActiveCues()
   const core = useEditor()
   const { doc } = useEditorSnapshot()
   const flashToast = useUiStore((s) => s.flashToast)
-  const ballFling = useUiStore((s) => s.ballFling)
-  const setBallFling = useUiStore((s) => s.setBallFling)
   const home = doc.teams[0]
   const away = doc.teams[1]
   const [homeF, setHomeF] = useState('4-3-3')
@@ -154,19 +115,6 @@ export function ActionsPanel() {
             <ShortcutRow key={b.label} b={b} active={isCued(b, cues)} />
           ))}
         </div>
-      </div>
-
-      {/* Opt-in board behaviours. One switch today (the throw), and the place the next one goes —
-          a preference that changes what a GESTURE does has to be visible where the gestures are
-          taught, not buried in an overlay. */}
-      <div className={styles.panelCard}>
-        <div className={styles.sectionLabel}>{t('panel.settings')}</div>
-        <SettingSwitch
-          on={ballFling}
-          onChange={setBallFling}
-          label={t('setting.ballFling')}
-          hint={t('setting.ballFlingHint')}
-        />
       </div>
 
       {/* Playback keys live here, not in the right-hand 조작법 panel: this column had the room

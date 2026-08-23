@@ -3,20 +3,20 @@ import { useEditorSnapshot } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
-import { actionSummary, activeStepAt, describeStep } from './stepNarrative'
+import { activeStepAt, secs, stepTiming } from './stepTiming'
 import styles from './shell.module.css'
 
 /**
- * The step, said out loud (PLAN-015 M4).
+ * The step's CLOCK, top-right of the board.
  *
- * A number on a chip is not a situation. This pill sits in the board's top-left corner and answers
- * the two questions a picked step actually raises — **지금** (where the play stands as the step
- * opens) and **이번** (what is authored to happen in it) — so the chips stop being nine identical
- * buttons. While the play runs it follows the RUNNING step instead, which turns the same pill into
- * a commentary line.
+ * This used to narrate the step in words and the user cut it, correctly: "10번이 공을 가지고 있고
+ * 7번에게 패스한다" is already drawn on the pitch in colour at full size, so saying it again is
+ * noise (2026-08-24: 눈으로 봐도 충분히 알 수 있잖아).
  *
- * Top-LEFT deliberately: the boost/invite pills own the top centre, and a caption that jumps out
- * of the way of another overlay is worse than one that never shares its slot.
+ * Timing is the information the picture genuinely cannot carry. A two-second run and a
+ * five-second run draw the identical arrow, and this is a sequencer — when a step fires and how
+ * long it lasts is the thing being authored. So: which of the play's steps this is, how long it
+ * takes, and where it sits in the whole. While the play runs it becomes the stopwatch.
  */
 export function StepStatus() {
   const { doc } = useEditorSnapshot()
@@ -27,24 +27,44 @@ export function StepStatus() {
 
   const running = playing ? activeStepAt(doc, compiled, clock) : null
   const step = running ?? currentStep
-  // Keyed on the STEP, not the clock: the narrative is a property of the step, so playback must
-  // not re-derive it (stateAt per movement) sixty times a second.
-  const narrative = useMemo(() => describeStep(doc, compiled, step), [doc, compiled, step])
+  // Keyed on the STEP, not the clock: this is a property of the step, so playback must not
+  // re-derive it sixty times a second.
+  const timing = useMemo(() => stepTiming(doc, compiled, step), [doc, compiled, step])
 
   return (
     <div className={styles.stepStatus} role="status" aria-live="polite" data-running={!!running}>
       <span className={styles.stepStatusBadge}>{t('step.badge', { n: step })}</span>
       <span className={styles.stepStatusBody}>
-        <span className={styles.stepStatusLine}>
-          <span className={styles.stepStatusKey}>{t('step.now')}</span>
-          {narrative.situation}
-        </span>
-        <span className={styles.stepStatusLine}>
-          <span className={styles.stepStatusKey}>
-            {running ? t('step.running') : t('step.plan')}
-          </span>
-          {actionSummary(narrative.actions)}
-        </span>
+        {playing ? (
+          <>
+            <span className={styles.stepStatusMain}>
+              {t('step.clock', { t: secs(clock), all: secs(timing.playEnd) })}
+            </span>
+            <span className={styles.stepStatusSub}>
+              {timing.index
+                ? t('step.ofTotal', { i: timing.index, n: timing.total })
+                : t('step.empty')}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className={styles.stepStatusMain}>
+              {timing.used
+                ? t('step.takes', { d: secs(timing.end - timing.start) })
+                : t('step.empty')}
+            </span>
+            <span className={styles.stepStatusSub}>
+              {timing.used
+                ? t('step.window', {
+                    i: timing.index ?? 1,
+                    n: timing.total,
+                    from: secs(timing.start),
+                    all: secs(timing.playEnd),
+                  })
+                : t('step.startsAt', { from: secs(timing.start) })}
+            </span>
+          </>
+        )}
       </span>
     </div>
   )

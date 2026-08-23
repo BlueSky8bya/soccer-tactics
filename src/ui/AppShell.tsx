@@ -268,6 +268,22 @@ export function AppShell() {
           )}
         </span>
         <span className={styles.group}>
+          {/* One row, one line (user 2026-08-24): a switch and its name. The full sentence lives in
+              the tooltip and in the 조작법 row that appears with the feature. */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={ui.ballFling}
+            className={styles.headerSwitch}
+            onClick={() => ui.setBallFling(!ui.ballFling)}
+            title={t('setting.ballFlingHint')}
+          >
+            <span className={styles.switchTrack} aria-hidden="true">
+              <span className={styles.switchKnob} />
+            </span>
+            {t('setting.ballFling')}
+          </button>
+          <span className={styles.barDivider} aria-hidden="true" />
           <button
             type="button"
             className={styles.btn}
