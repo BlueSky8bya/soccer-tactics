@@ -1,0 +1,70 @@
+{
+  "$comment": "Browser probe inventory — PLAN-014 D-browser. 'present' probes run in pw/run.cjs; 'missing' entries are historical names kept as inventory, NOT as evidence. A historical PASS is never a current PASS.",
+  "created": "2026-08-23",
+  "decision": "DG-BROWSER option 1 — tracked Playwright devDependency, version-locked probes in this folder (user 2026-08-23)",
+  "runtime": {
+    "runner": "node pw/run.cjs [probeId] [--headed]",
+    "requires": "npm run dev on ST_PROBE_URL (default http://localhost:5173/) — the QA hooks are import.meta.env.DEV gated",
+    "playwright": "1.62.1",
+    "browser": "chromium"
+  },
+  "probes": [
+    {
+      "id": "hit-scale",
+      "file": "hit-scale.cjs",
+      "status": "present",
+      "covers": "R12-D",
+      "describe": "path hit radius is 7px on both axes at every viewport and DPR; no dead strip in the surround",
+      "viewports": [
+        "1280x720",
+        "1280x800",
+        "1440x900",
+        "1440x1000@2x",
+        "1920x1080",
+        "ultrawide",
+        "tall"
+      ]
+    },
+    {
+      "id": "gesture-cancel",
+      "file": "gesture-cancel.cjs",
+      "status": "present",
+      "covers": "R7",
+      "describe": "blur / lostpointercapture / pointercancel / Escape mid-drag leave no open transaction, no invalid document, and the next edit still applies"
+    },
+    {
+      "id": "pick-overlap",
+      "file": "pick-overlap.cjs",
+      "status": "present",
+      "covers": "R5",
+      "describe": "hover promise equals press dispatch where ghost, token and path overlap; repeat clicks are deterministic"
+    },
+    {
+      "id": "reduced-motion",
+      "file": "reduced-motion.cjs",
+      "status": "present",
+      "covers": "structural — motion settings must not reach the tactic",
+      "describe": "the same pointer script authors an identical tactic with reduced motion on and off"
+    },
+    {
+      "id": "r5-diagnose",
+      "file": "r5-diagnose.cjs",
+      "status": "present",
+      "covers": "R5 diagnosis",
+      "describe": "scan line through the ghost: hover key, element under cursor, resolved intent"
+    },
+    {
+      "id": "historical-22",
+      "status": "missing",
+      "covers": "2026-08-22 session",
+      "describe": "ballmoment, ballrest, midghost, throughball, steps, aimclick, passland, orbit, identity, colors, homeanchor, overhaul, fling, cues, panelbtns, launchorigin, throughplayer, gif, render, carrylook, receiveside, autosave — source not in this repository. Recorded as HISTORICAL inventory; re-author on demand rather than restoring blind.",
+      "note": "PLAN-014 M0 finding: these names appear in CHANGELOG/CURRENT_STATE but no source exists in the checkout."
+    },
+    {
+      "id": "marathon",
+      "status": "missing",
+      "covers": "randomised pointer marathon",
+      "describe": "19 gesture kinds in random order with the fuzz invariants checked in-page after every gesture. Source not in this repository; a re-authored version is a follow-up (E/D scope)."
+    }
+  ]
+}

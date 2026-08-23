@@ -2344,6 +2344,10 @@ export function SimplePitch() {
       dropHint: dropHint ? { entityId: dropHint.entityId, step: dropHint.step ?? null } : null,
       detachPos: !!detachPos,
       pressedId,
+      // What the HOVER promises, in the same key space the halo renders from. A probe can then
+      // compare the promise against what the press actually dispatched (audit R5) — the halo is
+      // React state, so paint alone cannot tell them apart.
+      hoverKey,
       selection: [...useUiStore.getState().selection],
     }
   }
