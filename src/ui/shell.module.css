@@ -1165,12 +1165,15 @@
  * that should read as a table — "Ctrl+좌클릭 → 우리팀 선수 추가", "Ctrl+Z → 되돌리기" — had a ragged
  * second column (lab review, 2026-08-24). One column width, one left edge for every description.
  */
+/*
+ * FLEX, not a fixed cap column. A reviewer asked for one — the descriptions do start at ragged x —
+ * but the panel is 222px wide, and reserving 86px for the cap left so little for the hint that
+ * "우리팀 선수 추가" and "패널 접기·펴기" both wrapped mid-word. A ragged left edge on the second
+ * column is a smaller cost than a wrapped sentence, so the raggedness stays, on purpose.
+ */
 .shortcutRowInline {
-  display: grid;
-  /* a floor, not a fixed width: the common caps (Space, Home, G, Ctrl+Z, Ctrl+좌클릭) all land
-     inside it and share one edge, and a rare long one still gets the room it needs */
-  grid-template-columns: minmax(86px, max-content) 1fr;
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
   min-width: 0;
 }
