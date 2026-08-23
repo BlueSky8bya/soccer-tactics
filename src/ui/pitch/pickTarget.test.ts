@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import {
   BALL_HIT_M,
+  GHOST_PLAYER_HIT_M,
   GHOST_YIELD_BALL_M,
   GHOST_YIELD_PLAYER_M,
   PLAYER_HIT_M,
   ghostYieldTarget,
   pickTargets,
+  pressSubject,
   resolvePossessionPair,
+  subjectKey,
 } from './pickTarget'
-import type { PickInput } from './pickTarget'
+import type { Candidate, PickInput } from './pickTarget'
+import { resolvePointerIntent } from './gestureIntent'
 
 const base = (over: Partial<PickInput> = {}): PickInput => ({
   players: [],
@@ -120,5 +124,94 @@ describe('pickTargets (PLAN-007 M1 golden)', () => {
     const c = pickTargets(base({ players: [{ id: 'p2', pos: { x: 1, y: 0 } }] }))
     expect(a.fingerprint).toBe(b.fingerprint)
     expect(a.fingerprint).not.toBe(c.fingerprint)
+  })
+})
+
+describe('pressSubject — the halo and the press share one answer (audit R5)', () => {
+  const ghost = (d: number): Extract<Candidate, { kind: 'ghost' }> => ({
+    kind: 'ghost',
+    entityId: 'p1',
+    segId: 's1',
+    pos: { x: 0, y: 0 },
+    step: 1,
+    d,
+    norm: d / GHOST_PLAYER_HIT_M,
+  })
+  const seg = (d: number): Extract<Candidate, { kind: 'segment' }> => ({
+    kind: 'segment',
+    segId: 's1',
+    entityId: 'p1',
+    step: 1,
+    d,
+    norm: d / 0.35,
+  })
+
+  it('a ghost beats a path even when the path is normalised-nearer', () => {
+    // This IS the R5 case: on the path (norm≈0.03) and 1m from the ghost (norm≈0.53).
+    // `ordered[0]` would answer "segment"; the press acts on the ghost, so the halo must too.
+    const s = pressSubject({ ghostTop: ghost(1), segTop: seg(0.01), tokenId: null, yieldTokenId: null })
+    expect(s?.kind).toBe('ghost')
+  })
+
+  it('a live token underneath the ghost claims the press (golden G2)', () => {
+    const s = pressSubject({ ghostTop: ghost(0.2), segTop: null, tokenId: null, yieldTokenId: 'p9' })
+    expect(s).toEqual({ kind: 'token', id: 'p9' })
+  })
+
+  it('a path only wins when no token is under the cursor', () => {
+    expect(pressSubject({ ghostTop: null, segTop: seg(0.1), tokenId: null, yieldTokenId: null })?.kind).toBe(
+      'segment',
+    )
+    expect(pressSubject({ ghostTop: null, segTop: seg(0.1), tokenId: 'p3', yieldTokenId: null })).toEqual({
+      kind: 'token',
+      id: 'p3',
+    })
+  })
+
+  it('nothing in range is nothing', () => {
+    expect(pressSubject({ ghostTop: null, segTop: null, tokenId: null, yieldTokenId: null })).toBeNull()
+  })
+
+  it('subjectKey speaks the renderer key space', () => {
+    expect(subjectKey(ghost(0.1), 'ball')).toBe('ghost:s1:p1')
+    expect(subjectKey(seg(0.1), 'ball')).toBe('segment:s1')
+    expect(subjectKey({ kind: 'token', id: 'ball' }, 'ball')).toBe('ball:ball')
+    expect(subjectKey({ kind: 'token', id: 'p7' }, 'ball')).toBe('player:p7')
+    expect(subjectKey(null, 'ball')).toBeNull()
+  })
+
+  it('the precedence matches resolvePointerIntent for every combination', () => {
+    // The contract that closes R5: whatever the press MEANS, it is about the subject this
+    // function names. Walk the truth table and check the two agree on which category wins.
+    for (const hasGhost of [false, true]) {
+      for (const hasSeg of [false, true]) {
+        for (const hasToken of [false, true]) {
+          const s = pressSubject({
+            ghostTop: hasGhost ? ghost(0.5) : null,
+            segTop: hasSeg ? seg(0.1) : null,
+            tokenId: hasToken ? 'p3' : null,
+            yieldTokenId: null,
+          })
+          const intent = resolvePointerIntent(
+            { ghost: hasGhost, segment: hasSeg, token: hasToken, insidePitch: true },
+            { button: 0, draw: false, ctrl: false },
+            { liveTokenNearGhost: false, chainActive: false, soloSelection: false },
+          )
+          const intentSubject =
+            intent === 'adjust-ghost-end' || intent === 'draw-from-ghost'
+              ? 'ghost'
+              : intent === 'bend-path'
+                ? 'segment'
+                : intent === 'press-token' ||
+                    intent === 'press-token-additive' ||
+                    intent === 'draw-from-token'
+                  ? 'token'
+                  : null
+          expect(s?.kind ?? null, `ghost=${hasGhost} seg=${hasSeg} token=${hasToken}`).toBe(
+            intentSubject,
+          )
+        }
+      }
+    }
   })
 })

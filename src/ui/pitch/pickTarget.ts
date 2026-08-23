@@ -202,3 +202,47 @@ export function ghostYieldTarget(
   if (nearBall) return ball.id
   return nearPlayer?.id ?? null
 }
+
+/**
+ * WHICH SUBJECT A PRESS WOULD ACT ON — the one answer the halo and the press must share.
+ *
+ * The hover halo used to mark `ordered[0]`: the global rank top, which compares a ghost and a
+ * path by NORMALISED distance. The press instead takes a per-category top and applies a fixed
+ * precedence in which a ghost always outranks a path. A ghost is a run's endpoint and an endpoint
+ * always lies ON its own path, so the two answers disagreed in a band around every run end: the
+ * halo lit the path, the drag moved the ghost, and a user aiming to bend a curve retargeted the
+ * run instead (audit R5, browser scan 2026-08-23 — mismatch from −1.5 m to +0.5 m of the ghost).
+ *
+ * The precedence encoded here mirrors `resolvePointerIntent` exactly:
+ *   ghost (unless a live token sits under it) → path (only when no token) → token → nothing.
+ * `resolvePointerIntent` stays the authority on what the press then MEANS; this says who it is
+ * about, so both consumers can ask the same question.
+ */
+export function pressSubject(input: {
+  ghostTop: Extract<Candidate, { kind: 'ghost' }> | null
+  segTop: Extract<Candidate, { kind: 'segment' }> | null
+  tokenId: Id | null
+  /** `ghostYieldTarget` result: a live token underneath claims the press (golden G2). */
+  yieldTokenId: Id | null
+}): Candidate | { kind: 'token'; id: Id } | null {
+  const { ghostTop, segTop, tokenId, yieldTokenId } = input
+  if (ghostTop) {
+    if (yieldTokenId) return { kind: 'token', id: yieldTokenId }
+    return ghostTop
+  }
+  if (segTop && !tokenId) return segTop
+  if (tokenId) return { kind: 'token', id: tokenId }
+  return null
+}
+
+/** The hover-halo key for a subject, in the key space the renderer already uses. */
+export function subjectKey(
+  s: ReturnType<typeof pressSubject>,
+  ballId: Id,
+): string | null {
+  if (!s) return null
+  if (s.kind === 'ghost') return `ghost:${s.segId}:${s.entityId}`
+  if (s.kind === 'segment') return `segment:${s.segId}`
+  if (s.kind === 'token') return `${s.id === ballId ? 'ball' : 'player'}:${s.id}`
+  return `${s.kind}:${s.id}`
+}

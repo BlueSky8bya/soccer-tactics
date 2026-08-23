@@ -40,7 +40,14 @@ import {
   truncateBallFromStepInDraft,
 } from '@/editor/stepCommands'
 import { nextChainStep, resolvePointerIntent } from './gestureIntent'
-import { distToPolyline, ghostYieldTarget, pickTargets, resolvePossessionPair } from './pickTarget'
+import {
+  distToPolyline,
+  ghostYieldTarget,
+  pickTargets,
+  pressSubject,
+  resolvePossessionPair,
+  subjectKey,
+} from './pickTarget'
 import {
   FLING_MIN_SPEED,
   SLING_MAX_SPEED,
@@ -2770,14 +2777,40 @@ export function SimplePitch() {
         hoverRaf.current = null
         const hp = hoverPt.current
         if (!hp || gesture.current) return
-        const top = pickNowRef.current(hp).ordered[0] ?? null
-        const key = top
-          ? top.kind === 'ghost'
-            ? `ghost:${top.segId}:${top.entityId}`
-            : top.kind === 'segment'
-              ? `segment:${top.segId}`
-              : `${top.kind}:${top.id}`
+        /*
+         * THE HALO PROMISES WHAT THE PRESS WILL DO. It used to mark `ordered[0]` — the global
+         * rank top — while the press applied its own precedence, so around every run endpoint
+         * the halo lit the path and the drag moved the ghost (audit R5). Both now ask
+         * `pressSubject` the same question with the same inputs.
+         */
+        const ov = pickNowRef.current(hp).overlaps
+        const inFocus = focusIds.size > 0
+        const gTop = (inFocus ? ov.ghosts.filter((g) => focusIds.has(g.entityId)) : ov.ghosts)[0] ?? null
+        const sTop =
+          (inFocus ? ov.segments.filter((c) => focusIds.has(c.entityId)) : ov.segments)[0] ?? null
+        const hoverHolderId =
+          resolved.ball.holderId ?? (ui.playback.t === 0 ? doc.ball.initialHolderId : undefined)
+        let tokenId: Id | null
+        if (ov.ball && hoverHolderId && resolved.players[hoverHolderId]) {
+          const hpos = resolved.players[hoverHolderId]!.pos
+          tokenId =
+            resolvePossessionPair(hp, resolved.ball.pos, hpos) === 'holder'
+              ? hoverHolderId
+              : doc.ball.id
+        } else {
+          tokenId = ov.players[0]?.id ?? ov.ball?.id ?? null
+        }
+        const yieldId = gTop
+          ? ghostYieldTarget(
+              hp,
+              doc.players.map((pl) => ({ id: pl.id, pos: resolved.players[pl.id]?.pos ?? pl.home })),
+              { id: doc.ball.id, pos: resolved.ball.pos },
+            )
           : null
+        const key = subjectKey(
+          pressSubject({ ghostTop: gTop, segTop: sTop, tokenId, yieldTokenId: yieldId }),
+          doc.ball.id,
+        )
         setHoverKey((prev) => (prev === key ? prev : key))
       })
     }
