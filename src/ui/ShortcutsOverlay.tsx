@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
-import { KEYMAP_GROUPS } from './keymap'
+import { KEYMAP_GROUPS, visibleBindings } from './keymap'
 import { SPRINGS } from './motion/spring'
 import { useSpringAnimator } from './motion/useSpring'
 import styles from './shell.module.css'
@@ -10,6 +10,7 @@ import styles from './shell.module.css'
 export function ShortcutsOverlay() {
   const open = useUiStore((s) => s.shortcutsOpen)
   const setOpen = useUiStore((s) => s.setShortcutsOpen)
+  const ballFling = useUiStore((s) => s.ballFling)
   const el = useRef<HTMLDivElement>(null)
   const anim = useSpringAnimator(0, SPRINGS.overlay, (v) => {
     const node = el.current
@@ -96,7 +97,7 @@ export function ShortcutsOverlay() {
           {KEYMAP_GROUPS.map((g) => (
             <div key={g.title} className={styles.card}>
               <div className={styles.sectionLabel}>{g.title}</div>
-              {g.items.map((b, i) => (
+              {visibleBindings(g.items, { ballFling }).map((b, i) => (
                 <div key={b.label + i} className={styles.shortcutRow}>
                   <span className={styles.kbd}>{b.label}</span>
                   <span>{b.hint}</span>

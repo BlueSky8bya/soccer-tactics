@@ -2673,3 +2673,55 @@ Change:
 
 Validation: typecheck/lint/build PASS, 291 tests, 프로브 9종 + GIF 내보내기 PASS, marathon
 240제스처 0실패, 4배 확대 스크린샷으로 정션/도착/출발 3지점 육안 확인.
+
+## CHG-20260824-194 — 단계 격리 · 단계 상황판 · 공 던지기 토글 · 다크모드 (PLAN-015)
+
+Trigger: 사용자 2026-08-24 — "공 굴러가는거 키고 끄는 토글(기본 디폴트는 없게) / 레이어 단계를 하나
+선택했을 때 지금 어떤 상황이고 어떻게 행동할 예정인지가 더 중요하다. 직관성 필요함 / 처음부터 끝까지
+모든걸 보여줄 필욘 없음 / 다크모드 기능 추가."
+
+인터뷰로 확정: "공 굴러가는거" = **휙 던지기(플링)**, 단계 표시 = **이 단계 + 직전 1단계 흐리게**,
+다크모드 = **헤더 버튼 + 시스템 따름**.
+
+Change:
+
+- **단계 격리** (`deriveStepLayers` / `deriveGhostLayers`, `uiStore.stepIsolate` 기본 켜짐):
+  경로·배지는 `현재` 선명 / `현재-1` trace(0.15) / 나머지 **미렌더**. 잔상은 규칙이 다르다 —
+  현재 단계는 선명, **엔티티별로 현재 직전의 마지막 잔상**은 trace, 나머지는 숨김. 3단계 전에 움직인
+  선수의 현재 위치가 사라지는 것을 막는 앵커 규칙이다. 숨긴 것은 `pickSegments`/pick 고스트 입력에서도
+  빠진다(보이지 않는 것이 press를 먹으면 안 된다). 재생 중에는 격리하지 않는다. StepBar의
+  **"보기: 이 단계 / 전체"** 토글이 상시 탈출구.
+- **단계 상황판** (`stepNarrative.ts` + `StepStatus.tsx`): 보드 좌상단이 `N단계 · 지금 … · 이번 …`을
+  말한다. 상황은 **직전 단계들이 끝난 상태**에서 읽는다 — 단계 경계는 도착과 출발이 같은 순간에
+  겹쳐서, ε을 어느 쪽으로 줘도 한쪽이 틀린다(2단계가 "공 이동 중"으로 보고됨). 경계 직후를 읽고 그
+  travel이 이 단계 것이면 직전으로 되감는다. 재생 중엔 진행 중인 단계를 말한다.
+  `activeStepAt`은 StepBar의 aria-current와 공용 — 같은 질문에 두 파생이 답하면 갈라진다.
+- **빈 단계의 프레임**: 칩을 눌렀을 때 그 단계에 움직임이 없으면 재생 헤드가 그대로 있었다(4단계를
+  골라도 킥오프 프레임). `stepOpensAt`으로 **직전 단계의 끝**으로 보낸다.
+- **공 휙 던지기 토글** (`uiStore.ballFling`, 기본 **꺼짐**, localStorage): 꺼짐이면 아무리 빠르게
+  놓아도 배치. 상수는 그대로 두고 게이트만 추가했다(ISSUE-008은 여전히 열려 있다). 더블클릭
+  슬링샷은 명시적 제스처이므로 유지. 왼쪽 "동작 설정" 카드의 스위치, 꺼져 있으면 조작법의
+  "공 휙 던지기" 행도 사라진다(`Binding.flag` + `visibleBindings`).
+- **다크모드**: `theme.ts`(순수) + `useTheme.ts`, 헤더 버튼이 **시스템 → 라이트 → 다크** 순환.
+  `main.tsx`가 React 마운트 전에 칠한다(마운트 이펙트로 칠하면 다크 사용자에게 흰 화면이 한 프레임).
+  `AppShell`의 `dataset.theme = 'light'` 하드코딩 제거. 다크 토큰 보강: depth 4단(라이트의 청회색
+  그림자는 검정 위에서 보이지 않아 모든 표면이 납작했다), danger/warn/success/ball-chip, tint 버튼
+  잉크(`#0a63cc`류는 근-검정 위에서 안 읽힌다).
+- `deriveRestMutedIds` 제거 — `deriveStepLayers(isolate=false)`가 같은 답을 낸다.
+
+Files: src/ui/pitch/pathPresentation.ts(+stepLayers.test.ts), SimplePitch.tsx, renderer/PathLayer.tsx,
+renderer/pitch.module.css, editor/uiStore.ts, ui/{StepStatus.tsx,stepNarrative.ts(+test),theme.ts(+test),
+useTheme.ts,StepBar.tsx,SidePanels.tsx,AppShell.tsx,ShortcutsOverlay.tsx,keymap.ts,UiIcon.tsx,
+shell.module.css,tokens.css,i18n/ko.ts}, app/main.tsx, pw/step-view.cjs, pw/audit-manifest.json
+
+Validation: typecheck/lint/build/harness PASS, **346 tests** (신규 30: stepLayers 7, stepNarrative 8,
+theme 5 + 기존). 브라우저 `node pw/run.cjs step-view` → **16 checks ALL PASS**, 콘솔 클린 —
+테마 순환·새로고침 유지·다크 실제 도색, 2단계에서 1단계가 trace, 1단계에서 2단계가 **트리에서 제거**,
+토글 OFF 복귀, 플링 기본 꺼짐(빠른 스윕 overshoot 1.60m = 배치), 켜면 조작법 행 복귀.
+
+Related: PLAN-20260824-015, ADR-0009(단순 모드), ADR-0006 D2(토큰)
+
+Rollback: 세 기능 모두 UI 플래그 뒤 — `stepIsolate` 끄기 / `ballFling` 켜기 / 테마 라이트 고정으로
+종전 동작. 문서 스키마·엔진 불변이라 저장된 전술은 그대로 열린다.
+
+Documentation Updated: CURRENT_STATE, ACTIVE_PLAN, PROJECT_MAP, CHANGELOG_AGENT

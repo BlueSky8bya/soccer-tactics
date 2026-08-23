@@ -68,6 +68,13 @@
       "describe": "one press moves editing from one entity path to another; the anti-steal protection survives where strokes overlap"
     },
     {
+      "id": "step-view",
+      "file": "step-view.cjs",
+      "status": "present",
+      "covers": "PLAN-015 — 단계 격리 · 테마 · 플링 토글",
+      "describe": "theme cycles and persists across a reload; step isolation REMOVES a later step's path from the tree (not merely fades it) and restores it when switched off; the ball throw is opt-in and its guide row goes with it"
+    },
+    {
       "id": "historical-22",
       "status": "missing",
       "covers": "2026-08-22 session",

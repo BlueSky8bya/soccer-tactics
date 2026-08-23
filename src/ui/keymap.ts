@@ -30,11 +30,24 @@ export interface Binding {
    * gesture and part of editing a movement, and it should light either way.
    */
   cues?: readonly Cue[]
+  /**
+   * The gesture only exists while this preference is ON. A standing panel that teaches a gesture
+   * the board will not perform is worse than silence, so the row goes with the feature.
+   */
+  flag?: 'ballFling'
 }
 
 /** Does this row belong to any state the user is currently in? */
 export function isCued(b: Binding, active: ReadonlySet<Cue>): boolean {
   return !!b.cues?.some((c) => active.has(c))
+}
+
+/** Drop the rows whose feature is switched off. Pure. */
+export function visibleBindings(
+  list: readonly Binding[],
+  flags: { ballFling: boolean },
+): Binding[] {
+  return list.filter((b) => !b.flag || flags[b.flag])
 }
 
 export const KEYMAP = {
@@ -82,7 +95,13 @@ export const PLACE_BINDINGS: Binding[] = [
    */
   { label: '겹친 곳 다시 클릭', hint: '차례로 고르기', compact: true },
   { label: '공 → 선수 드롭', hint: '그 선수가 공 보유', cues: ['ball'] },
-  { label: '공 휙 던지기', hint: '빠르게 놓으면 굴러감', compact: true, cues: ['ball'] },
+  {
+    label: '공 휙 던지기',
+    hint: '빠르게 놓으면 굴러감',
+    compact: true,
+    cues: ['ball'],
+    flag: 'ballFling',
+  },
   { label: '공 더블클릭+드래그', hint: '당긴 반대로 발사', compact: true, cues: ['ball'] },
   { label: '선수 클릭', hint: '등번호·이름 편집', compact: true, cues: ['player'] },
 ]

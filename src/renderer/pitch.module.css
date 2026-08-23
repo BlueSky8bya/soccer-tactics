@@ -850,3 +850,12 @@
 .pathStepMuted {
   opacity: 0.55;
 }
+
+/*
+ * The trace layer (PLAN-015): the step BEFORE the one being authored, kept only so the current
+ * step has a "where this came from". 0.55 is a peer; this has to read as history at a glance, so
+ * it sits an order of emphasis below and stops taking the eye.
+ */
+.pathStepTrace {
+  opacity: 0.15;
+}

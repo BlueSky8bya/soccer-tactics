@@ -8,6 +8,7 @@ import {
   stepRangeFor,
   stepWindow,
 } from '@/editor/stepCommands'
+import { activeStepAt, stepOpensAt } from './stepNarrative'
 import { playWindow } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { entityChipOf } from './teamColor'
@@ -31,23 +32,12 @@ export function StepBar() {
   const counts = stepCounts(doc)
   const currentUsed = counts[currentStep - 1]! > 0
   const compiled = useCompiled()
+  const stepIsolate = useUiStore((s) => s.stepIsolate)
+  const setStepIsolate = useUiStore((s) => s.setStepIsolate)
   const playingT = useUiStore((s) => (s.playback.playing ? s.playback.t : null))
-  // Which step is running NOW (aria-current, M4) — derived from compiled times, no recompiles.
-  let activeStep: number | null = null
-  if (playingT !== null && doc.scenes[0]) {
-    outer: for (const tr of doc.scenes[0].timeline.tracks)
-      for (const sg of tr.segments) {
-        if (!('path' in sg) || sg.id.startsWith('gen-')) continue
-        const w = compiled.segmentTimes[sg.id]
-        if (w && playingT >= w.start - 1e-9 && playingT <= w.end + 1e-9) {
-          activeStep = Math.max(
-            1,
-            Math.min(MAX_STEP, Math.round((sg as { step?: number }).step ?? 1)),
-          )
-          break outer
-        }
-      }
-  }
+  // Which step is running NOW (aria-current, M4). Shared with the board caption via
+  // activeStepAt — two places answering "which step is this" separately is how they drift.
+  const activeStep = playingT !== null ? activeStepAt(doc, compiled, playingT) : null
 
   const preview = (n: number) => {
     setCurrentStep(n)
@@ -61,12 +51,16 @@ export function StepBar() {
       if (landed !== null && landed !== n && range)
         flashToast(t('simple.stepRange', { a: range.lo, b: range.hi }))
     }
-    if ((counts[n - 1] ?? 0) === 0) return
-    const w = stepWindow(doc, n)
-    if (!w) return
-    // Show the step's starting frame — pure UI time, no document change (A-01).
+    /*
+     * Show the frame the step OPENS at — pure UI time, no document change (A-01).
+     *
+     * An EMPTY step used to leave the playhead wherever it happened to be, so picking step 4 on a
+     * three-step play still previewed the kickoff and the caption described the wrong moment
+     * (PLAN-015). stepOpensAt falls back to the end of the last authored step, which is exactly
+     * where a new step-4 movement would begin.
+     */
     setPlaying(false)
-    setPlayhead(w.start)
+    setPlayhead(stepOpensAt(doc, compiled, n))
   }
 
   const replayStep = () => {
@@ -115,6 +109,17 @@ export function StepBar() {
           {counts[n - 1]! > 0 && <span className={styles.stepCount}>{counts[n - 1]}</span>}
         </button>
       ))}
+      {/* The view switch lives WITH the chips: it changes what picking a chip shows, and a
+          preference explained anywhere else is a preference nobody finds. */}
+      <button
+        type="button"
+        className={`${styles.btn} ${styles.stepActionBtn} ${styles.stepViewBtn}`}
+        onClick={() => setStepIsolate(!stepIsolate)}
+        title={t('step.isolateHint')}
+        aria-pressed={stepIsolate}
+      >
+        {stepIsolate ? t('step.isolateOn') : t('step.isolateOff')}
+      </button>
       {currentUsed && (
         <span className={styles.stepActions}>
           <button

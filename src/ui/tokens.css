@@ -16,6 +16,11 @@
   --st-accent: #0a7aff; /* selection / playhead / primary action only */
   --st-accent-soft: rgba(10, 122, 255, 0.12);
   --st-danger: #e5484d;
+  /* Status roles. They used to live only as inline fallbacks (`var(--st-warn, #9a5b00)`), which
+     meant the dark theme had no way to restate them — a fallback cannot be overridden. */
+  --st-warn: #9a5b00;
+  --st-warn-soft: color-mix(in srgb, #f5a623 14%, var(--st-surface));
+  --st-success: #1f9d55;
 
   /* Pitch */
   --st-pitch-grass: #4aab6d;
@@ -110,6 +115,14 @@
   --st-hit-edge: 8px;
 }
 
+/*
+ * Dark theme (user 2026-08-24). Only the ROLES are restated — spacing, radius, motion and the
+ * spring easings are physical, not tonal, and stay exactly where they are.
+ *
+ * Two things this pass adds: the depth ladder still carried the light theme's blue-grey shadows
+ * (invisible on a near-black ground, so every raised surface read flat), and the status/entity
+ * roles existed only as inline fallbacks, which a theme cannot override.
+ */
 :root[data-theme='dark'] {
   color-scheme: dark;
   --st-bg: #141518;
@@ -123,12 +136,22 @@
   --st-text-3: #6c7380;
   --st-accent: #3b8cff;
   --st-accent-soft: rgba(59, 140, 255, 0.18);
+  --st-danger: #ff6b6e;
+  --st-warn: #f0b25c;
+  --st-warn-soft: color-mix(in srgb, #f5a623 16%, var(--st-surface));
+  --st-success: #4ad07f;
   --st-pitch-grass: #2f8a50;
   --st-pitch-grass-alt: #2b804a;
   --st-pitch-surround: #246b3f;
+  /* A near-black chip on a near-black panel has no edge — the ball's filled chip lifts instead. */
+  --st-ball-chip: #3a3d44;
+  --st-depth-rest: 0 0 0 1px var(--st-border), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --st-depth-raised: 0 6px 18px rgba(0, 0, 0, 0.42);
+  --st-depth-drag: 0 12px 28px rgba(0, 0, 0, 0.55);
+  --st-depth-overlay: 0 20px 56px rgba(0, 0, 0, 0.62);
   --st-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --st-shadow-2: 0 4px 14px rgba(0, 0, 0, 0.35);
-  --st-shadow-3: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --st-shadow-2: var(--st-depth-raised);
+  --st-shadow-3: var(--st-depth-overlay);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import type { Id, Path, Segment, TacticDocument, Vec2 } from '@/domain/types'
 import { buildPathLUT, pathToSvgD, pointAtDistance } from '@/engine/path'
-import { trimPathEndD } from '@/ui/pitch/pathPresentation'
+import { trimPathEndD, type StepLayer } from '@/ui/pitch/pathPresentation'
 import styles from './pitch.module.css'
 
 export interface PathLayerProps {
@@ -23,8 +23,12 @@ export interface PathLayerProps {
   noHeadIds?: Readonly<Record<Id, boolean>>
   /** Playback focus (PLAN-005 M4): per-segment phase; active paths pop, past/future recede. */
   pathPhase?: Readonly<Record<Id, 'past' | 'active' | 'future'>>
-  /** Rest hierarchy (PLAN-006 M3b, A-05a): true = outside the current authoring step, recedes. */
-  stepMuted?: Readonly<Record<Id, boolean>>
+  /**
+   * Step layer per segment (PLAN-015). 'hidden' is not drawn AT ALL — the caller must drop the
+   * same segments from its hit-testing input, or the board keeps catching presses for a line
+   * nobody can see. 'muted' is the old rest hierarchy (PLAN-006 M3b, A-05a).
+   */
+  stepLayer?: Readonly<Record<Id, StepLayer>>
 }
 
 /** Display-d caches: immer keeps unchanged segments identical, so trims compute once per edit. */
@@ -145,7 +149,10 @@ export const PathLayer = memo(function PathLayer(p: PathLayerProps) {
             : phase === 'future'
               ? styles.pathFuture
               : ''
-      const mutedClass = !selected && p.stepMuted?.[seg.id] ? styles.pathStepMuted : ''
+      const layer = selected ? 'focus' : (p.stepLayer?.[seg.id] ?? 'focus')
+      if (layer === 'hidden') continue
+      const mutedClass =
+        layer === 'muted' ? styles.pathStepMuted : layer === 'trace' ? styles.pathStepTrace : ''
       const markerId = isBall ? 'arrow-ball' : `arrow-${track.entityId}`
       const axis = entryAxis(shown, isBall ? ENTRY_FADE_M.ball : ENTRY_FADE_M.player)
       const maskId = axis ? `entry-${seg.id}` : null

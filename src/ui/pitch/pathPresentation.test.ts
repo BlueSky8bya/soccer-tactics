@@ -4,7 +4,6 @@ import { buildScenarioA } from '@/presets/scenarios'
 import {
   deriveActiveSegmentIds,
   deriveFocusIds,
-  deriveRestMutedIds,
   deriveAttachedPathStart,
   derivePathPhase,
   ghostOpacityForStep,
@@ -130,22 +129,5 @@ describe('deriveFocusIds — focus is movement-editing, not token selection', ()
     expect(deriveFocusIds('seg-1', 'b1', 'ball', true)).toEqual(new Set())
     // and it comes back when the play stops
     expect(deriveFocusIds('seg-1', 'b1', 'ball', false)).toEqual(new Set(['b1', 'ball']))
-  })
-})
-
-describe('rest step hierarchy (PLAN-006 M3b, A-05a)', () => {
-  const segs = [
-    { id: 'a', step: 1 },
-    { id: 'b', step: 2 },
-    { id: 'c', step: 2 },
-  ]
-  it('mutes paths outside the current step; current step and selection stay vivid', () => {
-    expect(deriveRestMutedIds(segs, 2, null)).toEqual({ a: true })
-    expect(deriveRestMutedIds(segs, 1, null)).toEqual({ b: true, c: true })
-    // selected segment never mutes even from another step
-    expect(deriveRestMutedIds(segs, 2, 'a')).toEqual({})
-  })
-  it('is deterministic', () => {
-    expect(deriveRestMutedIds(segs, 2, null)).toEqual(deriveRestMutedIds(segs, 2, null))
   })
 })

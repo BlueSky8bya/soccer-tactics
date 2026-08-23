@@ -19,9 +19,26 @@ import { KEYMAP } from './keymap'
 import { prefersReducedMotion } from './motion/spring'
 import { SimplePitch } from './pitch/SimplePitch'
 import styles from './shell.module.css'
+import { StepStatus } from './StepStatus'
+import { nextTheme, type ThemePref } from './theme'
 import { TourOverlay } from './tour/TourOverlay'
 import { hasSeenTour } from './tour/tourStorage'
 import { useEditorKeyboard } from './useEditorKeyboard'
+import { useTheme } from './useTheme'
+
+const THEME_LABEL: Record<
+  ThemePref,
+  'topbar.themeSystem' | 'topbar.themeLight' | 'topbar.themeDark'
+> = {
+  system: 'topbar.themeSystem',
+  light: 'topbar.themeLight',
+  dark: 'topbar.themeDark',
+}
+const THEME_ICON: Record<ThemePref, 'themeAuto' | 'sun' | 'moon'> = {
+  system: 'themeAuto',
+  light: 'sun',
+  dark: 'moon',
+}
 
 /**
  * Single simple mode (ADR-0009, user decision 2026-08-20): pitch + play + steps. No tool rail,
@@ -40,6 +57,7 @@ export function AppShell() {
   const variants = useVariantSession()
   const [gifBusy, setGifBusy] = useState(false)
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
+  const theme = useTheme()
   const customCellRef = useRef<HTMLButtonElement>(null)
   useEditorKeyboard()
 
@@ -85,10 +103,6 @@ export function AppShell() {
     variants.cloneActiveTo(target)
     ui.flashToast(t('variant.cloned', { v: target }))
   }
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = 'light' // overrides any stored dark preference
-  }, [])
 
   useEffect(() => {
     setReducedMotion(prefersReducedMotion())
@@ -276,6 +290,19 @@ export function AppShell() {
           </button>
           <button
             type="button"
+            className={styles.btn}
+            onClick={theme.cycle}
+            title={t('topbar.themeCycle', {
+              now: t(THEME_LABEL[theme.pref]),
+              next: t(THEME_LABEL[nextTheme(theme.pref)]),
+            })}
+            aria-label={`${t('topbar.theme')}: ${t(THEME_LABEL[theme.pref])}`}
+            data-theme-pref={theme.pref}
+          >
+            <UiIcon name={THEME_ICON[theme.pref]} size={17} />
+          </button>
+          <button
+            type="button"
             className={`${styles.btn} ${styles.helpBtn}`}
             onClick={() => ui.setShortcutsOpen(true)}
             data-tour="tour-restart"
@@ -292,6 +319,7 @@ export function AppShell() {
         <div className={styles.pitchFrame} data-boost={boosted}>
           <SimplePitch />
         </div>
+        {!ui.annotate.on && <StepStatus />}
         {/* Zen hid every surface that named the key that undoes it, so the only way back was
             knowing F already (user 2026-08-22: 다시 펼치는 F 단축키 안내가 어디에도 없어서).
             A button, not a caption — a pointer user must not need the keyboard to get out. */}

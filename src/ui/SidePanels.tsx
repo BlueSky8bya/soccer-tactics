@@ -14,10 +14,48 @@ import {
   GUIDE_PLACE_BINDINGS,
   GUIDE_PLAY_BINDINGS,
   isCued,
+  visibleBindings,
   type Binding,
 } from './keymap'
 import { useActiveCues } from './useActiveCues'
 import styles from './shell.module.css'
+
+/**
+ * A preference row: what it does on the left, its state on the right.
+ *
+ * `role="switch"` and not a checkbox, because it takes effect immediately — there is no form to
+ * submit and no confirm step, which is exactly the distinction the role carries to a screen reader.
+ */
+export function SettingSwitch({
+  on,
+  onChange,
+  label,
+  hint,
+}: {
+  on: boolean
+  onChange: (on: boolean) => void
+  label: string
+  hint: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      className={styles.switchRow}
+      onClick={() => onChange(!on)}
+      title={hint}
+    >
+      <span className={styles.switchText}>
+        <span className={styles.switchLabel}>{label}</span>
+        <span className={styles.switchHint}>{hint}</span>
+      </span>
+      <span className={styles.switchTrack} aria-hidden="true">
+        <span className={styles.switchKnob} />
+      </span>
+    </button>
+  )
+}
 
 /** Left panel: the feature buttons (always visible). */
 export function ActionsPanel() {
@@ -25,6 +63,8 @@ export function ActionsPanel() {
   const core = useEditor()
   const { doc } = useEditorSnapshot()
   const flashToast = useUiStore((s) => s.flashToast)
+  const ballFling = useUiStore((s) => s.ballFling)
+  const setBallFling = useUiStore((s) => s.setBallFling)
   const home = doc.teams[0]
   const away = doc.teams[1]
   const [homeF, setHomeF] = useState('4-3-3')
@@ -116,6 +156,19 @@ export function ActionsPanel() {
         </div>
       </div>
 
+      {/* Opt-in board behaviours. One switch today (the throw), and the place the next one goes —
+          a preference that changes what a GESTURE does has to be visible where the gestures are
+          taught, not buried in an overlay. */}
+      <div className={styles.panelCard}>
+        <div className={styles.sectionLabel}>{t('panel.settings')}</div>
+        <SettingSwitch
+          on={ballFling}
+          onChange={setBallFling}
+          label={t('setting.ballFling')}
+          hint={t('setting.ballFlingHint')}
+        />
+      </div>
+
       {/* Playback keys live here, not in the right-hand 조작법 panel: this column had the room
           once the example card went, and the play controls are what a first-timer reaches for
           (user 2026-08-21: 빈 공간인 왼쪽 사이드바에 넣어줘). */}
@@ -166,12 +219,13 @@ export function ShortcutRow({ b, active }: { b: Binding; active?: boolean }) {
 /** Right panel: always-visible gesture guide, split by mode. */
 export function GuidePanel() {
   const cues = useActiveCues()
+  const ballFling = useUiStore((s) => s.ballFling)
   return (
     <aside className={styles.sideRight} aria-label={t('panel.guide')}>
       <div className={styles.panelCard}>
         <div className={styles.sectionLabel}>{t('panel.place')}</div>
         <div className={styles.shortcutList}>
-          {GUIDE_PLACE_BINDINGS.map((b) => (
+          {visibleBindings(GUIDE_PLACE_BINDINGS, { ballFling }).map((b) => (
             <ShortcutRow key={b.label} b={b} active={isCued(b, cues)} />
           ))}
         </div>

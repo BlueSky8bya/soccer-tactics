@@ -1,71 +1,69 @@
-# ACTIVE PLAN — PLAN-20260823-014: 핵심 재현 무결성 감사, Phase 1 (개정 v2)
+# ACTIVE PLAN — PLAN-20260824-015: 단계 레이어 직관화 · 공 던지기 토글 · 다크모드
 
-Plan ID: PLAN-20260823-014
-Status: Completed (2026-08-23) — 전 축 완주, 판정 **Core Closure Verified**. 모든 Finding 수정 완료, 미해결 P0/P1 0. 남은 것은 사용자 체감(DELEGATED)과 선택적 E-polish.
-Level: L2 — 전량 테스트 안정화 + domain/engine/editor Node/Vitest 감사
-Trigger: 사용자 2026-08-23 Claude Code 리뷰 — 기준선, 브라우저 전제, 범위, 측정 기준을 수정
-Canonical Plan: [completed/PLAN-20260823-014-total-verification-audit.md](./completed/PLAN-20260823-014-total-verification-audit.md)
+Plan ID: PLAN-20260824-015
+Status: Completed (2026-08-24) — M1~M5 전부 충족. 5게이트 PASS(346 tests), 브라우저 `pw/step-view` 16 checks ALL PASS. 남은 것은 사용자 체감(격리 범위·상황판 문구·다크 대비).
+Level: L2 — UI 상태(uiStore) + 표현 파생(pathPresentation) + 셸 크롬 추가. 문서 스키마·엔진 불변.
+Trigger: 사용자 2026-08-24 — (1) 공 굴러가는 토글(기본 꺼짐), (2) 단계를 고르면 "지금 상황 + 이번에 할 일"이 보이게, (3) 처음부터 끝까지 다 보이지 않게, (4) 다크모드.
+
+## 확정된 사용자 결정 (2026-08-24 인터뷰)
+
+| 질문                     | 결정                                                                         |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| "공 굴러가는거"의 정체   | **휙 던지기(플링)** — `ballFling.ts` 물리 굴림. 토글, **기본 꺼짐**          |
+| 단계 선택 시 기본 표시   | **이 단계 + 직전 1단계 흐리게**, 이후 단계는 숨김                            |
+| 다크모드                 | **헤더 버튼 + 시스템 따름** (시스템 → 라이트 → 다크 3상태 순환, localStorage) |
 
 ## Objective
 
-전량 실행에서만 위치가 이동하는 AppShell playback 실패를 G0에서 먼저 수리한 뒤, 브라우저 없이 I1~I10 mutation-kill과 junction read/write graph, `compile`/`stateAt`/`relayoutStepsInDraft` parity를 감사한다. 이 계획은 core document/engine pipeline만 판정하며 UI/renderer/UX 폐쇄를 선언하지 않는다.
+단계 칩이 "새 움직임이 붙을 번호"만 고르던 것을 넘어, 고른 순간 **그 단계의 상황(지금)과 계획(이번에 할 일)**을 보드와 문장 양쪽으로 말하게 한다. 동시에 우발적으로 발동하던 공 플링을 옵트인으로 내리고, 이미 토큰만 정의돼 있던 다크 테마를 실제로 켤 수 있게 한다.
 
 ## Verifiable End State
 
-- G0: root cause와 회귀 방어가 고정되고 AppShell 단독 3회, 기본 전량 3회, serial 전량 1회가 연속 PASS한다.
-- M1: I1~I10 mutant가 모두 `KILLED/MASKED/SURVIVED`로 분류되고 `SURVIVED` 0만 core closure를 지지한다.
-- M2: 모든 junction reader/writer가 역할·reachability를 가지며 6개 core fixture의 relayout/compile/stateAt semantic mismatch가 0이다.
-- 사전 resolver/호출/latency 목표를 두지 않는다. 수치와 역할을 먼저 측정하고 remediation 기준은 이후 결정한다.
-- 기본 tacticFuzz와 표준 5게이트를 실행한다. 7200 soak, browser probe, marathon, UX polish는 이 Phase의 gate가 아니다.
-- 결과는 `Core Closure Supported / Not Supported / Insufficient Evidence` 중 하나로 보고한다.
+- **M1 다크모드**: 헤더 테마 버튼이 시스템/라이트/다크를 순환하고 새로고침 후에도 유지된다. `data-theme='dark'` 하드코딩 강제(`AppShell.tsx:90`)가 사라지고, 다크에서 tint 버튼·경고/성공 색이 대비를 지킨다.
+- **M2 플링 토글**: `uiStore.ballFling`(기본 `false`, localStorage 유지). 꺼짐이면 아무리 빠르게 놓아도 공은 놓은 자리에 배치된다(플링 시뮬레이션 미호출). 더블클릭 슬링샷은 **명시적 제스처**이므로 토글과 무관하게 유지된다. 왼쪽 패널 설정 카드에서 켜고 끈다. 꺼져 있으면 조작법 패널의 "공 휙 던지기" 행도 사라진다.
+- **M3 단계 레이어**: `uiStore.stepIsolate`(기본 `true`). 켜짐이면
+  - 경로/배지: `step === current` = 선명, `step === current-1` = 아주 흐림(trace), 그 외 = 숨김.
+  - 잔상(ghost): `step === current` = 선명(이번 단계 도착지), **각 엔티티의 current 직전 마지막 잔상** = trace(이 단계가 열릴 때 서 있는 자리 — 3단계 전 움직임이라도 유지), 그 외 = 숨김.
+  - 숨겨진 것은 **집기(pick) 대상에서도 빠진다**. 선택된 움직임은 절대 숨지 않는다.
+  - 재생 중에는 격리하지 않는다(움직이는 토큰이 곧 플레이).
+  - 끄면 종전(현재 단계 외 0.55 흐림) 그대로.
+- **M4 상황/계획 캡션**: 보드 좌상단 알약이 `N단계 · 지금: … · 이번: …`을 말한다. 순수 함수 `describeStep(doc, compiled, step)`에서 파생하고 테스트한다. 재생 중에는 진행 중인 단계를 말한다.
+- **M5 게이트**: `npm run typecheck && npm run lint && npm test && npm run build && npm run harness:verify` PASS. 새 순수 함수 3종(`deriveStepLayers`, `describeStep`, 테마 해석)에 단위 테스트.
 
-## Current Baseline
+## Non-Goals
 
-- 사용자 재실행: AppShell 단독 **PASS 12/12**, 전량 **FAIL 1/291** at `AppShell.test.tsx:186`.
-- Codex 재확인: AppShell 단독 **PASS 12/12**, 직후 전량 **FAIL 2/291** at `:186`, `:359`.
-- 결론: 특정 assertion의 지속 실패가 아니라 전량 실행의 순서/부하/real rAF·wall-clock/cleanup 의존 선행 결함이다. G0 전에는 M1/M2 FAIL을 귀속하지 않는다.
-- `package.json`에 Playwright/Puppeteer가 없고 `pw/`/tracked `.cjs`도 없다.
+- 엔진/도메인/문서 스키마 변경 없음. 단계 모델(`stepCommands.ts`) 불변.
+- 플링 상수(ISSUE-008) 재조정 없음 — 토글만.
+- 다크 테마의 잔디 색 재디자인 없음(기존 토큰 사용).
 
 ## Execution Order
 
-1. **G0 BLOCKING** — AppShell/full-suite timing·isolation 결함 최소 재현 및 수리.
-2. **M1** — I1~I10 test-only mutation-kill.
-3. **M2** — junction authority graph + 6-fixture core parity + 측정 baseline.
-4. **M3** — 표준 gate와 core closure 판정.
+1. M1 다크모드 (독립).
+2. M2 플링 토글 (독립).
+3. M3 단계 레이어 — 파생 함수 → 렌더 → pick.
+4. M4 캡션.
+5. M5 게이트 + 문서(CURRENT_STATE, CHANGELOG_AGENT, PROJECT_MAP).
 
-세부 방법·통과 기준·Findings·Gate Matrix는 canonical plan을 따른다.
+## Risks
 
-## Decision Gate — DG-BROWSER
-
-브라우저 후속 D/E PLAN 전에 사용자가 다음 중 하나를 확정해야 한다.
-
-1. tracked Playwright devDependency + version-locked `pw/` manifest/probes(권고),
-2. version/source/artifact가 고정된 external harness,
-3. browser audit 생략 및 UI/UX/전체 제품 폐쇄 `NOT VERIFIED` 수용.
-
-이 결정은 G0/M1/M2를 막지 않지만 D-browser/E 착수를 막는다. 승인 없이 dependency를 추가하지 않는다.
-
-## Follow-up Plans
-
-- C 문서 drift: 0.5~1일, 문서 4~6개.
-- D-static: 0.5~1일, test 2~4개 파일.
-- D-browser: DG-BROWSER 뒤 0.5~1일, 핵심 probe 약 4개.
-- E-core: DG-BROWSER 뒤 1~2일, probe 3~5개 + 사용자 DELEGATED.
-- E-polish(contrast/CLS/ultrawide/Zen): 선택적 0.5~1일, 최후순위.
+- **R1**: 경로를 숨기면 집을 수 없는 움직임이 생긴다 → pick 입력에서 함께 제외하고, 선택된 움직임은 예외로 둔다. "전체" 모드가 상시 탈출구.
+- **R2**: 잔상을 "직전 1단계"로만 자르면 오래 전에 움직인 선수의 현재 위치가 사라진다 → 엔티티별 마지막 잔상 앵커 규칙(M3)으로 해결.
+- **R3**: 다크에서 하드코딩된 light 색(tint 버튼 `#0a63cc`/`#1e7e3e`/`#c62a22`)이 대비를 잃는다 → `[data-theme='dark']` 오버라이드.
 
 ## Ambiguity Register
 
-- AMB-01 — D1 2안: M2 측정 후 별도 L3에서 결정.
-- AMB-02 — 새 numeric tolerance: measurement note 뒤 결정.
-
-브라우저 runtime은 Ambiguity가 아니라 `DG-BROWSER`다.
+- **AMB-01 — "공 굴러가는거"의 정체:** 2026-08-24 사용자 인터뷰에서 **휙 던지기(플링)**로 확정. 후보였던 공 무늬 회전(spin)과 빼앗김 후 implicit roll은 이번 범위 밖이다.
+- **AMB-02 — 더블클릭 슬링샷:** 토글 대상에 포함하지 않는다. 슬링샷은 사용자가 명시적으로 요청한 제스처이고, 토글이 막으려는 것은 *우발적으로* 발동하는 굴림이다. 사용자가 반대하면 같은 플래그 아래로 옮긴다.
+- **AMB-03 — 잔상 격리 규칙:** 사용자는 "직전 1단계"를 골랐으나, 경로에는 그대로 적용하되 **잔상**에는 엔티티별 마지막 앵커 규칙을 쓴다(R2). 3단계 전에 움직인 선수의 현재 위치가 사라지는 것은 선택지의 의도가 아니라 부작용이기 때문이다.
 
 ## Rollback
 
-G0와 audit-only test/measurement artifact 외 product 변경은 하지 않는다. 범위가 커지면 이 계획을 늘리지 않고 새 PLAN을 만든다. 실패 detector를 assertion/tolerance 완화로 녹색화하지 않는다.
+- 세 기능 모두 UI 상태 플래그 뒤에 있다. `stepIsolate`를 끄면 종전 표시, `ballFling`을 켜면 종전 플링, 테마 버튼으로 라이트 고정 — 되돌리기에 문서 변경이 필요 없다.
+- 문서 스키마/엔진을 건드리지 않으므로 저장된 전술은 이 변경 전후로 동일하게 열린다.
 
 ## Plan Reversal Log
 
 | 날짜 | 변경 | 이유 | 영향 |
 |---|---|---|---|
-| 2026-08-23 | v1 총검증 단일 계획 → v2 G0 + core M1/M2 | 이동 flake, browser 전제, 과대 범위, 사전 수치 기준 | C/D/E 분리, browser gate 승격 |
+| 2026-08-24 | 상황 판정 시각을 "단계 시작"에서 "직전 단계들의 끝(+도착 해소)"으로 | 단계 경계에 도착과 출발이 같은 순간에 겹쳐, 어느 쪽으로 ε을 줘도 한쪽이 틀림 (2단계가 "공 이동 중"으로 보고됨) | `situationState` — 경계 직후를 읽고, 이 단계 자신의 travel이면 그 직전으로 되감음 |
+| 2026-08-24 | `deriveRestMutedIds` 제거 | `deriveStepLayers(isolate=false)`가 같은 결과를 낸다. 두 파생이 같은 질문에 답하면 갈라진다 | 테스트는 `stepLayers.test.ts`로 이동 |

@@ -90,8 +90,10 @@ import { AnimatedToken } from './AnimatedToken'
 import {
   deriveAttachedPathStart,
   deriveFocusIds,
+  deriveGhostLayers,
   derivePathPhase,
-  deriveRestMutedIds,
+  deriveStepLayers,
+  GHOST_TRACE_OPACITY,
   ghostOpacityForStep,
   placeStepBadges,
 } from './pathPresentation'
@@ -1140,6 +1142,8 @@ export function SimplePitch() {
         !releasedOnPlayer && !ballHasPath ? momentSpotAt(d, at, ATTACH_RADIUS_M) : null
       let fling: ReturnType<typeof simulateFling> | null = null
       if (
+        // OPT-IN since 2026-08-24 (uiStore.ballFling): off, a fast release is still just a drop.
+        ui.ballFling &&
         !releasedOnPlayer &&
         !pickup &&
         !ballHasPath &&
@@ -2391,11 +2395,38 @@ export function SimplePitch() {
     ;(window as unknown as Record<string, unknown>).__stValidate = () => validateDocument(doc)
   }, [doc, compiled])
 
+  /*
+   * Step layers (PLAN-015). Isolation is an AUTHORING view: while the play RUNS every path belongs
+   * to the play, so the layers stand down and the playback phase classes do the talking instead.
+   *
+   * Derived here, above the hit-testing input, because hiding a path and still letting it catch
+   * presses is the one way this feature can hurt: the two must read the SAME map.
+   */
+  const isolating = ui.stepIsolate && !ui.playback.playing
+  const stepLayers = !ui.playback.playing
+    ? deriveStepLayers(
+        sceneTracks(doc).flatMap((tr) =>
+          tr.segments
+            .filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
+            .map((sg) => ({ id: sg.id, step: stepOf(sg as { step?: number }) })),
+        ),
+        ui.currentStep,
+        ui.selectedSegmentId,
+        isolating,
+      )
+    : undefined
+
   // Geometric pick inputs (PLAN-007 M1): sampled FULL paths, cached by segment identity.
   const pickSegments: PickSegment[] = doc.scenes[0]
     ? sceneTracks(doc).flatMap((tr) =>
         tr.segments
-          .filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
+          .filter(
+            (sg) =>
+              'path' in sg &&
+              !sg.id.startsWith('gen-') &&
+              // isolation hides paths; an invisible path must not keep catching presses
+              (stepLayers?.[sg.id] ?? 'focus') !== 'hidden',
+          )
           .map((sg) => ({
             segId: sg.id,
             entityId: tr.entityId,
@@ -2574,19 +2605,6 @@ export function SimplePitch() {
   quickAimRef.current = !!quickAim
   const attachedStart = deriveAttachedPathStart(doc, compiled, ui.selectedSegmentId)
 
-  // A-05a rest hierarchy: paths outside the CURRENT step recede (0.55) but stay readable.
-  const stepMuted = !viewingFrame
-    ? deriveRestMutedIds(
-        sceneTracks(doc).flatMap((tr) =>
-          tr.segments
-            .filter((sg) => 'path' in sg && !sg.id.startsWith('gen-'))
-            .map((sg) => ({ id: sg.id, step: stepOf(sg as { step?: number }) })),
-        ),
-        ui.currentStep,
-        ui.selectedSegmentId,
-      )
-    : undefined
-
   // A-03: how many players are running right now (bob attenuation input).
   const movingCount = isPlaying
     ? doc.players.reduce((n, p) => n + (resolved.players[p.id]?.moving ? 1 : 0), 0)
@@ -2703,6 +2721,23 @@ export function SimplePitch() {
         })
     : []
 
+  /*
+   * Isolation applied to the ghosts (PLAN-015). Hidden ghosts leave the render AND every list
+   * derived from it — badge obstacles, hit-testing — because a mark nobody can see must not be
+   * grabbable and must not push a badge around.
+   */
+  const ghostLayers = deriveGhostLayers(ghosts, ui.currentStep, ui.selectedSegmentId, isolating)
+  const visibleGhosts = ghosts
+    .filter((g) => ghostLayers[g.id] !== 'hidden')
+    .map((g) => {
+      if (!isolating) return g
+      return ghostLayers[g.id] === 'trace'
+        ? { ...g, opacity: GHOST_TRACE_OPACITY }
+        : // isolating flattens the rank fade: with only this step on the board there is no queue
+          // of later steps to rank against, so its destinations all read at full ghost strength.
+          { ...g, opacity: ghostOpacityForStep(0, selection.includes(g.entityId)) }
+    })
+
   // Step badge sits faintly at the MIDDLE of each path (the end is busy: ghost + arrowhead).
   // placeStepBadges nudges overlapping badges apart deterministically (B-03).
   const focusIds = deriveFocusIds(
@@ -2715,7 +2750,13 @@ export function SimplePitch() {
   const badgeAnchors = doc.scenes[0]
     ? doc.scenes[0].timeline.tracks.flatMap((tr) =>
         tr.segments
-          .filter((s) => 'path' in s && !s.id.startsWith('gen-'))
+          .filter(
+            (s) =>
+              'path' in s &&
+              !s.id.startsWith('gen-') &&
+              // a badge is a handle on its path — it goes wherever the path went
+              (stepLayers?.[s.id] ?? 'focus') !== 'hidden',
+          )
           .map((s) => {
             const path = (s as { path: Path }).path
             const lut = buildPathLUT(path)
@@ -2732,7 +2773,7 @@ export function SimplePitch() {
   const badgeObstacles: Vec2[] = [
     ...doc.players.map((p) => resolved.players[p.id]?.pos ?? p.home),
     resolved.ball.pos,
-    ...ghosts.map((g) => g.pos),
+    ...visibleGhosts.map((g) => g.pos),
   ]
   const badgeSpots = new Map(
     placeStepBadges(badgeAnchors, 2.6, badgeObstacles).map((b) => [b.id, b.at]),
@@ -2757,7 +2798,7 @@ export function SimplePitch() {
         ball: { id: doc.ball.id, pos: resolved.ball.pos },
         ghosts: viewingFrame
           ? []
-          : ghosts.map((g) => ({
+          : visibleGhosts.map((g) => ({
               entityId: g.entityId,
               segId: g.segId,
               kind: g.kind === 'ball' ? ('ball' as const) : ('player' as const),
@@ -2937,7 +2978,7 @@ export function SimplePitch() {
           }
           dimOthers={focusIds.size > 0}
           pathPhase={viewingFrame ? pathPhase : undefined}
-          stepMuted={stepMuted}
+          stepLayer={stepLayers}
           hoverSegmentId={hoverKey?.startsWith('segment:') ? hoverKey.slice(8) : null}
           noHeadIds={passNoHeads}
         />
@@ -2954,7 +2995,12 @@ export function SimplePitch() {
             className={styles.stepBadge}
             style={
               {
-                opacity: focusIds.size > 0 && !focusIds.has(b.entityId) ? 0.25 : undefined,
+                opacity:
+                  focusIds.size > 0 && !focusIds.has(b.entityId)
+                    ? 0.25
+                    : stepLayers?.[b.id] === 'trace'
+                      ? 0.28
+                      : undefined,
                 '--st-entity-chip': entityChipOf(doc, b.entityId).fill,
               } as CSSProperties
             }
@@ -3055,7 +3101,7 @@ export function SimplePitch() {
       )}
       {/* ghosts: future positions - kept mounted, faded while viewing a frame (D-02) */}
       <g className={viewingFrame ? styles.decorHidden : styles.decorShown}>
-        {ghosts.map((g) => {
+        {visibleGhosts.map((g) => {
           /* the drop-promise glow: THIS step's spot would receive the dragged ball */
           const hinted =
             dropHint?.step !== undefined &&

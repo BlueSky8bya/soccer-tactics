@@ -9,6 +9,24 @@ import { MAX_STEP } from './stepCommands'
 
 export type Tool = 'select' | 'add-player' | 'add-ball' | 'path' | 'zone' | 'text' | 'arrow'
 
+/** A persisted UI preference — never part of the document. Storage can be absent or refuse. */
+function loadFlag(key: string, fallback: boolean): boolean {
+  try {
+    const v = localStorage.getItem(key)
+    return v === null ? fallback : v === '1'
+  } catch {
+    return fallback
+  }
+}
+
+function saveFlag(key: string, on: boolean): void {
+  try {
+    localStorage.setItem(key, on ? '1' : '0')
+  } catch {
+    /* private mode / disabled storage — the preference just does not survive the session */
+  }
+}
+
 export interface PlaybackState {
   /** Playhead (seconds, tactical clock). */
   t: number
@@ -54,6 +72,24 @@ export interface UiState {
   activeTeamId: Id | null
   snapEnabled: boolean
   reducedMotion: boolean
+  /**
+   * Throwing the ball (user 2026-08-24: 공 굴러가는거 키고 끄는 토글, 기본 디폴트는 없게).
+   *
+   * A fast release used to launch a physics roll on its own, which is a delightful feature exactly
+   * when it is wanted and a surprise every other time (2026-08-21 급발진, 2026-08-22 지 혼자 슉
+   * 지나가고 — the constants were tightened twice and the gesture still fires unasked). So it is
+   * OPT-IN now: off, the ball is placed where it was let go. The double-click slingshot is a
+   * deliberate gesture and is not gated by this.
+   */
+  ballFling: boolean
+  setBallFling: (on: boolean) => void
+  /**
+   * Step isolation (user 2026-08-24: 처음부터 끝까지 모든걸 보여줄 필욘 없음). On, the board shows
+   * the step being authored plus a faint trace of where it came from; off, every authored path
+   * stays on the board as before. See deriveStepLayers.
+   */
+  stepIsolate: boolean
+  setStepIsolate: (on: boolean) => void
   playback: PlaybackState
   /** Space-HOLD factor (0.5 / 2 / 3), picked by sliding the play button (user 2026-08-22). */
   boostFactor: number
@@ -148,6 +184,8 @@ export const useUiStore = create<UiState>((set) => ({
   activeTeamId: null,
   snapEnabled: true,
   reducedMotion: false,
+  ballFling: loadFlag('st.ballFling', false),
+  stepIsolate: loadFlag('st.stepIsolate', true),
   playback: { t: 0, playing: false, speed: NORMAL_SPEED, loop: false },
   boostFactor: 3,
   hasPlayed: false,
@@ -186,6 +224,14 @@ export const useUiStore = create<UiState>((set) => ({
   setActiveTeam: (activeTeamId) => set({ activeTeamId }),
   setSnapEnabled: (snapEnabled) => set({ snapEnabled }),
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
+  setBallFling: (ballFling) => {
+    saveFlag('st.ballFling', ballFling)
+    set({ ballFling })
+  },
+  setStepIsolate: (stepIsolate) => {
+    saveFlag('st.stepIsolate', stepIsolate)
+    set({ stepIsolate })
+  },
   setBoostFactor: (boostFactor) => set({ boostFactor }),
   setPlayhead: (t) =>
     set((s) => ({ playback: { ...s.playback, t: Math.max(0, t) }, completion: 'idle' })),
