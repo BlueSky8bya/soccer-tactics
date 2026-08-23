@@ -1193,12 +1193,27 @@
  * the 6px bleed welded neighbouring rows into one block (lab review, 2026-08-24). Half the wash,
  * and a rule down the left instead of a halo — it marks the row without claiming the row's area.
  */
+/*
+ * The gutter is reserved on EVERY row, lit only on the active one. Putting the padding on the
+ * highlight itself meant the text jogged 15px sideways whenever the highlight came or went — and
+ * it comes and goes on its own during playback, so three lines of an unrelated panel visibly slid
+ * back and forth while the user was watching the pitch (craft review, 2026-08-24). Nothing here
+ * transitions geometry; colour only.
+ */
+.shortcutRow,
+.shortcutRowInline {
+  padding-left: 8px;
+  box-shadow: inset 2px 0 0 transparent;
+  border-radius: 4px;
+  transition:
+    background-color var(--st-motion-transition) var(--st-ease-standard),
+    box-shadow var(--st-motion-transition) var(--st-ease-standard);
+}
+
 .shortcutRowOn,
 .shortcutRowOn.shortcutRowInline {
   background: color-mix(in srgb, var(--st-accent-soft) 55%, transparent);
   box-shadow: inset 2px 0 0 var(--st-accent);
-  border-radius: 4px;
-  padding-left: 8px;
 }
 
 .shortcutRowOn .shortcutHint {

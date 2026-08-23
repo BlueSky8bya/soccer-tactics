@@ -590,9 +590,10 @@ export function AppShell() {
                 </button>
               </span>
               <span className={styles.toolCol}>
-                <span className={styles.toolKey} aria-hidden="true">
-                  GIF
-                </span>
+                {/* the slot above a transport button names its KEY. "GIF" is a file format, and
+                    styling it like Space/Home/G taught a shortcut that does not exist (craft
+                    review, 2026-08-24) — the button says 내보내기 and its tooltip says the rest. */}
+                <span className={styles.toolKey} aria-hidden="true" />
                 <button
                   type="button"
                   className={`${styles.btn} ${styles.gifBtn}`}

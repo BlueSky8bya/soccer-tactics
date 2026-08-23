@@ -65,9 +65,9 @@ export function togglePlayback(duration: number): void {
   else playAll(duration)
 }
 
-/** Home: explicit return to the authoring start (t=0, scope reset). */
+/** Home: the beginning of the PLAY — step 1, t=0, scope reset (not the current step's opening). */
 export function returnToStart(): void {
-  useUiStore.getState().returnToAuthoringStart()
+  useUiStore.getState().goToStart()
 }
 
 export function usePlaybackController(duration: number) {

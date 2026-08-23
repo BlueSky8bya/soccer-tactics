@@ -121,8 +121,14 @@ export interface UiState {
   startRange: (scope: PlaybackScope, start: number, end: number | null) => void
   /** Natural finish: freeze the frame at `t` and flag the held-result state (A-02). */
   holdResult: (t: number) => void
-  /** Explicit return to the authoring view: `authoringT`, stopped, scope reset (Home / first edit). */
+  /** Explicit return to the authoring view: `authoringT`, stopped, scope reset (a press / first edit). */
   returnToAuthoringStart: () => void
+  /**
+   * Home — "처음으로", and it has to mean the beginning of the PLAY, not the beginning of whatever
+   * step is being authored. With isolation on the anchor sits mid-play, so returning to it would
+   * have made the one control named "start" the only one that does not go there.
+   */
+  goToStart: () => void
   /** Simple mode (ADR-0009): step number newly drawn movements get. */
   currentStep: number
   setCurrentStep: (n: number) => void
@@ -261,6 +267,16 @@ export const useUiStore = create<UiState>((set) => ({
       completion: 'held-result',
     })),
   setAuthoringT: (authoringT) => set({ authoringT: Math.max(0, authoringT) }),
+  goToStart: () =>
+    set((s) => ({
+      currentStep: 1,
+      authoringT: 0,
+      playback: { ...s.playback, t: 0, playing: false },
+      playScope: 'all',
+      rangeStart: 0,
+      rangeEnd: null,
+      completion: 'idle',
+    })),
   returnToAuthoringStart: () =>
     set((s) => ({
       playback: { ...s.playback, t: s.authoringT, playing: false },

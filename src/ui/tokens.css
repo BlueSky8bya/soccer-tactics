@@ -31,10 +31,16 @@
   --st-warn-soft: color-mix(in srgb, #f5a623 14%, var(--st-surface));
   --st-success: #1f9d55;
 
-  /* Pitch */
-  --st-pitch-grass: #4aab6d;
-  --st-pitch-grass-alt: #45a266;
-  --st-pitch-surround: #3a8f57;
+  /*
+   * Pitch. Darkened 2026-08-24: the white markings measured 2.86:1 against the old grass while the
+   * SAME lines sat at 7.7:1 in the dark theme — the light board looked soft for one reason, and it
+   * is the surface the product exists to show. The token discs are only ~1.6:1 against the grass in
+   * either theme, so their white ring is doing all the separating work and it needs a ground to
+   * work against. Still vivid, just no longer washed out. Revert by restoring #4aab6d here.
+   */
+  --st-pitch-grass: #3b9159;
+  --st-pitch-grass-alt: #378752;
+  --st-pitch-surround: #2e7645;
   --st-pitch-line: rgba(255, 255, 255, 0.9);
 
   /* Teams (defaults; documents may override) */
