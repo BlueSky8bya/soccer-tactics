@@ -368,6 +368,90 @@ module.exports = {
         ),
       )
 
+      /*
+       * REGRESSION (user 2026-08-24: 전체 보기에서 단계 2를 골라도 공 경로가 1단계로 저장됨).
+       * The ball's step came from the CLOCK, and under 전체 보기 the clock is pinned to kickoff for
+       * the whole session — so the derived moment was always step 0, and a derived moment overrides
+       * the chip outright. Every ball path landed on step 1 whatever chip was lit. Players were
+       * immune: they are anchored by identity, so nothing overrode the chip for them.
+       *
+       * Both view modes are checked, and the second half uses an EMPTY step: picking step 4 on a
+       * board that only has 1 and 2 must author step 4, not the step the play happens to end on.
+       *
+       * The ball is put on bare grass first and every destination is bare grass too — a ball
+       * sitting on a player cannot be clicked apart from them, and the probe would then be
+       * measuring a player's run instead of the ball's pass.
+       */
+      const clearAll = page.getByRole('button', { name: /움직임 전체 지우기/ })
+      const dHome = await h.doc(page)
+      const bare = []
+      for (const gap of [12, 9, 7])
+        for (let x = 8; x <= 97 && bare.length < 3; x += 2)
+          for (let y = 5; y <= 63 && bare.length < 3; y += 3)
+            if (
+              dHome.players.every((pl) => Math.hypot(pl.home.x - x, pl.home.y - y) > gap) &&
+              bare.every((q) => Math.hypot(q.x - x, q.y - y) > 16)
+            )
+              bare.push({ x, y })
+      out.push(h.check('bare grass found for the ball checks', bare.length === 3, JSON.stringify(bare)))
+
+      for (const mode of ['전체', '단계만']) {
+        await clearAll.click()
+        await page.waitForTimeout(300)
+        await chip(page, 1).click()
+        await page.waitForTimeout(200)
+        await page
+          .locator('[class*=viewSeg] button')
+          .filter({ hasText: mode === '전체' ? /^전체$/ : /단계만/ })
+          .click()
+        await page.waitForTimeout(200)
+        // ball onto bare grass: loose, and clickable on its own
+        const b0 = await page.evaluate(() => window.__stStateAt(window.__stClock().t).ball.pos)
+        await h.dragPitch(page, b0, bare[0], { steps: 12, settleMs: 450 })
+        const dv = await h.doc(page)
+        const ballIdV = dv.ball.id
+        out.push(
+          h.check(`[${mode}] the ball is loose on bare grass`, !dv.ball.initialHolderId, `holder=${dv.ball.initialHolderId}`),
+        )
+        // a step-1 run, far away, so a later step exists to pick
+        const runner = dv.players.find((pl) => Math.hypot(pl.home.x - bare[0].x, pl.home.y - bare[0].y) > 22)
+        await h.drawFrom(page, runner.home, { x: runner.home.x + 12, y: runner.home.y + 4 }, { steps: 8 })
+        await page.waitForTimeout(340)
+
+        const landOn = async (n, to) => {
+          await chip(page, n).click()
+          await page.waitForTimeout(280)
+          const bp = await page.evaluate(() => window.__stStateAt(window.__stClock().t).ball.pos)
+          await h.dragPitch(page, bp, bp, { steps: 1, settleMs: 220 }) // click = pick the ball
+          const was = h.authoredSegments(await h.doc(page)).map((x) => x.id)
+          await h.drawFrom(page, { x: bp.x + 2, y: bp.y + 2 }, to, { steps: 8 })
+          await page.waitForTimeout(380)
+          const now = h.authoredSegments(await h.doc(page))
+          return { made: now.find((x) => !was.includes(x.id)), all: now }
+        }
+        const r2 = await landOn(2, bare[1])
+        out.push(
+          h.check(
+            `[${mode}] a ball path drawn on chip 2 lands on step 2`,
+            r2.made && r2.made.entityId === ballIdV && r2.made.step === 2,
+            r2.made ? `${r2.made.entityKind}:${r2.made.kind}@${r2.made.step}` : 'nothing',
+          ),
+        )
+        const r4 = await landOn(4, bare[2])
+        out.push(
+          h.check(
+            `[${mode}] chip 4 with no step 3 still authors step 4, and the chain keeps both passes`,
+            r4.made &&
+              r4.made.entityId === ballIdV &&
+              r4.made.step === 4 &&
+              r4.all.filter((x) => x.entityId === ballIdV).length === 2,
+            r4.made
+              ? `${r4.made.kind}@${r4.made.step} | ${r4.all.map((x) => x.entityKind + '@' + x.step).join(',')}`
+              : 'nothing',
+          ),
+        )
+      }
+
       // ---- the throw ------------------------------------------------------
       /*
        * A pathless board first. A ball that already carries an authored pass is PLACED, never

@@ -359,6 +359,37 @@ export function SimplePitch() {
    * Null means no ball token was named, so the ball's chain simply continues from its rest.
    */
   const ballMomentRef = useRef<{ step: number; pos: Vec2 } | null>(null)
+  /**
+   * The ball's moment AS THE BOARD STANDS — or null when the board is not standing anywhere.
+   *
+   * Reading the clock is only honest while the clock MEANS something. Under 전체 보기 it does not:
+   * the playhead is pinned to kickoff for the whole authoring session, so "the last step finished
+   * by now" is always 0, every ball gesture claimed step 1, and `atStep` is the ANSWER rather than
+   * a floor — so picking step 2 and drawing from the ball still put the pass on step 1 (user
+   * 2026-08-24: 전체 보기에서 2단계를 골라도 공 경로가 1단계로 저장됨). Players never showed it:
+   * a player is anchored by IDENTITY, so nothing overrode the chip for them.
+   *
+   * A moment therefore exists only where the user parked the board at one — a step's opening under
+   * isolation, or the held result frame. Otherwise the ball simply continues from its rest, and the
+   * step chip is free to say where the new movement goes.
+   */
+  const parkedBallMoment = (): { step: number; pos: Vec2 } | null => {
+    const st = useUiStore.getState()
+    if (!st.stepIsolate && st.completion !== 'held-result') return null
+    const at = st.playback.t
+    /*
+     * Under isolation the CHIP is the parking — they are one gesture. An empty step has no window
+     * of its own, so it opens at the end of the play, and the clock alone would then report the
+     * last AUTHORED step: pick step 4 on a board that only has 1 and 2 and the pass lands on 3.
+     * The chip is the explicit half of the same act, so it floors the moment. Where the step does
+     * exist the two already agree, so this only ever fills a gap.
+     */
+    const clock = completedStepAt(doc, compiled, at)
+    return {
+      step: st.stepIsolate ? Math.max(clock, st.currentStep - 1) : clock,
+      pos: stateAt(compiled, doc, at).ball.pos,
+    }
+  }
   /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
   const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
   const flingDoneRef = useRef<(() => void) | null>(null)
@@ -677,9 +708,13 @@ export function SimplePitch() {
       relayoutStepsInDraft(d2)
     })
     core.commit()
-    // The ball now STARTS here: the named moment follows it, or the next Alt+click would leave
-    // from wherever the ball sat before the throw.
-    ballMomentRef.current = { step: 0, pos: { ...core.getDocument().ball.home } }
+    /*
+     * No named moment survives a throw. The ball's start MOVED, so the next gesture has to read the
+     * board as it now stands — which `subjectAnchor` does from the fresh document at press time,
+     * either from the parked step or from the ball's rest. Stamping `{step: 0}` here instead
+     * outlived the throw and dragged the next ball path back onto step 1.
+     */
+    ballMomentRef.current = null
     const done = () => {
       if (!near) return
       pulseKey.current++
@@ -1225,8 +1260,8 @@ export function SimplePitch() {
         relayoutStepsInDraft(d2) // see launchBall: the drop must settle the whole chain
       })
       core.commit()
-      // same as launchBall: the moment follows the ball's new starting spot
-      ballMomentRef.current = { step: 0, pos: { ...core.getDocument().ball.home } }
+      // same as launchBall: the drop moved the ball's start, so no named moment survives it
+      ballMomentRef.current = null
       // The ball may have snapped to a holder: animate the last few pixels (document is already final).
       const settled = core.getDocument().ball.home
       const dx = at.x - settled.x
@@ -1748,21 +1783,18 @@ export function SimplePitch() {
       ghostTop && ghostTop.entityId === doc.ball.id
         ? { step: ghostTop.step, pos: ghostTop.pos }
         : null
-    /**
-     * The live ball token's MOMENT — the step it is standing in.
+    /*
+     * The live ball token's MOMENT — the step it is standing in, or none.
      *
      * Step 0 used to be hard-coded here, and it was right for exactly as long as the authoring
      * clock was always kickoff. Step isolation parks the board at a step's opening, so the ball
      * under the cursor is the ball AS OF that step; still calling it step 0 made every pass drawn
      * from it truncate the chain and rebuild the first pass, and a second pass therefore changed
      * nothing on the board at all (user 2026-08-24: 같은 선수한테 또 공을 2번 이상 주면 반응을
-     * 안 해). The grabbed instant decides, exactly as it does for a ghost.
+     * 안 해). The grabbed instant decides, exactly as it does for a ghost — and where there is no
+     * parked instant to grab, `parkedBallMoment` says so instead of inventing kickoff.
      */
-    const startMoment = () => {
-      const at = useUiStore.getState().playback.t
-      return { step: completedStepAt(doc, compiled, at), pos: stateAt(compiled, doc, at).ball.pos }
-    }
-    const tokenMoment = tokenEntityId === doc.ball.id ? startMoment() : null
+    const tokenMoment = tokenEntityId === doc.ball.id ? parkedBallMoment() : null
     lastPickRef.current = { pick, pt, clientX: e.clientX, clientY: e.clientY }
     const intent = resolvePointerIntent(
       {
@@ -1852,7 +1884,7 @@ export function SimplePitch() {
       }
       case 'press-live-token':
         // A live token sits right under the ghost press - the token wins.
-        ballMomentRef.current = yieldId === doc.ball.id ? startMoment() : null
+        ballMomentRef.current = yieldId === doc.ball.id ? parkedBallMoment() : null
         pressToken(yieldId!)
         return
       case 'adjust-ghost-end': {
