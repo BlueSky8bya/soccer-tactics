@@ -89,7 +89,16 @@ export const KEYMAP = {
 export const PLACE_BINDINGS: Binding[] = [
   { label: 'Ctrl+좌클릭', hint: '우리팀 선수 추가' },
   { label: 'Ctrl+우클릭', hint: '상대팀 선수 추가' },
-  { label: '드래그', hint: '옮기기 (여러 명이면 같이)' },
+  /*
+   * The hint has to name what CHANGES, not just who moves. Dragging a starting spot means two
+   * different things depending on how many are selected — one token stretches its first leg and
+   * leaves everything downstream where it was; a group carries the whole chain — and the panel
+   * said only "여러 명이면 같이", which reads as "the players come along" and says nothing about
+   * the paths (user 2026-08-25: 왜 어쩔 땐 전체 단계가 움직이고 어쩔 땐 0단계만 움직여). Both
+   * behaviours are wanted and were each asked for: ADR-0009 v16b settles it by selection size, and
+   * `pw/home-drag` holds the contract in metres.
+   */
+  { label: '드래그', hint: '한 명 = 시작점만 · 여러 명 = 경로까지 통째로' },
   { label: '빈 잔디 드래그', hint: '박스로 여러 명 선택' },
   { label: 'Shift+잔디 드래그', hint: '선택에 더하기', compact: true, cues: ['shift'] },
   { label: 'Ctrl+선수 클릭', hint: '선택에 넣기·빼기', cues: ['ctrl'] },

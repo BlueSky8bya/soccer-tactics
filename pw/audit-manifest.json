@@ -90,6 +90,13 @@
       "describe": "switching tactic variants makes the board breathe and names which board you are on; every pressable surface gives under the press and springs back"
     },
     {
+      "id": "home-drag",
+      "file": "home-drag.cjs",
+      "status": "present",
+      "covers": "ADR-0009 v16b — 시작 위치 드래그가 선택 개수에 따라 달라지는 계약 (사용자 2026-08-25 문의)",
+      "describe": "one token selected: the first leg stretches and everything downstream is frozen; more than one selected: the entire chain translates. Measured in metres, both directions."
+    },
+    {
       "id": "historical-22",
       "status": "missing",
       "covers": "2026-08-22 session",
