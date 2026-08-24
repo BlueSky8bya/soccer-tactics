@@ -123,8 +123,15 @@
 
   /* Depth — four semantic levels (PLAN-006 M1): rest < raised < drag < overlay.
      Only ONE overlay-level surface may be visible at a time. */
-  --st-depth-rest: 0 0 0 1px var(--st-border), 0 1px 2px rgba(16, 24, 40, 0.05);
-  --st-depth-raised: 0 6px 18px rgba(16, 24, 40, 0.1);
+  /*
+   * DEPTH MEANS FLOATING. `rest` is a hairline and the faintest seat — nothing more — because a
+   * docked card is not above anything; it IS the ground. A wider lift was tried here and reversed:
+   * four sidebar cards each casting a real shadow turns the column into a pile, and it breaks the
+   * one rule that makes the floating layers legible — if everything is raised, nothing is.
+   * Raised / drag / overlay are for surfaces that genuinely left the surface.
+   */
+  --st-depth-rest: 0 0 0 1px var(--st-border), 0 1px 1px rgba(16, 24, 40, 0.03);
+  --st-depth-raised: 0 2px 6px rgba(16, 24, 40, 0.06), 0 10px 28px -6px rgba(16, 24, 40, 0.14);
   --st-depth-drag: 0 12px 28px rgba(16, 24, 40, 0.18);
   --st-depth-overlay: 0 20px 56px rgba(16, 24, 40, 0.22);
 

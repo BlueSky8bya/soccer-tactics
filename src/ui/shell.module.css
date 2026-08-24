@@ -1348,7 +1348,9 @@
   gap: 10px;
   /* Tallest column is the shared transport grid (13 + 44 = 57). The bar has to clear that with
      real breathing room, or everything reads squashed (user 2026-08-21: 위/아래로 찌부). */
-  padding: 11px 14px;
+  /* 12, not 11, so the arithmetic is TRUE: stage 22 − 12 = 10 = --st-radius-control, which is
+     what the pills inside are on. A concentric corner is one you can compute, not one you nudge. */
+  padding: 12px 14px;
   /* both bars (playback ↔ draw) keep the SAME height so the pitch never reflows on toggle */
   min-height: 79px;
   background: color-mix(in srgb, var(--st-surface) 90%, transparent);
@@ -2706,4 +2708,41 @@
   .panelBtn:hover:not(:disabled) {
     transform: none;
   }
+}
+
+
+/* =========================================================================
+ * FILLED CONTROLS CATCH THE LIGHT
+ *
+ * A filled control with one flat colour reads as a printed rectangle. Apple's do not: there is a
+ * lighter edge along the top where the surface turns toward the light, and it is the single
+ * cheapest thing that makes a control look like an object. One hue only — the fill is still the
+ * accent, this adds no colour (VDR-0001 excludes multi-hue buttons).
+ * ========================================================================= */
+.btnPrimary,
+.stepChipActive,
+.stepAllOn,
+.modeSegOn,
+.playBtn {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    var(--st-depth-rest);
+}
+
+/*
+ * FOCUS IS A RING PLUS A HALO. The bare 2px outline is legible but hard — it lands like a
+ * selection marquee. The soft outer ring is what keyboard users read as "the app is holding this
+ * for you". Radius follows the control so the ring never cuts a corner.
+ */
+.btn:focus-visible,
+.stepChip:focus-visible,
+.stepAll:focus-visible,
+.modeSeg:focus-visible,
+.panelBtn:focus-visible,
+.stepPanelBtn:focus-visible,
+.helpBtn:focus-visible,
+.gifBtn:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 2px;
 }

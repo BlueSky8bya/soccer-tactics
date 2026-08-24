@@ -55,7 +55,9 @@ export function StepBar() {
     const el = barRef.current?.querySelector<HTMLElement>('[data-step-active="1"]')
     el?.animate?.(
       [{ transform: 'scale(1)' }, { transform: 'scale(1.28)' }, { transform: 'scale(1)' }],
-      { duration: 420, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
+      // 446 = --st-spring-drop-ms, the settle curve the rest of the app uses. An ad-hoc duration
+      // here would be one more number nobody can trace (feel-lab checks the vocabulary).
+      { duration: 446, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
     )
   }, [stepBump, reducedMotion])
 
