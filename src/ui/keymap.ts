@@ -138,7 +138,14 @@ export const ANIM_BINDINGS: Binding[] = [
   },
   { label: '경로 드래그', hint: '당겨서 휘기', compact: true, cues: ['path'] },
   { label: '잔상 드래그', hint: '도착 지점 조정', compact: true, cues: ['path'] },
-  { label: '경로 클릭', hint: '선택 — Delete·Shift+숫자', compact: true, cues: ['path'] },
+  // Each key says what it DOES. "선택 — Delete·Shift+숫자" named two keys and left the reader to
+  // guess which one deletes and which one re-files (user 2026-08-24).
+  {
+    label: '경로 선택',
+    hint: 'Delete - 삭제/Shift+숫자 - 변경',
+    compact: true,
+    cues: ['path'],
+  },
   { label: '단계 1~9', hint: '그 단계 보기 (그릴 때는 같은 번호는 같이, 다음 번호는 이어서)' },
 ]
 
