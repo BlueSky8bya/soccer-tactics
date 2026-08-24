@@ -208,9 +208,11 @@ export const ko = {
   'start.done': '기본 요소가 다 갖춰졌어요. 선수나 공을 선택하면 여기서 정밀 조정할 수 있어요.',
   'simple.steps': '단계',
 
-  'step.isolateOn': '보기: 이 단계',
-  'step.isolateOff': '보기: 전체',
-  'step.isolateHint': '고른 단계의 시작 프레임에 서고 그 단계만 그립니다 (끄면 모든 단계 표시)',
+  'step.viewLabel': '보기 범위',
+  'step.isolateOn': '{n}단계만',
+  'step.isolateOff': '전체',
+  'step.isolateHint': '고른 단계의 시작 프레임에 서고 그 단계만 그립니다',
+  'step.allHint': '모든 단계의 경로와 잔상을 함께 봅니다',
   'player.card': '선수 정보',
   'player.number': '번호',
   'player.name': '이름',
@@ -259,9 +261,9 @@ export const ko = {
   'simple.stepPick':
     '{n}단계 — 지금부터 그리는 움직임이 이 단계에 들어가요. 이미 쓰인 단계면 시작 장면 미리보기 (움직임 {c}개)',
   'simple.stepAssign': '선택한 움직임을 {n}단계로',
-  'simple.playStep': '{n}단계만 재생',
-  'simple.playStepHint': '{n}단계 구간만 반복 재생',
-  'simple.playFrom': '{n}단계부터 재생',
+  'simple.playStep': '현재 단계만',
+  'simple.playStepHint': '{n}단계 구간만 재생',
+  'simple.playFrom': '현재 단계부터',
   'simple.playFromHint': '{n}단계부터 끝까지 재생',
   'simple.stepPanel': '단계 보기·재생',
   'simple.stepLimit':

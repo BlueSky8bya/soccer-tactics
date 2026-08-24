@@ -109,7 +109,7 @@ describe('AppShell (simple mode, ADR-0009)', () => {
      * so it asks for the all-steps view first, exactly as a user would.
      */
     await act(async () => {
-      screen.getByRole('button', { name: /보기: 이 단계/ }).click()
+      screen.getByRole('button', { name: /^전체$/ }).click()
     })
     const badge = screen.getByRole('button', { name: /단계 1/ })
     await act(async () => {
@@ -190,7 +190,7 @@ describe('AppShell (simple mode, ADR-0009)', () => {
     expect(core.getRevision()).toBe(rev) // chip never mutates the document
     // scoped replay lives beside the board now, not in the footer (PLAN-015 v3): the footer used
     // to grow and shrink with it and slide every chip sideways.
-    const stepOnly = screen.getByRole('button', { name: /2단계만 재생/ })
+    const stepOnly = screen.getByRole('button', { name: /현재 단계만/ })
     await act(async () => {
       stepOnly.click()
     })

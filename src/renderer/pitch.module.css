@@ -183,7 +183,9 @@
 .ball {
   fill: var(--st-ball);
   stroke: #1d1d1f;
-  stroke-width: 1.2px;
+  /* the keyline separates the ball from the grass; at 1.2 it was a third of a 12px ball's radius
+     and the ball read as a dark disc rather than a white one */
+  stroke-width: 0.9px;
   vector-effect: non-scaling-stroke;
 }
 
@@ -230,10 +232,29 @@
   fill: #f2f6ff;
 }
 
+/* ---------- ball & motion cues ---------- */
+
+/*
+ * Restored 2026-08-24. These two were collateral damage when the player heading wedge was removed —
+ * the deletion took the section header and both of these with it, so the ball lost its ground
+ * shadow and its highlight fell back to the SVG default of black. A white ball with a black
+ * highlight reads as a dark blob, which is what the pattern was being blamed for.
+ */
+.ballShadow {
+  fill: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.ballSpecular {
+  fill: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
 .ballPattern {
   fill: #1d1d1f;
   pointer-events: none;
 }
+
 
 /* ---------- snap guides ---------- */
 

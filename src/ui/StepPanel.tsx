@@ -39,16 +39,34 @@ export function StepPanel() {
 
   return (
     <div className={styles.stepPanel} role="group" aria-label={t('simple.stepPanel')}>
-      <button
-        type="button"
-        className={`${styles.stepPanelBtn} ${styles.stepViewBtn} ${used ? styles.stepViewBtnLeads : ''}`}
-        onClick={() => setStepIsolate(!stepIsolate)}
-        title={t('step.isolateHint')}
-        aria-pressed={stepIsolate}
-      >
-        <UiIcon name={stepIsolate ? 'layers' : 'layersAll'} size={13} />
-        {stepIsolate ? t('step.isolateOn') : t('step.isolateOff')}
-      </button>
+      {/*
+       * A SEGMENTED control, not a toggle button. A single button showing one label cannot say
+       * whether it reports the current mode or the mode it would switch to — the user read
+       * "보기: 전체" and could not tell which of the two they were in (2026-08-24: 이 버튼을 누르면
+       * 전체보기 모드로 된다는건지 지금 현재가 전체보기 모드인지 인식이 안 돼). Two segments with
+       * one lit answer both questions at once, and the lit segment also carries the step number, so
+       * the buttons below can drop it and stay short.
+       */}
+      <span className={styles.viewSeg} role="group" aria-label={t('step.viewLabel')}>
+        <button
+          type="button"
+          className={`${styles.viewSegBtn} ${stepIsolate ? styles.viewSegOn : ''}`}
+          onClick={() => setStepIsolate(true)}
+          aria-pressed={stepIsolate}
+          title={t('step.isolateHint')}
+        >
+          {t('step.isolateOn', { n: currentStep })}
+        </button>
+        <button
+          type="button"
+          className={`${styles.viewSegBtn} ${!stepIsolate ? styles.viewSegOn : ''}`}
+          onClick={() => setStepIsolate(false)}
+          aria-pressed={!stepIsolate}
+          title={t('step.allHint')}
+        >
+          {t('step.isolateOff')}
+        </button>
+      </span>
       {used && (
         <>
           <button
@@ -57,8 +75,8 @@ export function StepPanel() {
             onClick={() => replay('step')}
             title={t('simple.playStepHint', { n: currentStep })}
           >
-            <UiIcon name="play" size={11} filled />
-            {t('simple.playStep', { n: currentStep })}
+            <UiIcon name="play" size={10} filled />
+            {t('simple.playStep')}
           </button>
           <button
             type="button"
@@ -66,8 +84,8 @@ export function StepPanel() {
             onClick={() => replay('from-step')}
             title={t('simple.playFromHint', { n: currentStep })}
           >
-            <UiIcon name="play" size={11} filled />
-            {t('simple.playFrom', { n: currentStep })}
+            <UiIcon name="play" size={10} filled />
+            {t('simple.playFrom')}
           </button>
         </>
       )}

@@ -2,7 +2,7 @@
  * Theme preference (PLAN-015 M1). The pure half — the half that decides what gets painted.
  */
 import { describe, expect, it } from 'vitest'
-import { nextTheme, parseThemePref, resolveTheme, THEME_ORDER } from './theme'
+import { nextTheme, parseThemePref, resolveTheme } from './theme'
 
 describe('resolveTheme', () => {
   it('follows the OS only while the preference is "system"', () => {
@@ -14,16 +14,18 @@ describe('resolveTheme', () => {
 })
 
 describe('nextTheme', () => {
-  it('cycles system → light → dark → system, so the default is always one press away', () => {
-    expect(nextTheme('system')).toBe('light')
+  it('always switches to the OTHER theme, so one press always changes the screen', () => {
+    expect(nextTheme('dark')).toBe('light')
     expect(nextTheme('light')).toBe('dark')
-    expect(nextTheme('dark')).toBe('system')
   })
 
-  it('returns to the start after one full lap of THEME_ORDER', () => {
-    let p = THEME_ORDER[0]!
-    for (let i = 0; i < THEME_ORDER.length; i++) p = nextTheme(p)
-    expect(p).toBe(THEME_ORDER[0])
+  it('never returns "system", which is what made the old cycle no-op', () => {
+    /*
+     * The old order was system → light → dark → system. On a machine set to dark, pressing while
+     * the preference was 'dark' landed on 'system', which resolves back to dark — the screen did
+     * not change and the user had to press twice to reach light.
+     */
+    for (const shown of ['light', 'dark'] as const) expect(nextTheme(shown)).not.toBe('system')
   })
 })
 

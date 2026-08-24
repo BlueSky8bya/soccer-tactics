@@ -23,13 +23,14 @@ const drawnPaths = (page) =>
     [...document.querySelectorAll('g[data-segment]')].map((g) => g.getAttribute('class') || ''),
   )
 
+/** Press until the SHOWN theme is the one asked for (the button flips what is on screen). */
 async function cycleThemeTo(page, want) {
-  for (let i = 0; i < 4; i++) {
-    if ((await themeBtn(page).getAttribute('data-theme-pref')) === want) return true
+  for (let i = 0; i < 3; i++) {
+    if ((await themeAttr(page)) === want) return true
     await themeBtn(page).click()
-    await page.waitForTimeout(60)
+    await page.waitForTimeout(70)
   }
-  return (await themeBtn(page).getAttribute('data-theme-pref')) === want
+  return (await themeAttr(page)) === want
 }
 
 module.exports = {
@@ -52,17 +53,23 @@ module.exports = {
           await themeAttr(page),
         ),
       )
-      const seen = []
-      for (let i = 0; i < 4; i++) {
-        seen.push(await themeBtn(page).getAttribute('data-theme-pref'))
+      /*
+       * The button flips what is SHOWN. It used to walk system → light → dark → system, which
+       * no-ops on a machine already set to the theme it lands on — the user had to press twice
+       * (2026-08-24). One press, one visible change, every time.
+       */
+      const shown = []
+      for (let i = 0; i < 3; i++) {
+        shown.push(await themeAttr(page))
         await themeBtn(page).click()
-        await page.waitForTimeout(60)
+        await page.waitForTimeout(80)
       }
+      shown.push(await themeAttr(page))
       out.push(
         h.check(
-          'theme cycles system → light → dark → system',
-          JSON.stringify(seen) === JSON.stringify(['system', 'light', 'dark', 'system']),
-          seen.join(' → '),
+          'every press changes the theme on screen',
+          shown.every((v, i) => i === 0 || v !== shown[i - 1]),
+          shown.join(' → '),
         ),
       )
       await cycleThemeTo(page, 'dark')
@@ -91,6 +98,13 @@ module.exports = {
        * one position than the other — so every step chip slid sideways under the cursor
        * (user 2026-08-24: 단계 선택하는 버튼이 계속 좌우로 왔다갔다거리는게 불편해).
        */
+      const viewIsolated = () =>
+        page.evaluate(
+          () =>
+            document
+              .querySelector('[class*=viewSeg] button')
+              .getAttribute('aria-pressed') === 'true',
+        )
       const barWidth = () =>
         page.evaluate(() =>
           Math.round(document.querySelector('[class*=simpleBar]').getBoundingClientRect().width),
@@ -177,7 +191,7 @@ module.exports = {
       out.push(
         h.check(
           'a used step offers its scoped replay beside the board',
-          (await page.getByRole('button', { name: /단계만 재생/ }).count()) === 1,
+          (await page.getByRole('button', { name: /현재 단계만/ }).count()) === 1,
           (await replay.innerText()).split(String.fromCharCode(10)).join(' / '),
         ),
       )
@@ -199,7 +213,7 @@ module.exports = {
       out.push(
         h.check(
           'and its scoped replay is simply absent (the view switch stays)',
-          (await page.getByRole('button', { name: /단계만 재생/ }).count()) === 0,
+          (await page.getByRole('button', { name: /현재 단계만/ }).count()) === 0,
         ),
       )
       await chip(page, 1).click()
@@ -210,7 +224,7 @@ module.exports = {
        * casing carries the SAME dash — a solid casing under a dashed stroke fills every gap with
        * pale white, which is what made the ball's dotted pass read as a smear.
        */
-      await page.getByRole('button', { name: /보기: 이 단계/ }).click()
+      await page.locator('[class*=viewSeg] button').nth(1).click() // segmented: all steps
       await page.waitForTimeout(200)
       drawn = await drawnPaths(page)
       out.push(
@@ -250,7 +264,7 @@ module.exports = {
           JSON.stringify(flow.map((f) => f.anim)),
         ),
       )
-      await page.getByRole('button', { name: /보기: 전체/ }).click()
+      await page.locator('[class*=viewSeg] button').nth(0).click() // segmented: this step
       await page.waitForTimeout(120)
 
       /*

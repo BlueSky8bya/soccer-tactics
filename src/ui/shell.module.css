@@ -1274,13 +1274,13 @@
 
 /* Soft tinted actions: blue = build, green = ball, red = destructive. */
 .btnTintBlue {
-  background: rgba(10, 122, 255, 0.1);
-  border-color: rgba(10, 122, 255, 0.22);
-  color: #0a63cc;
+  background: var(--st-accent-soft);
+  border-color: color-mix(in srgb, var(--st-accent) 30%, transparent);
+  color: var(--st-accent-text, var(--st-accent));
 }
 
 .btnTintBlue:hover:not(:disabled) {
-  background: rgba(10, 122, 255, 0.16);
+  background: color-mix(in srgb, var(--st-accent) 20%, transparent);
 }
 
 .btnTintGreen {
@@ -1309,10 +1309,6 @@
  * not: #0a63cc / #1e7e3e / #c62a22 were chosen to be dark enough for a cream panel and are close
  * to unreadable on a near-black one. Only the text colour is restated.
  */
-:global([data-theme='dark']) .btnTintBlue {
-  color: #7db4ff;
-}
-
 :global([data-theme='dark']) .btnTintGreen {
   color: #6bd694;
 }
@@ -1714,9 +1710,15 @@
   height: 44px;
   border-radius: 50%;
   font-size: 15px;
-  background: linear-gradient(180deg, #2f8fff 0%, #0a6fe8 100%);
+  /* derived from the accent token, not a second blue hand-picked next to it: when the accent moved
+     off blue this gradient was the one control still arguing with it */
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--st-accent) 88%, #fff) 0%,
+    color-mix(in srgb, var(--st-accent) 88%, #000) 100%
+  );
   box-shadow:
-    0 4px 12px rgba(10, 122, 255, 0.35),
+    0 4px 12px color-mix(in srgb, var(--st-accent) 38%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
   border: none;
 }
@@ -2402,16 +2404,17 @@
   appearance: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-  /* one width for all three, so the column has a single straight edge whatever the labels say */
-  min-width: 138px;
-  height: 30px;
-  padding: 0 12px 0 10px;
-  border: 1px solid transparent;
+  gap: 7px;
+  /* narrow on purpose: this box floats over the playing surface, so every character it does not
+     need is pitch it gives back (user 2026-08-24: 안내 박스가 경기장 안을 침범) */
+  min-width: 116px;
+  height: 28px;
+  padding: 0 10px 0 9px;
+  border: 1px solid var(--st-border);
   border-radius: var(--st-radius-s);
-  background: transparent;
+  background: var(--st-surface-2);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--st-text);
   white-space: nowrap;
@@ -2419,11 +2422,6 @@
   transition:
     background-color var(--st-motion-fast) var(--st-ease-out),
     transform var(--st-spring-press-ms) var(--st-spring-press);
-}
-
-.stepPanelBtn:not(.stepViewBtn) {
-  background: var(--st-surface-2);
-  border-color: var(--st-border);
 }
 
 .stepPanelBtn:hover {
@@ -2437,25 +2435,49 @@
   transition: transform var(--st-motion-instant) var(--st-ease-out);
 }
 
-/* The view switch is a MODE, not an action: it stays lit while it is on, and a hairline separates
-   it from the two one-shot buttons below — but only when there ARE buttons below, or the panel
-   ends on a divider with nothing under it (lab review, 2026-08-24). */
-.stepViewBtn {
-  height: 33px;
-  color: var(--st-text-2);
-  font-weight: 500;
-}
-
-.stepViewBtnLeads {
+/*
+ * The view control is SEGMENTED: both modes are on screen, one is lit. A single toggle button
+ * cannot say whether its label is the current state or the state it would move to, and the user
+ * could not tell which mode they were in from it.
+ */
+.viewSeg {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px;
+  padding: 2px;
   margin-bottom: 3px;
-  padding-bottom: 0;
-  border-bottom: 1px solid var(--st-border);
-  border-radius: var(--st-radius-s) var(--st-radius-s) 0 0;
+  background: var(--st-surface-3);
+  border-radius: var(--st-radius-s);
 }
 
-.stepViewBtn[aria-pressed='true'] {
-  color: var(--st-accent-text, var(--st-accent));
+.viewSegBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  height: 24px;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 11.5px;
   font-weight: 600;
+  /* the UNSELECTED segment is still a control you can press, not a caption: text-3 on the track
+     measured 4.16:1 in dark, under the floor (feel-lab) */
+  color: var(--st-text-2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--st-motion-feedback) var(--st-ease-standard),
+    color var(--st-motion-feedback) var(--st-ease-standard);
+}
+
+.viewSegBtn:hover {
+  color: var(--st-text);
+}
+
+.viewSegOn {
+  background: var(--st-surface);
+  color: var(--st-accent-text, var(--st-accent));
+  box-shadow: var(--st-depth-rest);
 }
 
 .speedPillRate {

@@ -40,7 +40,7 @@ export function useTheme(): {
 
   const cycle = useCallback(() => {
     setPref((p) => {
-      const n = nextTheme(p)
+      const n = nextTheme(resolveTheme(p, systemTheme()))
       saveThemePref(n)
       return n
     })

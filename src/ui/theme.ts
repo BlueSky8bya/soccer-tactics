@@ -19,10 +19,20 @@ export function resolveTheme(pref: ThemePref, system: ResolvedTheme): ResolvedTh
   return pref === 'system' ? system : pref
 }
 
-/** Pure: the next state of the header button. */
-export function nextTheme(pref: ThemePref): ThemePref {
-  const i = THEME_ORDER.indexOf(pref)
-  return THEME_ORDER[(i < 0 ? 0 : i + 1) % THEME_ORDER.length]!
+/**
+ * Pure: what the header button switches to.
+ *
+ * It used to walk system → light → dark → system, and that cycle can NO-OP: on a machine set to
+ * dark, pressing while the preference is 'dark' lands on 'system', which resolves back to dark and
+ * the screen does not change — so the user pressed twice to get to light (user 2026-08-24: 다크에서
+ * 라이트로 갈 때 버튼을 2번 눌러야 하는 버그).
+ *
+ * A button that paints the screen must change the screen. So it flips what is CURRENTLY SHOWN, and
+ * takes an explicit preference: press once, always see the other theme. 'system' remains the value
+ * you start with — it follows the OS until the first press, which is what following the OS is for.
+ */
+export function nextTheme(resolved: ResolvedTheme): ThemePref {
+  return resolved === 'dark' ? 'light' : 'dark'
 }
 
 /** Pure: an unknown/corrupt stored value is not a preference — fall back to the OS. */

@@ -41,26 +41,27 @@ export interface TokenProps {
   wrap?: (body: ReactNode) => ReactNode
 }
 
-/** Classic 32-panel look, simplified: centre pentagon + 5 satellites. Drawn in ball-local units (r = 1). */
+/**
+ * The ball, in ball-local units (r = 1).
+ *
+ * ONE pentagon, centred, and nothing else. The first version added five more pentagons at
+ * two-thirds radius and the second added seams out to the rim; both were drawn for a ball the size
+ * of a thumbnail, and the ball renders at about fourteen pixels. At that size every extra mark is
+ * ink, and enough ink turns a white ball into a dark blob — which is what the pattern actually
+ * looked like on the board (user 2026-08-24: 오각형이 필요없는 부분에 끼어있음).
+ *
+ * A white disc, a dark keyline, one black pentagon. It is the smallest drawing that is unmistakably
+ * a football, and it stays clean when the board is zoomed all the way in.
+ */
 function BallPattern() {
-  const pent = (cx: number, cy: number, r: number, rot = 0) => {
-    const pts: string[] = []
-    for (let i = 0; i < 5; i++) {
-      const a = rot + (i * 2 * Math.PI) / 5 - Math.PI / 2
-      pts.push(`${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`)
-    }
-    return pts.join(' ')
-  }
-  const sats = Array.from({ length: 5 }, (_, i) => {
+  const R = 0.33
+  const pts = [0, 1, 2, 3, 4].map((i) => {
     const a = (i * 2 * Math.PI) / 5 - Math.PI / 2
-    return { x: 0.66 * Math.cos(a), y: 0.66 * Math.sin(a), rot: a + Math.PI }
+    return `${R * Math.cos(a)},${R * Math.sin(a)}`
   })
   return (
     <g className={styles.ballPattern}>
-      <polygon points={pent(0, 0, 0.3)} />
-      {sats.map((s, i) => (
-        <polygon key={i} points={pent(s.x, s.y, 0.26, s.rot)} opacity={0.85} />
-      ))}
+      <polygon points={pts.join(' ')} />
     </g>
   )
 }

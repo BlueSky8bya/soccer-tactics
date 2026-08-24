@@ -16,14 +16,24 @@
      keycap and hint below the line. The hierarchy between them is preserved, just moved down. */
   --st-text-2: #514c3e; /* ~6.9:1 on --st-surface, 5.9:1 on --st-surface-3 */
   --st-text-3: #64604f; /* ~5.3:1 on --st-surface, 4.8:1 on --st-surface-3 */
-  --st-accent: #0a7aff; /* selection / playhead / primary action only */
+  /*
+   * The accent is VIOLET, not blue (user 2026-08-24: 파란색 말고 다른 색으로).
+   *
+   * Blue is the home team. On this board blue already means "us", so every blue control — the play
+   * button, the active step chip, a lit hint row — was quietly claiming to be about the home side,
+   * and the board's most important distinction was competing with the chrome. Violet is free: it
+   * belongs to neither team, and it sits warmer against the cream page than the old web-blue,
+   * which was the one colour in the app that read as a default rather than a decision.
+   * Revert by restoring #0a7aff / #0b62cc / rgba(10,122,255,·) here.
+   */
+  --st-accent: #6a4bd8; /* selection / playhead / primary action only */
   /*
    * The accent as INK. #0a7aff is a fill colour — as 12px text on a cream panel it measures 3.7:1,
    * under the 4.5 floor, and it is exactly what an active shortcut row and a pressed toggle are
    * painted with (pw/lab/feel-lab.cjs). Same hue, taken down until it can be read.
    */
-  --st-accent-text: #0b62cc; /* ~5.4:1 on --st-surface */
-  --st-accent-soft: rgba(10, 122, 255, 0.12);
+  --st-accent-text: #56349f; /* ~7.0:1 on --st-surface */
+  --st-accent-soft: rgba(106, 75, 216, 0.13);
   --st-danger: #e5484d;
   /* Status roles. They used to live only as inline fallbacks (`var(--st-warn, #9a5b00)`), which
      meant the dark theme had no way to restate them — a fallback cannot be overridden. */
@@ -36,11 +46,16 @@
    * SAME lines sat at 7.7:1 in the dark theme — the light board looked soft for one reason, and it
    * is the surface the product exists to show. The token discs are only ~1.6:1 against the grass in
    * either theme, so their white ring is doing all the separating work and it needs a ground to
-   * work against. Still vivid, just no longer washed out. Revert by restoring #4aab6d here.
+   * work against.
+   *
+   * Retuned 2026-08-24 for the LIGHT theme specifically: the first correction went dark enough to
+   * read as a night pitch on a cream page. This sits at 3.0:1 against the white markings — the
+   * WCAG floor for a non-text graphic, which is what a pitch line is — while staying a bright,
+   * daylit green. Revert by restoring #4aab6d here.
    */
-  --st-pitch-grass: #3b9159;
-  --st-pitch-grass-alt: #378752;
-  --st-pitch-surround: #2e7645;
+  --st-pitch-grass: #47a268;
+  --st-pitch-grass-alt: #429b62;
+  --st-pitch-surround: #3b8c58;
   --st-pitch-line: rgba(255, 255, 255, 0.9);
 
   /* Teams (defaults; documents may override) */
@@ -154,10 +169,10 @@
   --st-text: #f2f3f5;
   --st-text-2: #a9b0b9; /* ~7.0:1 on the dark surface */
   --st-text-3: #8a919b; /* ~5.3:1 — was #6c7380 at 3.5:1 */
-  --st-accent: #3b8cff;
+  --st-accent: #9b7bff;
   /* on a near-black panel the fill colour is already legible as ink — no separate value needed */
-  --st-accent-text: #6aa8ff;
-  --st-accent-soft: rgba(59, 140, 255, 0.18);
+  --st-accent-text: #b7a2ff;
+  --st-accent-soft: rgba(155, 123, 255, 0.2);
   --st-danger: #ff6b6e;
   --st-warn: #f0b25c;
   --st-warn-soft: color-mix(in srgb, #f5a623 16%, var(--st-surface));

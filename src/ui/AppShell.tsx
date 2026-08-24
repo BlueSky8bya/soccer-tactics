@@ -326,13 +326,15 @@ export function AppShell() {
             className={styles.btn}
             onClick={theme.cycle}
             title={t('topbar.themeCycle', {
-              now: t(THEME_LABEL[theme.pref]),
-              next: t(THEME_LABEL[nextTheme(theme.pref)]),
+              now: t(THEME_LABEL[theme.resolved]),
+              next: t(THEME_LABEL[nextTheme(theme.resolved)]),
             })}
-            aria-label={`${t('topbar.theme')}: ${t(THEME_LABEL[theme.pref])}`}
+            aria-label={`${t('topbar.theme')}: ${t(THEME_LABEL[theme.resolved])}`}
             data-theme-pref={theme.pref}
+            data-theme-shown={theme.resolved}
           >
-            <UiIcon name={THEME_ICON[theme.pref]} size={17} />
+            {/* the icon names what you are LOOKING AT, and pressing shows the other one */}
+            <UiIcon name={THEME_ICON[theme.resolved]} size={17} />
           </button>
           <button
             type="button"
