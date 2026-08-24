@@ -11,6 +11,13 @@ import { pitchMarkings } from '@/engine/geometry'
 import { stateAt } from '@/engine/stateAt'
 import { penSegments } from '@/ui/pitch/inking'
 import { VISUAL } from '@/renderer/visualDefaults'
+import {
+  BALL_FILL,
+  BALL_INK,
+  BALL_SPECULAR,
+  ballPanels,
+  pentagonPoints,
+} from '@/renderer/ballMark'
 
 export interface GifOptions {
   /** Tactical seconds per real second in the GIF (1 = real time). */
@@ -220,18 +227,39 @@ export function drawFrame(
     ctx.textBaseline = 'middle'
     ctx.fillText(String(p.number), pos.x * k, pos.y * k + 0.1 * k)
   }
-  // ball on top
+  /*
+   * The ball on top — the SAME ball the board draws.
+   *
+   * This used to be a white disc with one dark dot in the middle, which is not what anyone sees in
+   * the app, so an exported GIF showed a different product (user 2026-08-25: gif 내보내기의
+   * 축구공 디자인이 사이트랑 달라). The panel geometry is shared (`renderer/ballMark`); only
+   * the stroking differs, because canvas has no CSS.
+   */
   const b = rs.ball.pos
+  const bx = b.x * k
+  const by = b.y * k
+  const br = BALL_R * k
   ctx.beginPath()
-  ctx.arc(b.x * k, b.y * k, BALL_R * k, 0, Math.PI * 2)
-  ctx.fillStyle = VISUAL.ballFill
+  ctx.arc(bx, by, br, 0, Math.PI * 2)
+  ctx.fillStyle = BALL_FILL
   ctx.fill()
-  ctx.lineWidth = Math.max(1, 0.12 * k)
-  ctx.strokeStyle = 'rgba(20,24,32,0.7)'
+  // the board's keyline is 0.9 CSS px whatever the zoom; here the frame is the zoom, so scale it
+  ctx.lineWidth = Math.max(1, 0.075 * k)
+  ctx.strokeStyle = BALL_INK
   ctx.stroke()
+  ctx.fillStyle = BALL_INK
+  for (const panel of ballPanels()) {
+    const pts = pentagonPoints(panel)
+    ctx.globalAlpha = panel.opacity
+    ctx.beginPath()
+    for (const [px, py] of pts) ctx.lineTo(bx + px * br, by + py * br)
+    ctx.closePath()
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
   ctx.beginPath()
-  ctx.arc(b.x * k, b.y * k, BALL_R * 0.35 * k, 0, Math.PI * 2)
-  ctx.fillStyle = VISUAL.ballDetail
+  ctx.arc(bx + BALL_SPECULAR.cx * br, by + BALL_SPECULAR.cy * br, BALL_SPECULAR.r * br, 0, Math.PI * 2)
+  ctx.fillStyle = BALL_SPECULAR.fill
   ctx.fill()
   ctx.restore()
 }

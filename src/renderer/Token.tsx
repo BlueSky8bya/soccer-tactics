@@ -1,6 +1,7 @@
 import { memo, type CSSProperties, type ReactNode } from 'react'
 import type { Id, Vec2 } from '@/domain/types'
 import styles from './pitch.module.css'
+import { ballPanels, pentagonPoints } from './ballMark'
 
 export const TOKEN_R = 1.35 // metres (visual) — user 2026-08-21: 축소 후 재보정 (1.5→1.2→1.35)
 export const TOKEN_HIT_R = 2.2 // metres (hit area ≥ visual; ≥28px at typical sizes)
@@ -54,23 +55,18 @@ export interface TokenProps {
  * did, so the ball stays white and the panels stay panels.
  */
 function BallPattern() {
-  const pent = (cx: number, cy: number, r: number, rot = 0) => {
-    const pts: string[] = []
-    for (let i = 0; i < 5; i++) {
-      const a = rot + (i * 2 * Math.PI) / 5 - Math.PI / 2
-      pts.push(`${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`)
-    }
-    return pts.join(' ')
-  }
-  const sats = Array.from({ length: 5 }, (_, i) => {
-    const a = (i * 2 * Math.PI) / 5 - Math.PI / 2
-    return { x: 0.66 * Math.cos(a), y: 0.66 * Math.sin(a), rot: a + Math.PI }
-  })
+  // Geometry from `ballMark` — the GIF exporter draws the same panels on a canvas, and the two
+  // used to be different balls (user 2026-08-25: gif 내보내기의 축구공 디자인이 사이트랑 달라).
   return (
     <g className={styles.ballPattern}>
-      <polygon points={pent(0, 0, 0.3)} />
-      {sats.map((s, i) => (
-        <polygon key={i} points={pent(s.x, s.y, 0.26, s.rot)} opacity={0.85} />
+      {ballPanels().map((panel, i) => (
+        <polygon
+          key={i}
+          points={pentagonPoints(panel)
+            .map(([x, y]) => `${x},${y}`)
+            .join(' ')}
+          opacity={panel.opacity}
+        />
       ))}
     </g>
   )

@@ -3253,3 +3253,31 @@ Validation: typecheck/lint/**346 tests**/build/harness PASS. 브라우저 **167 
 서서 Space → 0.37s에서 시작 / 일시정지 뒤 Space → 1.44s에서 1.92s로 이어서).
 
 Related: ADR-0009 v29, CHG-20260824-207
+
+## CHG-20260825-209 — GIF 속 축구공이 사이트의 축구공과 달랐다
+
+Date: 2026-08-25 · Type: FIX · Level: L1
+
+Problem (사용자): "gif 내보내기의 축구공 디자인이 사이트랑 달라."
+
+원인: 공을 그리는 곳이 둘이었다. 보드는 SVG로 **표준 축구공 무늬**(가운데 오각형 + 위성 5개)를
+그리고, GIF 내보내기는 캔버스에 **흰 원 + 가운데 점 하나**를 그렸다. CSS 커스텀 프로퍼티는
+`<canvas>`에 닿지 않으므로(AUD-06) 렌더러가 둘인 것 자체는 불가피한데, **디자인까지 둘**이었다 —
+그래서 남에게 보낸 GIF는 그 사람이 본 적 없는 제품을 보여 줬다.
+
+Change: `src/renderer/ballMark.ts` (신규) — 반지름 1 단위 공간의 **패널 기하 하나**. `Token.tsx`가
+폴리곤으로 그리고 `exportGif.ts`가 같은 좌표를 캔버스 path로 그린다. 색(`BALL_INK`/`BALL_FILL`)과
+하이라이트 위치도 여기 있다. `visualDefaults`에 있던 `ballFill`/`ballDetail` 중복은 제거 —
+두 벌을 유지한 것이 애초에 두 개의 공이 된 경로다.
+
+캔버스에는 CSS가 없으므로 **스트로크만 다르다**: 보드의 키라인은 줌과 무관한 0.9 CSS px이고,
+GIF는 프레임 자체가 줌이므로 `0.075 × k`로 스케일한다.
+
+Files: src/renderer/ballMark.ts(신규), src/renderer/Token.tsx, src/renderer/visualDefaults.ts,
+src/ui/exportGif.ts
+
+Validation: typecheck/lint/**346 tests**/build/harness PASS. 육안 확인 — 실행 중인 앱에서
+`exportGif.drawFrame`을 직접 호출해 k=160으로 프레임을 그리고 공 주변을 잘라 확인:
+보드와 같은 표준 무늬(가운데 오각형 + 위성 5개 + 하이라이트).
+
+Related: CHG-20260822(고스트 공이 흰 원이던 문제 — 같은 계열의 앞선 통일)

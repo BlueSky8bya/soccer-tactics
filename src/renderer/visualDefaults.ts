@@ -10,8 +10,8 @@ export const VISUAL = {
   pitchLine: 'rgba(255,255,255,0.9)',
   teamHome: '#1f6df2',
   teamAway: '#e03e3e',
-  ballFill: '#ffffff',
-  ballDetail: 'rgba(20,24,32,0.6)',
+  // the BALL's own colours and panels live in `ballMark`, which both the SVG token and the canvas
+  // exporter draw from — keeping a second set here is how the two ended up different balls
   tokenRadiusM: 1.35,
   ballRadiusM: 0.68,
 } as const
