@@ -338,7 +338,7 @@ module.exports = {
     await page.waitForTimeout(300)
     const parked = await page.evaluate(() => window.__stClock().t)
     await page.keyboard.press(' ')
-    await page.waitForTimeout(1100)
+    await page.waitForTimeout(1400)
     const mid = await page.evaluate(() => window.__stClock().t)
     await page.keyboard.press(' ')
     await page.waitForTimeout(500)
@@ -346,10 +346,68 @@ module.exports = {
     out.push(
       h.check(
         'pausing mid-play holds the frame instead of snapping back to the step',
-        mid > parked + 0.3 && Math.abs(held - mid) < 0.4,
-        'parked ' + parked.toFixed(2) + ' → mid ' + mid.toFixed(2) + ' → paused ' + held.toFixed(2),
+        // the frame it stopped on is neither the step's opening nor kickoff, and it stays put
+        mid > 0.3 && Math.abs(mid - parked) > 0.2 && Math.abs(held - mid) < 0.4,
+        'step opens at ' + parked.toFixed(2) + ' → stopped at ' + mid.toFixed(2) + ' → held ' + held.toFixed(2),
       ),
     )
+
+    /*
+     * A NUMBER KEY SHOWS THAT STEP, whatever view you were in (ADR-0009 v28). Under 전체 보기 the
+     * press used to move the chip and change nothing on screen.
+     */
+    await viewBtn('all').click()
+    await page.waitForTimeout(300)
+    const wasAll = await page.evaluate(() => window.__stFlags().stepIsolate)
+    await page.keyboard.press('3')
+    await page.waitForTimeout(400)
+    const afterKey = await snapshot(page)
+    const onlyThree = afterKey.painted.every(
+      (id) => afterKey.steps[id] && afterKey.steps[id].step === 3,
+    )
+    out.push(
+      h.check(
+        'a number key switches to that step even from ‘전체’',
+        wasAll === false && afterKey.stepIsolate === true && afterKey.currentStep === 3 && onlyThree,
+        'was all=' + wasAll + ' → isolate=' + afterKey.stepIsolate + ' chip=' + afterKey.currentStep +
+          ' painted=' + afterKey.painted.length,
+      ),
+    )
+
+    /*
+     * SPACE PLAYS THE PLAY, from the start. It used to resume from wherever the clock stood, and
+     * under isolation that is the current step's opening — so Space quietly meant "현재 단계부터",
+     * which is a button's job. A pause still RESUMES: that is what the anchor tells them apart.
+     */
+    await chip(page, 4).click()
+    await page.waitForTimeout(320)
+    const anchor4 = await page.evaluate(() => window.__stClock().t)
+    await page.keyboard.press(' ')
+    await page.waitForTimeout(220)
+    const justStarted = await page.evaluate(() => window.__stClock().t)
+    out.push(
+      h.check(
+        'Space plays from the START, not from the step you are standing in',
+        anchor4 > 0.5 && justStarted < anchor4 - 0.3,
+        'step 4 opens at ' + anchor4.toFixed(2) + ' · Space started at ' + justStarted.toFixed(2),
+      ),
+    )
+    await page.waitForTimeout(700)
+    const beforePause = await page.evaluate(() => window.__stClock().t)
+    await page.keyboard.press(' ')
+    await page.waitForTimeout(350)
+    await page.keyboard.press(' ')
+    await page.waitForTimeout(300)
+    const resumed = await page.evaluate(() => window.__stClock())
+    out.push(
+      h.check(
+        'but Space after a pause RESUMES instead of restarting',
+        resumed.playing && resumed.t >= beforePause - 0.05,
+        'paused at ' + beforePause.toFixed(2) + ' → resumed at ' + resumed.t.toFixed(2),
+      ),
+    )
+    await page.keyboard.press(' ')
+    await page.waitForTimeout(200)
 
     /*
      * The retarget did not disappear — it moved to Shift. This is the LAST thing the probe does,

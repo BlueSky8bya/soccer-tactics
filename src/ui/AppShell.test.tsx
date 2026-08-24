@@ -141,10 +141,19 @@ describe('AppShell (simple mode, ADR-0009)', () => {
     expect(useUiStore.getState().currentStep).toBe(5)
     // and a pick drops the selection, so the step you left stops being painted over the one you chose
     expect(useUiStore.getState().selectedSegmentId).toBe(null)
+    // …and it SHOWS that step: a pick switches the view, whatever view you were in (v28)
+    expect(useUiStore.getState().stepIsolate).toBe(true)
 
     // Exact assignment 1 -> 5, with the modifier that means it: Shift+5 on the selected movement.
+    // Back to the all-steps view first — under isolation the step-1 badge is not on the board to
+    // press, which is the whole point of isolation.
     await act(async () => {
-      badge.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+      screen.getByRole('button', { name: /^전체$/ }).click()
+    })
+    await act(async () => {
+      screen.getByRole('button', { name: /단계 1/ }).dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true }),
+      )
     })
     await act(async () => {
       window.dispatchEvent(

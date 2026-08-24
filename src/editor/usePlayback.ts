@@ -41,11 +41,25 @@ export function advanceClock(
   return { t: next, done: false }
 }
 
-/** Footer Play / Space: the whole play. Resumes a paused frame; restarts after a finish. */
+/**
+ * Footer Play / Space: the whole play, FROM THE START — unless it is resuming a pause.
+ *
+ * It used to resume from wherever the clock stood, and under step isolation the clock stands at
+ * the current step's opening: pressing Space on step 3 quietly played "from step 3", which is what
+ * the 현재 단계부터 button is for. So Space meant something different depending on which chip was
+ * lit, and one of the two controls was invisible (user 2026-08-24: 스페이스 바를 누르면
+ * 처음부터 시작해야 하는 게 맞지 않을까 — 현재 단계만/부터 재생은 버튼으로만). Scoped replay is
+ * the buttons' job; Space plays the play.
+ *
+ * RESUME survives, because it has to: you pause to look and press Space to carry on. The two are
+ * told apart by the authoring anchor — a clock resting ON it was parked there by a step pick, a
+ * clock away from it was left there by a pause.
+ */
 export function playAll(duration: number): void {
   const st = useUiStore.getState()
   const atEnd = st.completion === 'held-result' || st.playback.t >= duration - 1e-6
-  st.startRange('all', atEnd ? 0 : st.playback.t, null)
+  const parked = Math.abs(st.playback.t - st.authoringT) < 1e-6
+  st.startRange('all', atEnd || parked ? 0 : st.playback.t, null)
 }
 
 /** Scoped replay (StepBar context actions): one step, or from a step to the end. */

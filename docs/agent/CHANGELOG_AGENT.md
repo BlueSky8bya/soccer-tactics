@@ -3218,3 +3218,38 @@ Validation: typecheck/lint/**346 tests**/build/harness PASS. 브라우저 **164 
 `no view op edited the tactic` FAIL, `pausing mid-play holds the frame` 1.67 → 0.00.
 
 Related: PLAN-20260824-015(단계 격리), CHG-20260824-206, ADR-0009 v28
+
+## CHG-20260824-208 — 숫자키는 그 단계를 보여 주고, Space는 처음부터 (ADR-0009 v29)
+
+Date: 2026-08-24 · Type: UX · Level: L2
+
+Problem (사용자 제안, 2026-08-24): "숫자 키 누를 때는 자동으로 해당 단계 모드로 보여야 하고(현재
+전체 모드더라도) 또 스페이스 바 누르면 처음부터 시작해야하는게 맞지 않을까?(해당 단계 모드더라도)
+현재 단계만, 현재 단계부터 재생은 버튼으로만 하는게 더 나을 것 같아서."
+
+동의. 두 제안 다 같은 규칙의 두 얼굴이다 — **컨트롤은 자기가 하는 일을 눈에 보이게 해야 하고, 두
+컨트롤이 같은 일을 하면 안 된다.**
+
+**1. 단계를 고르면 그 단계를 보여 준다** (`stepPick`이 `stepIsolate`를 켠다). 전체 보기에서 숫자키는
+칩만 옮기고 화면에는 아무 일도 없었다 — **아무 답도 안 하는 키**다. 되돌아가는 길은 같은 패널의
+`전체` 버튼 한 번. 칩 클릭도 같다(v28에서 한 구현으로 합친 것을 무르지 않는다).
+
+**2. Space는 재생을 처음부터, 단 재개는 유지.** 종전 `playAll`은 시계가 선 자리에서 이어졌고, 격리
+중 그 자리는 **현재 단계의 시작**이라 Space가 조용히 "현재 단계부터"를 뜻했다 — 바로 옆 버튼과 같은
+일을, 눈에 안 보이는 방식으로.
+
+**재개는 살렸다** — 사용자 제안대로 "항상 처음부터"로 하면 일시정지 후 이어 보기가 사라진다. 둘은
+**저작 앵커**로 구분한다: 앵커 위에 선 시계는 단계 고르기가 세워 둔 것, 앵커에서 벗어난 시계는
+일시정지가 남긴 것. 그래서 Space는 (a) 재생 중이면 정지 (b) 일시정지한 프레임에서는 이어서
+(c) 단계에 서 있거나 결과를 붙잡고 있으면 **처음부터**.
+
+안내: `Space — 처음부터 재생·일시정지`.
+
+Files: src/ui/stepPick.ts, src/editor/usePlayback.ts, src/ui/keymap.ts, src/ui/AppShell.test.tsx,
+pw/step-view.cjs, pw/step-view-fuzz.cjs, docs/agent/decisions/ADR-0009-simple-mode-interaction.md
+
+Validation: typecheck/lint/**346 tests**/build/harness PASS. 브라우저 **167 probe checks ALL PASS**
+(신규 3: 전체 보기에서 숫자키 3 → 격리 ON·칩 3·그려진 경로 3단계뿐(painted=1) / 4단계(시작 4.04s)에
+서서 Space → 0.37s에서 시작 / 일시정지 뒤 Space → 1.44s에서 1.92s로 이어서).
+
+Related: ADR-0009 v29, CHG-20260824-207

@@ -418,8 +418,17 @@ module.exports = {
         await h.drawFrom(page, runner.home, { x: runner.home.x + 12, y: runner.home.y + 4 }, { steps: 8 })
         await page.waitForTimeout(340)
 
+        const setView = () =>
+          page
+            .locator('[class*=viewSeg] button')
+            .filter({ hasText: mode === '전체' ? /^전체$/ : /단계만/ })
+            .click()
         const landOn = async (n, to) => {
           await chip(page, n).click()
+          await page.waitForTimeout(200)
+          // A step pick now always shows that step (ADR-0009 v28), so 전체 has to be re-asserted
+          // AFTER the chip — which is exactly the reported situation: chip N lit, whole play drawn.
+          await setView()
           await page.waitForTimeout(280)
           const bp = await page.evaluate(() => window.__stStateAt(window.__stClock().t).ball.pos)
           await h.dragPitch(page, bp, bp, { steps: 1, settleMs: 220 }) // click = pick the ball
