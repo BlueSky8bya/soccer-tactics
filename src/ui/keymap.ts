@@ -114,21 +114,27 @@ export const PLACE_BINDINGS: Binding[] = [
  * no longer are, so the rows halved (user: 단축키 설명만 봐도 2배가 되어있잖아).
  */
 export const ANIM_BINDINGS: Binding[] = [
+  /*
+   * ONE row for the drawing gesture, not two (user 2026-08-24: 걍 Alt + 클릭/드래그 로 합치고).
+   * Click and drag were separate rows because they produce different SHAPES — a straight leg and a
+   * curve. But the panel is read to answer "how do I draw a path", and the answer is one modifier
+   * on one subject; which shape comes out is what the hand already decides. Two rows spent the
+   * fold on a distinction nobody has to be told, and the hints narrated the MECHANISM
+   * ("잔상은 그 타이밍") instead of naming the action.
+   *
+   * 경로 드래그 sits directly under it (user: 바로 아래에 위치해줘) — bending the line you
+   * just drew is the next thing you do, so it belongs beside drawing it, not after the rows about
+   * picking an existing one.
+   */
   {
-    label: 'Alt+클릭',
-    hint: '찍은 곳까지 — 잔상은 그 타이밍',
+    label: 'Alt+클릭/드래그',
+    hint: '경로 지정',
     compact: true,
     cues: ['alt', 'ball', 'player', 'path'],
   },
-  {
-    label: 'Alt+드래그',
-    hint: '곡선으로 한 번에',
-    compact: true,
-    cues: ['alt', 'ball', 'player', 'path'],
-  },
+  { label: '경로 드래그', hint: '당겨서 휘기', compact: true, cues: ['path'] },
   { label: '잔상 드래그', hint: '도착 지점 조정', compact: true, cues: ['path'] },
   { label: '경로 클릭', hint: '선택 — Delete·숫자키', compact: true, cues: ['path'] },
-  { label: '경로 드래그', hint: '당겨서 휘기', compact: true, cues: ['path'] },
   { label: '단계 1~9', hint: '같은 번호는 같이, 다음 번호는 이어서' },
 ]
 
