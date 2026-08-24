@@ -83,6 +83,13 @@
       "env": "ST_PROBE_ROUNDS (default 3) lengthens the campaign; ST_PROBE_SHOTS=1 writes a gallery to pw/lab/out-stepfuzz"
     },
     {
+      "id": "shell-feedback",
+      "file": "shell-feedback.cjs",
+      "status": "present",
+      "covers": "보드가 다른 보드로 바뀌었을 때의 피드백 + 누름 감각 (사용자 2026-08-25)",
+      "describe": "switching tactic variants makes the board breathe and names which board you are on; every pressable surface gives under the press and springs back"
+    },
+    {
       "id": "historical-22",
       "status": "missing",
       "covers": "2026-08-22 session",

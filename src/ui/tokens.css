@@ -92,11 +92,34 @@
   --st-toolkey-row: 13px;
   --st-toolbtn-row: 44px;
 
-  /* Radius */
-  --st-radius-s: 7px;
-  --st-radius-m: 10px;
-  --st-radius-l: 16px;
+  /*
+   * RADIUS — one ladder, and the rungs are CONCENTRIC.
+   *
+   * Apple's HIG states the rule for iOS/macOS 26: a nested shape's radius is its parent's radius
+   * minus the padding between them, so the two curves stay parallel instead of one bending inside
+   * the other. Ours falls out of the inset rhythm below and each rung is derived, not invented:
+   *
+   *     stage 22
+   *       − inset 6  → card 16      (a card sitting 6px inside the stage)
+   *       − inset 6  → control 10   (a button sitting 6px inside a card)
+   *       − tight 4  → chip 6       (a keycap or count sitting 4px inside a control)
+   *
+   * `radiusLadder.test.ts` holds the arithmetic, so the next value someone reaches for has to be
+   * on the ladder or the ladder has to change on purpose. Before this there were TWO ladders
+   * (s/m/l and control/card/stage) plus eleven raw pixel values — which is the same as none.
+   */
+  --st-inset: 6px;
+  --st-inset-tight: 4px;
+  --st-radius-chip: 6px;
+  --st-radius-control: 10px;
+  --st-radius-card: 16px;
+  --st-radius-stage: 22px;
   --st-radius-pill: 999px;
+
+  /* The old names, pointed at the ladder so every existing call site moves with it. */
+  --st-radius-s: var(--st-radius-chip);
+  --st-radius-m: var(--st-radius-control);
+  --st-radius-l: var(--st-radius-card);
 
   /* Depth — four semantic levels (PLAN-006 M1): rest < raised < drag < overlay.
      Only ONE overlay-level surface may be visible at a time. */
@@ -109,11 +132,6 @@
   --st-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06);
   --st-shadow-2: var(--st-depth-raised);
   --st-shadow-3: var(--st-depth-overlay);
-
-  /* Radius roles: control 8 / card 14 / stage 20 / pill */
-  --st-radius-control: 8px;
-  --st-radius-card: 14px;
-  --st-radius-stage: 20px;
 
   /* Interface motion (UI only — never tactical motion). Semantic durations + easings:
      instant(hover/focus color) < feedback(press/release) < transition(panel/cross-fade)

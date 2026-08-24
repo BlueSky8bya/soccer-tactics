@@ -25,6 +25,7 @@ import { TourOverlay } from './tour/TourOverlay'
 import { hasSeenTour } from './tour/tourStorage'
 import { useEditorKeyboard } from './useEditorKeyboard'
 import { useTheme } from './useTheme'
+import { useBoardBreath } from './useBoardBreath'
 
 const THEME_LABEL: Record<
   ThemePref,
@@ -55,6 +56,12 @@ export function AppShell() {
   const setReducedMotion = useUiStore((s) => s.setReducedMotion)
   const startTour = useUiStore((s) => s.startTour)
   const variants = useVariantSession()
+  /*
+   * The stage, so a board that has BECOME A DIFFERENT BOARD can say so with one breath. See
+   * `useBoardBreath`: a variant switch used to replace every token in silence.
+   */
+  const pitchFrameRef = useRef<HTMLDivElement>(null)
+  useBoardBreath(pitchFrameRef)
   const [gifBusy, setGifBusy] = useState(false)
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
   const theme = useTheme()
@@ -95,12 +102,17 @@ export function AppShell() {
     ui.returnToAuthoringStart()
     ui.clearSelection()
     variants.switchTo(id)
+    // …and it SAYS SO. Two channels, because they answer different questions: the breath says
+    // "the board changed", the toast says "to this one" (user 2026-08-25).
+    ui.announceIdentitySwap()
+    ui.flashToast(t('variant.switched', { v: id }))
   }
   const cloneInto = (target: 'A' | 'B' | 'C') => {
     if (!variants || variants.has(target)) return
     ui.returnToAuthoringStart()
     ui.clearSelection()
     variants.cloneActiveTo(target)
+    ui.announceIdentitySwap()
     ui.flashToast(t('variant.cloned', { v: target }))
   }
 
@@ -351,7 +363,7 @@ export function AppShell() {
 
       <ActionsPanel />
       <main className={styles.pitchAreaSimple}>
-        <div className={styles.pitchFrame} data-boost={boosted}>
+        <div className={styles.pitchFrame} data-boost={boosted} ref={pitchFrameRef}>
           <SimplePitch />
         </div>
         {!ui.annotate.on && <StepPanel />}

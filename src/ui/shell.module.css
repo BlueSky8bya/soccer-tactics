@@ -51,7 +51,7 @@
   color: var(--st-text-3);
   background: transparent;
   border: 1px solid var(--st-border);
-  border-radius: 999px;
+  border-radius: var(--st-radius-pill);
   padding: 2px 8px;
   /* it copies the deploy hash on click, so it has to be readable: 0.55 took it to 1.7:1 */
   opacity: 0.9;
@@ -149,7 +149,7 @@
   color: var(--st-text-2);
   background: var(--st-surface-2);
   border: 1px solid var(--st-border);
-  border-radius: 5px;
+  border-radius: var(--st-radius-chip);
   padding: 0 5px;
   line-height: 17px;
   white-space: nowrap;
@@ -1208,7 +1208,7 @@
   margin-left: -8px;
   padding-left: 8px;
   box-shadow: inset 2px 0 0 transparent;
-  border-radius: 4px;
+  border-radius: var(--st-radius-chip);
   transition:
     background-color var(--st-motion-transition) var(--st-ease-standard),
     box-shadow var(--st-motion-transition) var(--st-ease-standard);
@@ -1395,7 +1395,7 @@
 .colorCell {
   width: 16px;
   height: 16px;
-  border-radius: 4px;
+  border-radius: var(--st-radius-chip);
   border: 1px solid rgba(0, 0, 0, 0.25);
   padding: 0;
   cursor: pointer;
@@ -1442,7 +1442,7 @@
   position: relative;
   width: 100%;
   height: 132px;
-  border-radius: 8px;
+  border-radius: var(--st-radius-control);
   cursor: crosshair;
   touch-action: none;
 }
@@ -1497,7 +1497,7 @@
 .cpSwatch {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--st-radius-chip);
   border: 1px solid rgba(0, 0, 0, 0.2);
   flex: none;
 }
@@ -1585,7 +1585,7 @@
   color: var(--st-text-3);
   background: var(--st-surface-2);
   border: 1px solid var(--st-border);
-  border-radius: 4px;
+  border-radius: var(--st-radius-chip);
   padding: 0 4px;
   line-height: 14px;
 }
@@ -1747,13 +1747,13 @@
   right: 0;
   top: 7px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--st-radius-pill);
   background: var(--st-surface-2);
 }
 
 .scrub:focus-visible {
   outline: 2px solid var(--st-accent);
-  border-radius: 4px;
+  border-radius: var(--st-radius-chip);
 }
 
 .scrubFill {
@@ -1761,7 +1761,7 @@
   left: 0;
   top: 7px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--st-radius-pill);
   background: var(--st-accent);
   pointer-events: none;
 }
@@ -1806,7 +1806,7 @@
 .stepAll {
   height: 30px;
   padding: 0 10px;
-  border-radius: 15px;
+  border-radius: var(--st-radius-pill);
   border: 1.5px solid var(--st-border-strong);
   background: var(--st-surface);
   color: var(--st-text-2);
@@ -1893,7 +1893,7 @@
   box-shadow: 0 0 0 2px var(--st-surface);
   min-width: 15px;
   height: 15px;
-  border-radius: 8px;
+  border-radius: var(--st-radius-control);
   background: var(--st-surface-3);
   color: var(--st-text-2);
   font-size: 10px;
@@ -2262,7 +2262,7 @@
   color: var(--st-text-3);
   background: color-mix(in srgb, var(--st-surface-2) 70%, transparent);
   border: 1px solid var(--st-border);
-  border-radius: 5px;
+  border-radius: var(--st-radius-chip);
   /* one width for every cap in the column: "X" and "⇧R" are one and two characters, and letting
      each shrink to its own content left the caps' right edges ragged against the button edge
      (user 2026-08-24: X랑 시프트 R 너비가 안 맞아서 불편해) */
@@ -2486,11 +2486,6 @@
   border-color: color-mix(in srgb, var(--st-accent) 40%, transparent);
 }
 
-.stepPanelBtn:active {
-  transform: scale(0.97);
-  transition: transform var(--st-motion-instant) var(--st-ease-out);
-}
-
 .speedPillRate {
   font-variant-numeric: tabular-nums;
   font-size: 14px;
@@ -2611,5 +2606,104 @@
 @media (prefers-reduced-motion: reduce) {
   .shell[data-simple='true'] {
     transition: none;
+  }
+}
+
+
+/* =========================================================================
+ * ONE PRESS, EVERYWHERE
+ *
+ * `.btn` has carried the right recipe for a while and nothing else did: the shell had eighteen
+ * hover rules and THREE press rules, so most controls lit up when the pointer arrived and then sat
+ * perfectly still under the click. That is the half of the feel that reads as cheap — the moment
+ * a control answers your finger is the moment it feels physical (user 2026-08-25: 버튼이나 호버링
+ * 애니메이션 등등도 애플처럼 감성 있고 부드럽고 통통 튀고).
+ *
+ * The recipe, unchanged from `.btn`:
+ *   DOWN is fast and flat — the acknowledgement has to beat the eye. Miller (1968) puts the ceiling
+ *   for "part of the machine I am operating" at 0.1s and `--st-motion-instant` is 80ms.
+ *   UP rides the press spring, where the overshoot is what reads as physical.
+ *
+ * bounce stays LOW here on purpose. Kao (2020, N=3018) finds juice is an inverted U — None and
+ * Extreme are equally bad, and not just on preference: task PERFORMANCE drops. These are the
+ * controls you hit hundreds of times a session, so they get the quiet spring; the rare, identity-
+ * changing moments are where the bouncy one lives (see `.boardSwap`).
+ *
+ * Naming every surface rather than using a wildcard keeps the next control a decision.
+ * ========================================================================= */
+.stepChip,
+.stepAll,
+.modeSeg,
+.panelBtn,
+.selectBtn,
+.colorCell,
+.cpSwatch,
+.swatchBtn,
+.gifBtn,
+.helpBtn,
+.stepPanelBtn,
+.themeBtn {
+  transition:
+    background-color var(--st-motion-instant) var(--st-ease-out),
+    border-color var(--st-motion-instant) var(--st-ease-out),
+    color var(--st-motion-instant) var(--st-ease-out),
+    box-shadow var(--st-motion-feedback) var(--st-ease-out),
+    transform var(--st-spring-press-ms) var(--st-spring-press);
+}
+
+/*
+ * HOVER LIFTS ONLY WHAT FLOATS. A docked row of chips that rises under the pointer wobbles the
+ * line it sits in; a card or a floating button has somewhere to rise to. So the lift is named, not
+ * global, and it is half a pixel plus a shadow — enough to read as "this is pickable".
+ */
+.stepPanelBtn:hover:not(:disabled),
+.gifBtn:hover:not(:disabled),
+.panelBtn:hover:not(:disabled) {
+  --st-press-lift: -1px;
+  transform: translateY(-1px);
+  box-shadow: var(--st-depth-raised);
+}
+
+.stepChip:active:not(:disabled),
+.stepAll:active:not(:disabled),
+.modeSeg:active:not(:disabled),
+.panelBtn:active:not(:disabled),
+.selectBtn:active:not(:disabled),
+.colorCell:active:not(:disabled),
+.cpSwatch:active:not(:disabled),
+.swatchBtn:active:not(:disabled),
+.gifBtn:active:not(:disabled),
+.helpBtn:active:not(:disabled),
+.stepPanelBtn:active:not(:disabled),
+.themeBtn:active:not(:disabled) {
+  /* the lift is kept while pressing so a floating control sinks IN PLACE rather than dropping
+     back to the surface the moment you touch it */
+  transform: translateY(var(--st-press-lift, 0)) scale(0.94);
+  transition-duration: var(--st-motion-instant);
+  transition-timing-function: var(--st-ease-out);
+}
+
+/*
+ * The one place a wildcard is right: a press that the user cannot see is worse than no animation,
+ * and someone who asked for less motion asked about DECORATION, not about feedback. Colour still
+ * changes; only the geometry stops.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .stepChip:active:not(:disabled),
+  .stepAll:active:not(:disabled),
+  .modeSeg:active:not(:disabled),
+  .panelBtn:active:not(:disabled),
+  .selectBtn:active:not(:disabled),
+  .colorCell:active:not(:disabled),
+  .cpSwatch:active:not(:disabled),
+  .swatchBtn:active:not(:disabled),
+  .gifBtn:active:not(:disabled),
+  .helpBtn:active:not(:disabled),
+  .stepPanelBtn:active:not(:disabled),
+  .themeBtn:active:not(:disabled),
+  .stepPanelBtn:hover:not(:disabled),
+  .gifBtn:hover:not(:disabled),
+  .panelBtn:hover:not(:disabled) {
+    transform: none;
   }
 }

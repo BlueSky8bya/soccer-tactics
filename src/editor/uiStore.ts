@@ -139,6 +139,17 @@ export interface UiState {
    * (user 2026-08-25: 사용하다보면 레이어 단계가 4번으로 가있고).
    */
   stepBump: number
+  /**
+   * Ticks when the board's IDENTITY changes — a different tactic variant, a file opened, a reset.
+   * Not when the tactic is merely edited: an edit is something you just did to the board in front
+   * of you, a swap replaces the board itself.
+   *
+   * Switching A→B changed every token on the pitch and said nothing at all, so it was possible to
+   * be editing the wrong plan without noticing (user 2026-08-25: A, B, C 바꿀 때 내가 이 페이지를
+   * 바꾸고 있는지를 잘 모르겠어서). The board takes one breath off this counter.
+   */
+  identitySwap: number
+  announceIdentitySwap: () => void
   /** Transient status line ("다운로드 시작" …), shown by DocMenu; auto-clears. */
   toast: string | null
   flashToast: (msg: string, ms?: number) => void
@@ -208,6 +219,7 @@ export const useUiStore = create<UiState>((set) => ({
   snapEnabled: true,
   reducedMotion: false,
   stepBump: 0,
+  identitySwap: 0,
   ballFling: loadFlag('st.ballFling', false),
   stepIsolate: loadFlag('st.stepIsolate', true),
   playback: { t: 0, playing: false, speed: NORMAL_SPEED, loop: false },
@@ -258,6 +270,7 @@ export const useUiStore = create<UiState>((set) => ({
     set({ stepIsolate })
   },
   setBoostFactor: (boostFactor) => set({ boostFactor }),
+  announceIdentitySwap: () => set((s) => ({ identitySwap: s.identitySwap + 1 })),
   setPlayhead: (t) =>
     set((s) => ({ playback: { ...s.playback, t: Math.max(0, t) }, completion: 'idle' })),
   startRange: (scope, start, end) =>

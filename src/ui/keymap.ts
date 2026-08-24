@@ -52,7 +52,7 @@ export function visibleBindings(
 
 export const KEYMAP = {
   playback: {
-    toggle: { key: ' ', label: 'Space', hint: '처음부터 재생·일시정지', chip: true, cues: ['space'] },
+    toggle: { key: ' ', label: 'Space', hint: '처음부터 재생·정지', chip: true, cues: ['space'] },
     // its own row, not a tail on the Space hint — the hold was undiscoverable buried there
     // (user 2026-08-21: space 꾹 누르는 키도 안내하게)
     // one line beside its keycap — a wrapped hint hangs indented under the cap and breaks the

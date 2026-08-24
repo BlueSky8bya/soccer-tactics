@@ -104,6 +104,9 @@ export function ActionsPanel() {
             const u = useUiStore.getState()
             u.clearSelection()
             u.returnToAuthoringStart()
+            // the board in front of you is a different board now — same signal the variant switch
+            // uses, so "it changed" always looks the same wherever it comes from
+            u.announceIdentitySwap()
           }}
           title={`${t('panel.reset')} (Shift+R)`}
         >

@@ -214,6 +214,7 @@ export function useEditorKeyboard(): void {
             )
             ui.clearSelection()
             ui.returnToAuthoringStart()
+            ui.announceIdentitySwap()
             ui.flashToast(t('panel.resetDone'))
           }
           return
