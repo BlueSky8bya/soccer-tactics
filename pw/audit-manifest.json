@@ -75,6 +75,14 @@
       "describe": "theme cycles and persists across a reload; step isolation REMOVES a later step's path from the tree (not merely fades it) and restores it when switched off; the ball throw is opt-in and its guide row goes with it"
     },
     {
+      "id": "step-view-fuzz",
+      "file": "step-view-fuzz.cjs",
+      "status": "present",
+      "covers": "단계 레이어를 계속 누를 때 단계가 섞이는 문제 (사용자 2026-08-24)",
+      "describe": "one tactic, then only VIEW ops — number keys, Space, the two replay buttons, the chips, the view toggle, path clicks — in a seeded campaign: the document never changes, isolation never paints another step's path or ghost, the chip agrees with the state, a step pick parks the clock, and every token stands where the clock says",
+      "env": "ST_PROBE_ROUNDS (default 3) lengthens the campaign; ST_PROBE_SHOTS=1 writes a gallery to pw/lab/out-stepfuzz"
+    },
+    {
       "id": "historical-22",
       "status": "missing",
       "covers": "2026-08-22 session",

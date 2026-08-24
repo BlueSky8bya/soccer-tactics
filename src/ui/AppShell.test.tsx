@@ -123,12 +123,33 @@ describe('AppShell (simple mode, ADR-0009)', () => {
       .find((s) => 'path' in s)!
     expect(useUiStore.getState().selectedSegmentId).toBe(seg.id)
     expect(seg.step ?? 1).toBe(1)
-    // Exact assignment 1 -> 5 in one action. This used to go through a native dropdown in the
-    // action bar; that was the fourth control assigning the same value and is gone (2026-08-22).
-    // The footer chip now retargets the selected movement, exactly as its number key already did.
+    /*
+     * A CHIP ONLY LOOKS. It used to retarget the selected movement — matching what the bare number
+     * key did — and that turned reading a tactic step by step into rewriting it (user 2026-08-24:
+     * 계속 누르니까 단계들이 서로 섞여서 보임). ADR-0009 v28: the view keys look, Shift files.
+     */
     const chip5 = screen.getByTitle(/^5단계 —/)
     await act(async () => {
       chip5.click()
+    })
+    const afterChip = core
+      .getDocument()
+      .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
+      .find((s) => 'path' in s)!
+    expect(core.getRevision()).toBe(rev)
+    expect(afterChip.step ?? 1).toBe(1)
+    expect(useUiStore.getState().currentStep).toBe(5)
+    // and a pick drops the selection, so the step you left stops being painted over the one you chose
+    expect(useUiStore.getState().selectedSegmentId).toBe(null)
+
+    // Exact assignment 1 -> 5, with the modifier that means it: Shift+5 on the selected movement.
+    await act(async () => {
+      badge.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    })
+    await act(async () => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: '%', code: 'Digit5', shiftKey: true, bubbles: true }),
+      )
     })
     const seg2 = core
       .getDocument()

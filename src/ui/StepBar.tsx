@@ -1,13 +1,9 @@
 import type { CSSProperties } from 'react'
-import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
+import { useEditorSnapshot } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
-import {
-  MAX_STEP,
-  setSegmentStep,
-  stepCounts,
-  stepRangeFor,
-} from '@/editor/stepCommands'
-import { activeStepAt, stepOpensAt } from './stepTiming'
+import { MAX_STEP, stepCounts } from '@/editor/stepCommands'
+import { activeStepAt } from './stepTiming'
+import { pickStep } from './stepPick'
 import { useUiStore } from '@/editor/uiStore'
 import { entityChipOf } from './teamColor'
 import { t } from './i18n'
@@ -15,7 +11,9 @@ import styles from './shell.module.css'
 
 /**
  * Step chips ①-⑨ (ADR-0009, PLAN-005 M1). A chip NEVER changes the document: it picks the step new
- * movements get and previews the frame that step opens at.
+ * movements get and stands the board at the frame that step opens at. For a while it broke that
+ * promise — with a movement selected it re-filed it — and reading a tactic step by step quietly
+ * rewrote it (2026-08-24). Retargeting is Shift+number now; this row only ever looks.
  *
  * ONE job, and therefore one constant width. Scoped replay and the view switch used to sit here
  * as context actions, appearing and disappearing with the state — which made this centred row grow
@@ -23,14 +21,9 @@ import styles from './shell.module.css'
  * board now (StepPanel), where nothing they do can move anything else.
  */
 export function StepBar() {
-  const core = useEditor()
   const { doc } = useEditorSnapshot()
   const currentStep = useUiStore((s) => s.currentStep)
-  const setCurrentStep = useUiStore((s) => s.setCurrentStep)
-  const setPlayhead = useUiStore((s) => s.setPlayhead)
-  const setPlaying = useUiStore((s) => s.setPlaying)
   const selectedSegmentId = useUiStore((s) => s.selectedSegmentId)
-  const flashToast = useUiStore((s) => s.flashToast)
   const counts = stepCounts(doc)
   const compiled = useCompiled()
   const playingT = useUiStore((s) => (s.playback.playing ? s.playback.t : null))
@@ -38,33 +31,23 @@ export function StepBar() {
   // activeStepAt — two places answering "which step is this" separately is how they drift.
   const activeStep = playingT !== null ? activeStepAt(doc, compiled, playingT) : null
 
-  const preview = (n: number) => {
-    setCurrentStep(n)
-    // A number KEY already retargeted the selected movement while a CLICK on the same chip did
-    // not — one control, two behaviours. Now that the bar visibly wears the selected movement's
-    // colour, the click has to mean what the colour says (and it is what makes the action bar's
-    // own step dropdown redundant).
-    if (selectedSegmentId) {
-      const range = stepRangeFor(doc, selectedSegmentId)
-      const landed = setSegmentStep(core, selectedSegmentId, n)
-      if (landed !== null && landed !== n && range)
-        flashToast(t('simple.stepRange', { a: range.lo, b: range.hi }))
-    }
-    /*
-     * Show the frame the step OPENS at — pure UI time, no document change (A-01).
-     *
-     * An EMPTY step used to leave the playhead wherever it happened to be, so picking step 4 on a
-     * three-step play still previewed the kickoff and the caption described the wrong moment
-     * (PLAN-015). stepOpensAt falls back to the end of the last authored step, which is exactly
-     * where a new step-4 movement would begin.
-     */
-    setPlaying(false)
-    setPlayhead(stepOpensAt(doc, compiled, n))
-  }
+  /**
+   * Pick a step to LOOK at. The chip is a VIEW control again, and this is the same three lines the
+   * number keys run (useEditorKeyboard) — one implementation, so the two cannot drift.
+   *
+   * It used to also re-file the selected movement, added so the click would match what the number
+   * key did. Both jobs are now on the key WITH SHIFT: a press that only means "show me step 3"
+   * must not rewrite the tactic (user 2026-08-24: 계속 누르니까 단계들이 서로 섞여서 보임).
+   *
+   * It also used to set the playhead itself. The board pins the clock to the step's opening on its
+   * own (SimplePitch), and under 전체 보기 that pin promptly undid this line — two writers, one of
+   * them always losing. The pin is the writer now.
+   */
+  const preview = (n: number) => pickStep(doc, compiled, n)
 
-  // With a movement selected the bar RETARGETS it (number keys change its step), so the active
-  // chip belongs to that entity and wears its identity. With nothing selected the bar picks the
-  // step for whatever gets drawn next — no entity yet, so it stays the system accent.
+  // A selected movement wears its entity's colour here, because Shift+number files it onto the
+  // chip you press. With nothing selected the bar picks the step for whatever gets drawn next —
+  // no entity yet, so it stays the system accent.
   const chip = selectedSegmentId
     ? entityChipOf(
         doc,

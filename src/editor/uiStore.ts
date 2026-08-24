@@ -131,7 +131,7 @@ export interface UiState {
   goToStart: () => void
   /** Simple mode (ADR-0009): step number newly drawn movements get. */
   currentStep: number
-  setCurrentStep: (n: number) => void
+  setCurrentStep: (n: number, opts?: { keepResult?: boolean }) => void
   /** Transient status line ("다운로드 시작" …), shown by DocMenu; auto-clears. */
   toast: string | null
   flashToast: (msg: string, ms?: number) => void
@@ -285,8 +285,25 @@ export const useUiStore = create<UiState>((set) => ({
       rangeEnd: null,
       completion: 'idle',
     })),
-  setCurrentStep: (currentStep) =>
-    set({ currentStep: Math.max(1, Math.min(MAX_STEP, currentStep)) }),
+  /**
+   * Picking a step ENDS the held result.
+   *
+   * `held-result` means "the play ran out and the board is holding its last frame", and the pin
+   * that parks the board at a step stands down while it holds. So after watching the play, the
+   * number keys switched which step was DRAWN while the tokens stayed at the final frame — one
+   * step's paths over another step's outcome (user 2026-08-24: 계속 누르니까 단계들이 서로
+   * 섞여서 보일 때도 있고). Asking for a step is asking to STAND in it, which is the opposite
+   * of holding the end, so the hold ends here and the board re-parks.
+   *
+   * Not while the play RUNS: the clock belongs to the play then, and nothing here should touch it.
+   */
+  setCurrentStep: (currentStep, opts) =>
+    set((s) => ({
+      currentStep: Math.max(1, Math.min(MAX_STEP, currentStep)),
+      // `keepResult` is for the board pointing the chip at the step a finished play stopped in:
+      // that is the hold DESCRIBING itself, not a user leaving it.
+      completion: s.playback.playing || opts?.keepResult ? s.completion : 'idle',
+    })),
   flashToast: (msg, ms = 1800) => {
     set({ toast: msg })
     setTimeout(() => set((s) => (s.toast === msg ? { toast: null } : {})), ms)

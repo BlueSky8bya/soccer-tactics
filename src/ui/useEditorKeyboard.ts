@@ -14,6 +14,7 @@ import { t } from './i18n'
 import { useUiStore } from '@/editor/uiStore'
 import { HOLD_TO_BOOST_MS, NORMAL_SPEED } from '@/editor/playbackRates'
 import { playableEnd, returnToStart, togglePlayback } from '@/editor/usePlayback'
+import { pickStep } from './stepPick'
 import { compile } from '@/engine/compile'
 
 function isTypingTarget(el: EventTarget | null): boolean {
@@ -53,6 +54,13 @@ export function useEditorKeyboard(): void {
       const ui = useUiStore.getState()
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
       const duration = () => playableEnd(compile(core.getDocument()))
+      /** Shift+1–9 reads the PHYSICAL key: with Shift held `e.key` is punctuation, not a digit. */
+      const shiftedDigit = e.shiftKey && /^Digit[1-9]$/.test(e.code) ? Number(e.code.slice(5)) : null
+      /** Look at a step — see `stepPick`, the one implementation the chips run too. */
+      const lookAtStep = (n: number) => {
+        const d = core.getDocument()
+        pickStep(d, compile(d), n)
+      }
 
       if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
         if (isTypingTarget(e.target)) return
@@ -112,7 +120,11 @@ export function useEditorKeyboard(): void {
          */
         const editKey =
           ui.annotate.tool === 'select' &&
-          (key === 'Delete' || key === 'Backspace' || key === 'Escape' || /^[1-9]$/.test(key))
+          (key === 'Delete' ||
+            key === 'Backspace' ||
+            key === 'Escape' ||
+            /^[1-9]$/.test(key) ||
+            shiftedDigit !== null)
         if (!viewKey && !editKey) return
       }
       if (key === 'd') {
@@ -206,17 +218,34 @@ export function useEditorKeyboard(): void {
           }
           return
         default: {
-          // 1-9 → step select; with a movement selected → move it to that step.
+          /*
+           * 1–9 = LOOK at that step. Nothing else.
+           *
+           * It used to ALSO re-file whatever movement was selected, and the two jobs collide the
+           * moment step isolation exists: reading a finished tactic means clicking a path and then
+           * walking the steps with the number keys, and every one of those presses silently moved
+           * the path you had clicked (user 2026-08-24: 계속 누르니까 단계들이 서로 섞여서
+           * 보일 때도 있고). A view act that edits the document is the wrong default whatever it
+           * is documented as — ADR-0009 v28 supersedes v13 here.
+           *
+           * The edit keeps its key, with Shift: same digit, same meaning, one deliberate modifier.
+           */
           if (/^[1-9]$/.test(key)) {
-            const n = Number(key)
-            ui.setCurrentStep(n)
-            if (ui.selectedSegmentId) {
-              // The chain's neighbours may leave no room for the step that was asked for — say
-              // where it actually landed rather than looking like a dead key.
-              const range = stepRangeFor(core.getDocument(), ui.selectedSegmentId)
-              const landed = setSegmentStep(core, ui.selectedSegmentId, n)
-              if (landed !== null && landed !== n && range)
-                ui.flashToast(t('simple.stepRange', { a: range.lo, b: range.hi }))
+            lookAtStep(Number(key))
+            return
+          }
+          if (shiftedDigit !== null && ui.selectedSegmentId) {
+            // The chain's neighbours may leave no room for the step that was asked for — say
+            // where it actually landed rather than looking like a dead key.
+            const range = stepRangeFor(core.getDocument(), ui.selectedSegmentId)
+            const landed = setSegmentStep(core, ui.selectedSegmentId, shiftedDigit)
+            if (landed !== null) {
+              ui.setCurrentStep(landed)
+              ui.flashToast(
+                landed !== shiftedDigit && range
+                  ? t('simple.stepRange', { a: range.lo, b: range.hi })
+                  : t('simple.stepMoved', { n: landed }),
+              )
             }
           }
           return

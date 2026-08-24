@@ -2441,6 +2441,14 @@ export function SimplePitch() {
       // React state, so paint alone cannot tell them apart.
       hoverKey,
       selection: [...useUiStore.getState().selection],
+      // The step VIEW state. A probe can see which paths are painted but not why: whether the chip
+      // moved, whether a movement is selected (a selected one is shown whatever step it is on), or
+      // whether isolation is even on. Without these, "two steps are on screen at once" cannot be
+      // told apart from "one step plus the thing you selected".
+      selectedSegmentId: useUiStore.getState().selectedSegmentId,
+      currentStep: useUiStore.getState().currentStep,
+      stepIsolate: useUiStore.getState().stepIsolate,
+      completion: useUiStore.getState().completion,
     }
   }
 
@@ -2506,21 +2514,57 @@ export function SimplePitch() {
    *
    * A held result is left alone: the user asked to study that exact frame.
    */
-  const stepAnchor = isolating ? stepOpensAt(doc, compiled, ui.currentStep) : 0
+  /*
+   * The anchor does NOT stand down while the play runs. `isolating` does — the play owns the
+   * board — but tying the anchor to it made the anchor swing to kickoff at play and back at pause,
+   * and a moved anchor re-parks the clock: every pause threw the board to the step's opening. The
+   * anchor is a property of the STEP you are authoring, not of what the board is doing right now.
+   */
+  const stepAnchor = ui.stepIsolate ? stepOpensAt(doc, compiled, ui.currentStep) : 0
+  /*
+   * SELF-HEALING, not a leash. The anchor moves when the step you are standing in moves on the
+   * clock — you picked another step, or an edit retimed the play — and the board has to follow it
+   * there. That is all this does.
+   *
+   * It used to re-park on EVERY render whenever the clock differed, and that overruled the user:
+   * pausing mid-play threw the board back to the step's opening, so the frame you stopped to look
+   * at was gone before you saw it (A-02 says a pause HOLDS the frame; user 2026-08-24: 스페이스바도
+   * 눌러보고). A finished result had to be exempted by name for the same reason — the same bug,
+   * patched once. Gating on "did the anchor move" covers both, and the step PICK now parks the
+   * clock itself (`stepPick`), which is the one place that should.
+   */
   useEffect(() => {
     const st = useUiStore.getState()
-    if (st.authoringT !== stepAnchor) {
-      /*
-       * A grabbed ball MOMENT is a statement about one frame. When the board moves to another one —
-       * a chip click, an edit that retimes the play — that statement is stale, and keeping it made
-       * the next gesture author against a frame nobody was looking at.
-       */
-      ballMomentRef.current = null
-      st.setAuthoringT(stepAnchor)
-    }
+    if (st.authoringT === stepAnchor) return
+    /*
+     * A grabbed ball MOMENT is a statement about one frame. When the board moves to another one —
+     * a chip click, an edit that retimes the play — that statement is stale, and keeping it made
+     * the next gesture author against a frame nobody was looking at.
+     */
+    ballMomentRef.current = null
+    st.setAuthoringT(stepAnchor)
     if (st.playback.playing || st.completion === 'held-result') return
     if (Math.abs(st.playback.t - stepAnchor) > 1e-6) st.setPlayhead(stepAnchor)
-  }, [stepAnchor, ui.playback.t, ui.playback.playing, ui.completion])
+  }, [stepAnchor, ui.playback.playing, ui.completion])
+
+  /*
+   * A HELD RESULT describes itself.
+   *
+   * When a replay runs out, the board holds its last frame — and isolation kept drawing whatever
+   * step the chip pointed at over it. Watch a five-step play with chip 2 lit and you got step 2's
+   * arrow floating across the final frame, its tail on empty grass because the player who drew it
+   * had long since moved on (user 2026-08-24: 단계들이 서로 섞여서 보일 때도 있고).
+   *
+   * The frame on screen belongs to the step that just finished, so the chip goes there. The hold
+   * itself is kept: pointing at the step is the result explaining what it is, not the user leaving
+   * it, and re-parking would rewind from the step's END to its opening.
+   */
+  useEffect(() => {
+    if (ui.completion !== 'held-result' || ui.playback.playing) return
+    const st = useUiStore.getState()
+    const landed = Math.max(1, completedStepAt(doc, compiled, st.playback.t))
+    if (landed !== st.currentStep) st.setCurrentStep(landed, { keepResult: true })
+  }, [ui.completion, ui.playback.playing, ui.playback.t, doc, compiled])
 
   const pickSegments: PickSegment[] = doc.scenes[0]
     ? sceneTracks(doc).flatMap((tr) =>
