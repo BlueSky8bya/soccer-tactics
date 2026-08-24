@@ -78,6 +78,7 @@ export const KEYMAP = {
     // movement was selected, and reading a finished tactic step by step then rewrote it
     // (user 2026-08-24: 계속 누르니까 단계들이 서로 섞여서 보임).
     step: { label: '1~9', hint: '그 단계 보기' },
+    stepAll: { label: '0', hint: '전체 보기' },
     moveStep: { label: 'Shift+1~9', hint: '선택한 경로를 그 단계로 옮기기' },
     clearAll: { label: 'X', hint: '움직임 전체 지우기' },
     reset: { label: 'Shift+R', hint: '새로 시작 (전체 초기화)' },
@@ -146,7 +147,7 @@ export const ANIM_BINDINGS: Binding[] = [
     compact: true,
     cues: ['path'],
   },
-  { label: '단계 1~9', hint: '그 단계 보기 (그릴 때는 같은 번호는 같이, 다음 번호는 이어서)' },
+  { label: '단계 0~9', hint: '0 전체 / 1~9 그 단계 (그릴 때는 같은 번호는 같이, 다음 번호는 이어서)' },
 ]
 
 /** 자유 그리기(주석) — PLAN-008. */

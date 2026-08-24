@@ -131,7 +131,14 @@ export interface UiState {
   goToStart: () => void
   /** Simple mode (ADR-0009): step number newly drawn movements get. */
   currentStep: number
-  setCurrentStep: (n: number, opts?: { keepResult?: boolean }) => void
+  setCurrentStep: (n: number, opts?: { keepResult?: boolean; auto?: boolean }) => void
+  /**
+   * Ticks every time something OTHER than a press moved the step — a drawing that landed on the
+   * next step, a replay that finished somewhere else. The bar flashes the chip off this, so a step
+   * that moves by itself is an event you SAW rather than a number you find changed later
+   * (user 2026-08-25: 사용하다보면 레이어 단계가 4번으로 가있고).
+   */
+  stepBump: number
   /** Transient status line ("다운로드 시작" …), shown by DocMenu; auto-clears. */
   toast: string | null
   flashToast: (msg: string, ms?: number) => void
@@ -200,6 +207,7 @@ export const useUiStore = create<UiState>((set) => ({
   activeTeamId: null,
   snapEnabled: true,
   reducedMotion: false,
+  stepBump: 0,
   ballFling: loadFlag('st.ballFling', false),
   stepIsolate: loadFlag('st.stepIsolate', true),
   playback: { t: 0, playing: false, speed: NORMAL_SPEED, loop: false },
@@ -303,6 +311,7 @@ export const useUiStore = create<UiState>((set) => ({
       // `keepResult` is for the board pointing the chip at the step a finished play stopped in:
       // that is the hold DESCRIBING itself, not a user leaving it.
       completion: s.playback.playing || opts?.keepResult ? s.completion : 'idle',
+      stepBump: opts?.auto ? s.stepBump + 1 : s.stepBump,
     })),
   flashToast: (msg, ms = 1800) => {
     set({ toast: msg })

@@ -609,7 +609,7 @@ export function SimplePitch() {
      * chip moves to where the movement went. The toast has always named that step; now the bar
      * agrees with it.
      */
-    if (landed !== st.currentStep) st.setCurrentStep(landed)
+    if (landed !== st.currentStep) st.setCurrentStep(landed, { auto: true })
     // commit confirmation: subject pops again as the arrow lands (M4)
     pulseKey.current++
     setPulses((prev) => ({ ...prev, [entityId]: pulseKey.current }))
@@ -2561,10 +2561,13 @@ export function SimplePitch() {
    */
   useEffect(() => {
     if (ui.completion !== 'held-result' || ui.playback.playing) return
+    // …and only while a STEP is what the board shows. Under 전체 보기 nothing is hidden, so there is
+    // nothing to correct, and moving the bar would look like the mode changed itself.
+    if (!ui.stepIsolate) return
     const st = useUiStore.getState()
     const landed = Math.max(1, completedStepAt(doc, compiled, st.playback.t))
-    if (landed !== st.currentStep) st.setCurrentStep(landed, { keepResult: true })
-  }, [ui.completion, ui.playback.playing, ui.playback.t, doc, compiled])
+    if (landed !== st.currentStep) st.setCurrentStep(landed, { keepResult: true, auto: true })
+  }, [ui.completion, ui.playback.playing, ui.playback.t, ui.stepIsolate, doc, compiled])
 
   const pickSegments: PickSegment[] = doc.scenes[0]
     ? sceneTracks(doc).flatMap((tr) =>

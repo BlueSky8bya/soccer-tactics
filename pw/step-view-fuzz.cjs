@@ -14,7 +14,9 @@ const path = require('path')
 
 const ID = 'step-view-fuzz'
 const OUT = path.join(__dirname, 'lab', 'out-stepfuzz')
-const chip = (page, n) => page.locator('[class*=stepBar] button[aria-pressed]').nth(n - 1)
+// The bar's first cell is 전체, so the numbers are their own class rather than "nth button".
+const chip = (page, n) => page.locator('[class*=stepChip]').nth(n - 1)
+const allCell = (page) => page.locator('[class*=stepAll]')
 const safe = (s) => s.replace(/[^a-z0-9]+/gi, '_')
 /**
  * ST_PROBE_SHOTS=1 writes a gallery (and failure frames) under pw/lab/out-stepfuzz — gitignored,
@@ -53,7 +55,7 @@ const snapshot = (page) =>
     const painted = [...document.querySelectorAll('g[data-segment]')].map((g) =>
       g.getAttribute('data-segment'),
     )
-    const chips = [...document.querySelectorAll('[class*=stepBar] button[aria-pressed]')]
+    const chips = [...document.querySelectorAll('[class*=stepChip]')]
     const f = window.__stFlags()
     const pb = window.__stClock()
     // Ghosts carry the movement they mark, so a ghost from another step is as much a leak as a path
@@ -80,7 +82,11 @@ const snapshot = (page) =>
       driftOf,
       steps,
       painted: [...new Set(painted)],
+      // 0 = no number lit, which is what 전체 looks like: the row has exactly ONE lit cell
       litChip: chips.findIndex((b) => b.getAttribute('aria-pressed') === 'true') + 1,
+      allLit: document.querySelector('[class*=stepAll]')?.getAttribute('aria-pressed') === 'true',
+      targetChip:
+        chips.findIndex((b) => /stepChipTarget/.test(b.getAttribute('class') || '')) + 1,
       ghosts: document.querySelectorAll('[class*=ghostToken]').length,
       clock: pb.t,
       playing: pb.playing,
@@ -139,8 +145,8 @@ module.exports = {
     // ---- the campaign ---------------------------------------------------
     const scopeOnly = page.getByRole('button', { name: /현재 단계만/ })
     const scopeFrom = page.getByRole('button', { name: /현재 단계부터/ })
-    const viewBtn = (which) =>
-      page.locator('[class*=viewSeg] button').filter({ hasText: which === 'iso' ? /단계만/ : /^전체$/ })
+    // 전체 is a cell of the step bar (v30); picking any number IS the other half of the switch.
+    const viewBtn = (which) => (which === 'all' ? allCell(page) : chip(page, 1))
 
     /*
      * Every op is TOLERANT. The panel unmounts while the play runs and its replay buttons only
@@ -272,12 +278,25 @@ module.exports = {
               ' [completion=' + s.completion + ' prev=' + (i ? plan[i - 1].name : '-') + ' sel=' + (s.selectedSegmentId || '-') + ']',
           )
       }
-      if (s.litChip !== s.currentStep) bad.chip.push(label + ' → lit ' + s.litChip + ' state ' + s.currentStep)
+      /*
+       * ONE lit cell, and it is the mode. Under isolation that is the current step; under 전체 it is
+       * the 전체 cell and NO number — the step new movements would go on wears a dashed ring
+       * instead, so the row never shows two lit things and never hides which mode is on.
+       */
+      const barOk = s.stepIsolate
+        ? s.litChip === s.currentStep && !s.allLit && s.targetChip === 0
+        : s.litChip === 0 && s.allLit && s.targetChip === s.currentStep
+      if (!barOk)
+        bad.chip.push(
+          label +
+            ' → isolate=' + s.stepIsolate + ' lit=' + s.litChip + ' all=' + s.allLit +
+            ' target=' + s.targetChip + ' state=' + s.currentStep,
+        )
     }
 
     out.push(h.check('no view op edited the tactic', bad.edited.length === 0, bad.edited.slice(0, 4).join(' ; ')))
     out.push(h.check('isolation never paints another step', bad.mixed.length === 0, bad.mixed.slice(0, 4).join(' ; ')))
-    out.push(h.check('the lit chip always agrees with the state', bad.chip.length === 0, bad.chip.slice(0, 4).join(' ; ')))
+    out.push(h.check('the bar shows exactly one lit cell, and it is the mode', bad.chip.length === 0, bad.chip.slice(0, 4).join(' ; ')))
     out.push(h.check('the clock parks at the isolated step opening', bad.clock.length === 0, bad.clock.slice(0, 4).join(' ; ')))
     out.push(h.check('no painted path is missing from the document', bad.orphan.length === 0, bad.orphan.slice(0, 4).join(' ; ')))
     out.push(h.check('isolation never paints another step as a ghost', bad.ghost.length === 0, bad.ghost.slice(0, 4).join(' ; ')))

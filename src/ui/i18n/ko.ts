@@ -208,11 +208,8 @@ export const ko = {
   'start.done': '기본 요소가 다 갖춰졌어요. 선수나 공을 선택하면 여기서 정밀 조정할 수 있어요.',
   'simple.steps': '단계',
 
-  'step.viewLabel': '보기 범위',
-  'step.isolateOn': '{n}단계만',
   'step.isolateOff': '전체',
-  'step.isolateHint': '고른 단계의 시작 프레임에 서고 그 단계만 그립니다',
-  'step.allHint': '모든 단계의 경로와 잔상을 함께 봅니다',
+  'step.allHint': '모든 단계의 경로와 잔상을 함께 봅니다 (0)',
   'player.card': '선수 정보',
   'player.number': '번호',
   'player.name': '이름',

@@ -1799,6 +1799,41 @@
   margin-right: 2px;
 }
 
+/*
+ * 전체 — the row's first cell. A pill, not a circle: it is a word, and shaping it like the digits
+ * would make it read as a tenth step. The hairline after it says "this one is not a number".
+ */
+.stepAll {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 15px;
+  border: 1.5px solid var(--st-border-strong);
+  background: var(--st-surface);
+  color: var(--st-text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Its own lit class rather than the chips' — sharing one would make 전체 answer to a
+   `[class*=stepChip]` selector, and it is emphatically not one of the numbers. */
+.stepAllOn {
+  background: var(--st-accent);
+  border-color: var(--st-accent);
+  color: #fff;
+}
+
+.stepBarSplit {
+  width: 1px;
+  height: 18px;
+  background: var(--st-border);
+  margin: 0 3px;
+}
+
 .stepChip {
   position: relative;
   width: 30px;
@@ -1831,6 +1866,17 @@
   background: var(--st-entity-chip, var(--st-accent));
   border-color: var(--st-entity-chip, var(--st-accent));
   color: var(--st-entity-ink, #fff);
+}
+
+/*
+ * Under 전체 no step is being SHOWN, but one is still where the next movement would go. A dashed
+ * ring says "this is the target, not the view" — filling it would give the row two lit cells and
+ * put the reader back where they started, wondering which mode they are in.
+ */
+.stepChipTarget {
+  border-style: dashed;
+  border-color: var(--st-entity-chip, var(--st-accent));
+  color: var(--st-text);
 }
 
 /*
@@ -2443,51 +2489,6 @@
 .stepPanelBtn:active {
   transform: scale(0.97);
   transition: transform var(--st-motion-instant) var(--st-ease-out);
-}
-
-/*
- * The view control is SEGMENTED: both modes are on screen, one is lit. A single toggle button
- * cannot say whether its label is the current state or the state it would move to, and the user
- * could not tell which mode they were in from it.
- */
-.viewSeg {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px;
-  padding: 2px;
-  margin-bottom: 3px;
-  background: var(--st-surface-3);
-  border-radius: var(--st-radius-s);
-}
-
-.viewSegBtn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  border-radius: 5px;
-  height: 24px;
-  padding: 0 9px;
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  /* the UNSELECTED segment is still a control you can press, not a caption: text-3 on the track
-     measured 4.16:1 in dark, under the floor (feel-lab) */
-  color: var(--st-text-2);
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color var(--st-motion-feedback) var(--st-ease-standard),
-    color var(--st-motion-feedback) var(--st-ease-standard);
-}
-
-.viewSegBtn:hover {
-  color: var(--st-text);
-}
-
-.viewSegOn {
-  background: var(--st-surface);
-  color: var(--st-accent-text, var(--st-accent));
-  box-shadow: var(--st-depth-rest);
 }
 
 .speedPillRate {

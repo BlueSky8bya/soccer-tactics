@@ -14,7 +14,9 @@
 const ID = 'step-view'
 
 /** Chips wear a count badge once used, so their accessible name is not just the number. */
-const chip = (page, n) => page.locator('[class*=stepBar] button[aria-pressed]').nth(n - 1)
+// The bar's first cell is 전체, so the numbers are their own class rather than "nth button".
+const chip = (page, n) => page.locator('[class*=stepChip]').nth(n - 1)
+const allCell = (page) => page.locator('[class*=stepAll]')
 const themeBtn = (page) => page.locator('button[data-theme-pref]')
 const themeAttr = (page) => page.evaluate(() => document.documentElement.dataset.theme)
 /** Path groups actually present in the tree — not "visible", PRESENT. */
@@ -98,13 +100,6 @@ module.exports = {
        * one position than the other — so every step chip slid sideways under the cursor
        * (user 2026-08-24: 단계 선택하는 버튼이 계속 좌우로 왔다갔다거리는게 불편해).
        */
-      const viewIsolated = () =>
-        page.evaluate(
-          () =>
-            document
-              .querySelector('[class*=viewSeg] button')
-              .getAttribute('aria-pressed') === 'true',
-        )
       const barWidth = () =>
         page.evaluate(() =>
           Math.round(document.querySelector('[class*=simpleBar]').getBoundingClientRect().width),
@@ -113,7 +108,7 @@ module.exports = {
         page.evaluate(() =>
           Math.round(
             document
-              .querySelectorAll('[class*=stepBar] button[aria-pressed]')[0]
+              .querySelectorAll('[class*=stepChip]')[0]
               .getBoundingClientRect().x,
           ),
         )
@@ -224,7 +219,7 @@ module.exports = {
        * casing carries the SAME dash — a solid casing under a dashed stroke fills every gap with
        * pale white, which is what made the ball's dotted pass read as a smear.
        */
-      await page.locator('[class*=viewSeg] button').nth(1).click() // segmented: all steps
+      await allCell(page).click() // the bar's 전체 cell
       await page.waitForTimeout(200)
       drawn = await drawnPaths(page)
       out.push(
@@ -264,7 +259,7 @@ module.exports = {
           JSON.stringify(flow.map((f) => f.anim)),
         ),
       )
-      await page.locator('[class*=viewSeg] button').nth(0).click() // segmented: this step
+      await chip(page, 1).click() // back to a single step — picking one IS the view (v29)
       await page.waitForTimeout(120)
 
       /*
@@ -298,7 +293,7 @@ module.exports = {
         h.check(
           'and the bar moved with it',
           (await page.evaluate(() =>
-            [...document.querySelectorAll('[class*=stepBar] button[aria-pressed]')].findIndex(
+            [...document.querySelectorAll('[class*=stepChip]')].findIndex(
               (b) => b.getAttribute('aria-pressed') === 'true',
             ),
           )) === 1,
@@ -396,14 +391,16 @@ module.exports = {
       out.push(h.check('bare grass found for the ball checks', bare.length === 3, JSON.stringify(bare)))
 
       for (const mode of ['전체', '단계만']) {
+        // Picking a step IS the view now (v29/v30), so 전체 is re-asserted after every chip — which
+        // is exactly the reported situation: chip N lit, the whole play drawn.
+        const setView = async () => {
+          if (mode === '전체') await allCell(page).click()
+        }
         await clearAll.click()
         await page.waitForTimeout(300)
         await chip(page, 1).click()
         await page.waitForTimeout(200)
-        await page
-          .locator('[class*=viewSeg] button')
-          .filter({ hasText: mode === '전체' ? /^전체$/ : /단계만/ })
-          .click()
+        await setView()
         await page.waitForTimeout(200)
         // ball onto bare grass: loose, and clickable on its own
         const b0 = await page.evaluate(() => window.__stStateAt(window.__stClock().t).ball.pos)
@@ -418,11 +415,6 @@ module.exports = {
         await h.drawFrom(page, runner.home, { x: runner.home.x + 12, y: runner.home.y + 4 }, { steps: 8 })
         await page.waitForTimeout(340)
 
-        const setView = () =>
-          page
-            .locator('[class*=viewSeg] button')
-            .filter({ hasText: mode === '전체' ? /^전체$/ : /단계만/ })
-            .click()
         const landOn = async (n, to) => {
           await chip(page, n).click()
           await page.waitForTimeout(200)

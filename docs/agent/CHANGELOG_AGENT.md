@@ -3281,3 +3281,42 @@ Validation: typecheck/lint/**346 tests**/build/harness PASS. 육안 확인 — �
 보드와 같은 표준 무늬(가운데 오각형 + 위성 5개 + 하이라이트).
 
 Related: CHG-20260822(고스트 공이 흰 원이던 문제 — 같은 계열의 앞선 통일)
+
+## CHG-20260825-210 — 보기 모드를 단계 바 안으로 접어 넣었다 (ADR-0009 v30)
+
+Date: 2026-08-25 · Type: UX · Level: L2
+
+Problem (사용자): "사용하다보면 레이어 단계가 4번으로 가있고, 또 전체 모드랑 해당 레이어 모드랑 어느
+순간 바껴있어서 인식하기 헷갈리는데, 좋은 구조적 방안 없을까?"
+
+진단: **같은 사실을 두 군데서 따로 말하고 있었다.** 단계 번호는 푸터 오른쪽, 보기 모드는 보드
+우상단에 떠 있는 세그먼트 — 대각선 700px. 한쪽을 보면 다른 쪽은 안 본다. `stepIsolate`는
+localStorage에 저장되므로 숫자키가 뒤집어 놓은 상태가 다음 세션까지 살아남는다. 그리고 칩은 세
+군데서 저절로 움직이는데(그린 뒤 / 재생 종료 / Shift+숫자) 이유는 다 정당하고 **말이 없었다**.
+
+Change (사용자 선택: "전체를 단계 바의 한 칸으로"):
+
+- **`단계 [전체] │ ①②③…⑨` 한 줄.** 우상단 세그먼트 제거. 컨트롤 하나, 볼 곳 하나.
+  `전체`는 알약 + 헤어라인 — 원이면 열 번째 단계로 읽힌다.
+- **불 켜진 칸은 정확히 하나.** 전체가 켜지면 숫자는 채워지지 않고, 새 움직임이 갈 단계만
+  **점선 테두리**로 남는다(채우면 켜진 칸이 둘이 되어 원점).
+- **자동 이동은 모드를 바꾸지 않는다.** 결과 프레임이 칩을 옮기는 동작은 격리 중에만.
+- **저절로 움직였으면 반짝인다.** 자동 이동만 `stepBump`를 올리고 바가 그 칸을 한 번 튕긴다
+  (420ms, `reducedMotion`이면 생략). `Element.animate()` — 클래스 재부착으로는 애니메이션이
+  재시작하지 않는다.
+- **`0` = 전체.** 바에서 ① 앞 칸이니 키도 1 앞 칸.
+- 우상단 패널은 `현재 단계만`·`현재 단계부터`만 남고, 전체 보기이거나 그 단계가 비면 **사라진다**.
+
+죽은 코드 정리: `.viewSeg*` CSS 3블록, `step.viewLabel`/`step.isolateOn`/`step.isolateHint` 문구.
+
+Files: src/ui/StepBar.tsx, src/ui/StepPanel.tsx, src/ui/stepPick.ts, src/ui/shell.module.css,
+src/editor/uiStore.ts, src/ui/pitch/SimplePitch.tsx, src/ui/useEditorKeyboard.ts, src/ui/keymap.ts,
+src/ui/i18n/ko.ts, pw/step-view.cjs, pw/step-view-fuzz.cjs,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md
+
+Validation: typecheck/lint/**346 tests**/build/harness PASS. 브라우저 **167 checks ALL PASS**.
+퍼즈의 바 불변식을 강화 — 격리 중이면 `lit === currentStep && !allLit && target === 0`, 전체면
+`lit === 0 && allLit && target === currentStep`. (강화된 검사는 구현 도중 실제로 실패해서
+`전체` 칸이 칩들의 활성 클래스를 재사용하던 것을 잡아냈다.)
+
+Related: ADR-0009 v30, CHG-20260824-207, CHG-20260824-208

@@ -7,8 +7,13 @@ import { UiIcon } from './UiIcon'
 import styles from './shell.module.css'
 
 /**
- * Everything you do TO the step in hand, in one column at the board's top-right: what the board
- * shows of it, and the two ways to replay it.
+ * The two ways to REPLAY the step in hand, in one column at the board's top-right.
+ *
+ * It used to carry the view switch too, and that was the mistake: the view mode belongs beside the
+ * step NUMBER, and the number lives in the footer bar. Stating the same fact in two corners is how
+ * the mode kept turning out to be something the user did not remember choosing (2026-08-25). 전체
+ * is a cell of the step bar now; this panel keeps only what is genuinely about the step in hand,
+ * and disappears when there is no step being shown or nothing in it to replay.
  *
  * All three used to live in the footer bar beside the step chips, and two of them appeared only
  * when the step held movements. The bar is a centred flex row, so its width breathed with the
@@ -26,11 +31,16 @@ export function StepPanel() {
   const currentStep = useUiStore((s) => s.currentStep)
   const playing = useUiStore((s) => s.playback.playing)
   const stepIsolate = useUiStore((s) => s.stepIsolate)
-  const setStepIsolate = useUiStore((s) => s.setStepIsolate)
 
   // While the play runs the board belongs to the play (same rule as the paths and badges).
   if (playing) return null
+  /*
+   * Only while a STEP is being shown. “현재 단계” means nothing under 전체 보기, and offering it
+   * there is what let the board's corner and the footer's bar disagree about which mode was on.
+   */
+  if (!stepIsolate) return null
   const used = (stepCounts(doc)[currentStep - 1] ?? 0) > 0
+  if (!used) return null
 
   const replay = (scope: 'step' | 'from-step') => {
     const w = stepWindow(doc, currentStep)
@@ -39,56 +49,24 @@ export function StepPanel() {
 
   return (
     <div className={styles.stepPanel} role="group" aria-label={t('simple.stepPanel')}>
-      {/*
-       * A SEGMENTED control, not a toggle button. A single button showing one label cannot say
-       * whether it reports the current mode or the mode it would switch to — the user read
-       * "보기: 전체" and could not tell which of the two they were in (2026-08-24: 이 버튼을 누르면
-       * 전체보기 모드로 된다는건지 지금 현재가 전체보기 모드인지 인식이 안 돼). Two segments with
-       * one lit answer both questions at once, and the lit segment also carries the step number, so
-       * the buttons below can drop it and stay short.
-       */}
-      <span className={styles.viewSeg} role="group" aria-label={t('step.viewLabel')}>
-        <button
-          type="button"
-          className={`${styles.viewSegBtn} ${stepIsolate ? styles.viewSegOn : ''}`}
-          onClick={() => setStepIsolate(true)}
-          aria-pressed={stepIsolate}
-          title={t('step.isolateHint')}
-        >
-          {t('step.isolateOn', { n: currentStep })}
-        </button>
-        <button
-          type="button"
-          className={`${styles.viewSegBtn} ${!stepIsolate ? styles.viewSegOn : ''}`}
-          onClick={() => setStepIsolate(false)}
-          aria-pressed={!stepIsolate}
-          title={t('step.allHint')}
-        >
-          {t('step.isolateOff')}
-        </button>
-      </span>
-      {used && (
-        <>
-          <button
-            type="button"
-            className={styles.stepPanelBtn}
-            onClick={() => replay('step')}
-            title={t('simple.playStepHint', { n: currentStep })}
-          >
-            <UiIcon name="play" size={10} filled />
-            {t('simple.playStep')}
-          </button>
-          <button
-            type="button"
-            className={styles.stepPanelBtn}
-            onClick={() => replay('from-step')}
-            title={t('simple.playFromHint', { n: currentStep })}
-          >
-            <UiIcon name="play" size={10} filled />
-            {t('simple.playFrom')}
-          </button>
-        </>
-      )}
+      <button
+        type="button"
+        className={styles.stepPanelBtn}
+        onClick={() => replay('step')}
+        title={t('simple.playStepHint', { n: currentStep })}
+      >
+        <UiIcon name="play" size={10} filled />
+        {t('simple.playStep')}
+      </button>
+      <button
+        type="button"
+        className={styles.stepPanelBtn}
+        onClick={() => replay('from-step')}
+        title={t('simple.playFromHint', { n: currentStep })}
+      >
+        <UiIcon name="play" size={10} filled />
+        {t('simple.playFrom')}
+      </button>
     </div>
   )
 }

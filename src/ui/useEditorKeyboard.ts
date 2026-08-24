@@ -14,7 +14,7 @@ import { t } from './i18n'
 import { useUiStore } from '@/editor/uiStore'
 import { HOLD_TO_BOOST_MS, NORMAL_SPEED } from '@/editor/playbackRates'
 import { playableEnd, returnToStart, togglePlayback } from '@/editor/usePlayback'
-import { pickStep } from './stepPick'
+import { pickAll, pickStep } from './stepPick'
 import { compile } from '@/engine/compile'
 
 function isTypingTarget(el: EventTarget | null): boolean {
@@ -123,7 +123,7 @@ export function useEditorKeyboard(): void {
           (key === 'Delete' ||
             key === 'Backspace' ||
             key === 'Escape' ||
-            /^[1-9]$/.test(key) ||
+            /^[0-9]$/.test(key) ||
             shiftedDigit !== null)
         if (!viewKey && !editKey) return
       }
@@ -234,13 +234,18 @@ export function useEditorKeyboard(): void {
             lookAtStep(Number(key))
             return
           }
+          // 0 sits where it does on the bar: one cell before ①, meaning "all of them".
+          if (key === '0') {
+            pickAll()
+            return
+          }
           if (shiftedDigit !== null && ui.selectedSegmentId) {
             // The chain's neighbours may leave no room for the step that was asked for — say
             // where it actually landed rather than looking like a dead key.
             const range = stepRangeFor(core.getDocument(), ui.selectedSegmentId)
             const landed = setSegmentStep(core, ui.selectedSegmentId, shiftedDigit)
             if (landed !== null) {
-              ui.setCurrentStep(landed)
+              ui.setCurrentStep(landed, { auto: true })
               ui.flashToast(
                 landed !== shiftedDigit && range
                   ? t('simple.stepRange', { a: range.lo, b: range.hi })

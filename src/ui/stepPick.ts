@@ -23,6 +23,24 @@ import type { TacticDocument } from '@/domain/types'
 import { useUiStore } from '@/editor/uiStore'
 import { stepOpensAt } from './stepTiming'
 
+/**
+ * The other cell on the same bar: show the WHOLE play.
+ *
+ * 전체 used to be a segmented control floating over the board's top-right corner while the step
+ * number lived in the footer — the same fact, two places, 700px apart diagonally, so you read one
+ * and never looked at the other (user 2026-08-25: 전체 모드랑 해당 레이어 모드랑 어느 순간
+ * 바꺼있어서 인식하기 헷갈려). It is one cell of the step bar now: one control, one lit cell,
+ * one place to look, and “which mode am I in” stops being a second thing to remember.
+ */
+export function pickAll(): void {
+  const st = useUiStore.getState()
+  st.setPlaying(false)
+  st.selectSegment(null)
+  st.setStepIsolate(false)
+  // the whole play is drawn from kickoff — there is no single frame “all steps” could mean
+  st.setPlayhead(0)
+}
+
 export function pickStep(doc: TacticDocument, compiled: CompiledTimeline, n: number): void {
   const st = useUiStore.getState()
   st.setPlaying(false)
