@@ -340,6 +340,34 @@ module.exports = {
         ),
       )
 
+      /*
+       * REGRESSION (user 2026-08-24: 2단계를 선택하고 축구공을 선택해서 경로 그리면 1단계로 설정돼).
+       * An Alt gesture that starts on GRASS draws for whatever is selected and never presses the
+       * token, so for the ball it fell through to a cached moment — one taken at kickoff, before
+       * the chip moved the clock. A player never hit this because a player is anchored by identity.
+       */
+      await chip(page, 1).click()
+      await page.waitForTimeout(150)
+      const ballId = (await h.doc(page)).ball.id
+      const ballNow = await page.evaluate(() => window.__stStateAt(window.__stClock().t).ball.pos)
+      await h.dragPitch(page, ballNow, ballNow, { steps: 1, settleMs: 200 }) // select it, cache a moment
+      await chip(page, 3).click()
+      await page.waitForTimeout(250)
+      const beforeBall = h.authoredSegments(await h.doc(page)).map((s) => s.id)
+      const spot = (await h.doc(page)).players[3]
+      await h.drawFrom(page, { x: spot.home.x - 7, y: spot.home.y - 7 }, spot.home, { steps: 6 })
+      await page.waitForTimeout(340)
+      const madeBall = h
+        .authoredSegments(await h.doc(page))
+        .find((s) => !beforeBall.includes(s.id) && s.entityId === ballId)
+      out.push(
+        h.check(
+          'a ball path drawn on chip 3 lands on step 3, not on a stale moment',
+          !!madeBall && madeBall.step === 3,
+          `landed on ${madeBall ? madeBall.step : 'nothing (no ball segment)'}`,
+        ),
+      )
+
       // ---- the throw ------------------------------------------------------
       /*
        * A pathless board first. A ball that already carries an authored pass is PLACED, never

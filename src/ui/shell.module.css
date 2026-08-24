@@ -1532,10 +1532,14 @@
  * The tool columns carry a key-hint row above their button, so the bar's OTHER groups have to
  * reserve the same height or they float 6-8px above the shared centre line and the footer stops
  * reading as one object (lab review, 2026-08-24, measured 1696.0 / 1696.5 / 1707.5).
+ *
+ * Scoped to direct children of the FOOTER. Unscoped it also pushed the header's variant switcher
+ * — the same component — 13px below the wordmark beside it (user 2026-08-24: 서로 높이가 안
+ * 정렬되어 있어서 불편해).
  */
-.modeToggle,
-.stepBar,
-.barDivider {
+.simpleBar > .modeToggle,
+.simpleBar > .stepBar,
+.simpleBar > .barDivider {
   margin-top: var(--st-toolkey-row);
 }
 
@@ -2213,7 +2217,12 @@
   background: color-mix(in srgb, var(--st-surface-2) 70%, transparent);
   border: 1px solid var(--st-border);
   border-radius: 5px;
+  /* one width for every cap in the column: "X" and "⇧R" are one and two characters, and letting
+     each shrink to its own content left the caps' right edges ragged against the button edge
+     (user 2026-08-24: X랑 시프트 R 너비가 안 맞아서 불편해) */
+  min-width: 30px;
   padding: 0 6px;
+  text-align: center;
   line-height: 17px;
   flex: none;
 }
@@ -2222,11 +2231,12 @@
 /* A/B/C variants share the segmented-control language of the bottom mode badge (harmony:
    repetition · alignment · proportion — user 2026-08-21). Empty slots sit quiet until hover. */
 .variantSeg {
-  min-width: 36px;
+  /* near-round rather than a stretched ellipse: 36 wide against a 28 tall pill read as squashed */
+  min-width: 30px;
   justify-content: center;
-  padding: 0 10px;
+  padding: 0 8px;
   font-weight: 700;
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
 /* EXISTING variants invite a switch on hover; EMPTY slots read as "make this plan" —

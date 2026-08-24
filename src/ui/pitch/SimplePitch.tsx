@@ -1456,7 +1456,24 @@ export function SimplePitch() {
    */
   const subjectAnchor = (entityId: Id): { from: Vec2; atStep?: number } => {
     const m = entityId === doc.ball.id ? ballMomentRef.current : null
-    return m ? { from: m.pos, atStep: m.step + 1 } : { from: entityRestPos(entityId) }
+    if (m) return { from: m.pos, atStep: m.step + 1 }
+    /*
+     * No grabbed moment, and the board is parked on ONE step: then the frame on screen is the
+     * answer. An Alt gesture that starts on grass never presses the ball, so it used to fall
+     * through to "the end of the ball's whole chain" — and with a step isolated that is not what
+     * the user is looking at. Picking step 2 and drawing from the ball put the pass on step 1
+     * (user 2026-08-24: 2단계 선택하고 축구공으로 경로 그리면 1단계로 설정돼). A player never had
+     * this problem because a player is anchored by identity, not by a moment.
+     */
+    const st = useUiStore.getState()
+    if (entityId === doc.ball.id && st.stepIsolate && !st.playback.playing) {
+      const at = st.playback.t
+      return {
+        from: stateAt(compiled, doc, at).ball.pos,
+        atStep: completedStepAt(doc, compiled, at) + 1,
+      }
+    }
+    return { from: entityRestPos(entityId) }
   }
 
   /**
@@ -2460,7 +2477,15 @@ export function SimplePitch() {
   const stepAnchor = isolating ? stepOpensAt(doc, compiled, ui.currentStep) : 0
   useEffect(() => {
     const st = useUiStore.getState()
-    if (st.authoringT !== stepAnchor) st.setAuthoringT(stepAnchor)
+    if (st.authoringT !== stepAnchor) {
+      /*
+       * A grabbed ball MOMENT is a statement about one frame. When the board moves to another one —
+       * a chip click, an edit that retimes the play — that statement is stale, and keeping it made
+       * the next gesture author against a frame nobody was looking at.
+       */
+      ballMomentRef.current = null
+      st.setAuthoringT(stepAnchor)
+    }
     if (st.playback.playing || st.completion === 'held-result') return
     if (Math.abs(st.playback.t - stepAnchor) > 1e-6) st.setPlayhead(stepAnchor)
   }, [stepAnchor, ui.playback.t, ui.playback.playing, ui.completion])

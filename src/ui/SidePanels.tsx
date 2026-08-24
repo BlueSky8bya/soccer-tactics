@@ -20,6 +20,13 @@ import {
 import { useActiveCues } from './useActiveCues'
 import styles from './shell.module.css'
 
+/*
+ * NO emoji on these buttons. ⚽ / ⌫ / 🗑 appeared nowhere else in the app — every other control is
+ * either a drawn stroke icon or plain text — so three coloured glyphs in one column read as a
+ * different product, and their varying widths pushed each label to a different x
+ * (user 2026-08-24: 여기만 있어서 어색하고 텍스트 정렬도 어지럽혀서 이상해).
+ */
+
 /** Left panel: the feature buttons (always visible). */
 export function ActionsPanel() {
   const cues = useActiveCues()
@@ -68,7 +75,7 @@ export function ActionsPanel() {
           title={`${home?.name ?? 'Home'} ${homeF} · ${away?.name ?? 'Away'} ${awayF}`}
           data-tour="fill"
         >
-          ⚽ {t('panel.fill')}
+          {t('panel.fill')}
         </button>
       </div>
 
@@ -83,7 +90,7 @@ export function ActionsPanel() {
           }}
           title={`${t('panel.clearAll')} (X)`}
         >
-          ⌫ {t('panel.clearAll')}
+          {t('panel.clearAll')}
           <span className={styles.btnKbd}>X</span>
         </button>
         <button
@@ -100,7 +107,7 @@ export function ActionsPanel() {
           }}
           title={`${t('panel.reset')} (Shift+R)`}
         >
-          🗑 {t('panel.reset')}
+          {t('panel.reset')}
           <span className={styles.btnKbd}>⇧R</span>
         </button>
       </div>
