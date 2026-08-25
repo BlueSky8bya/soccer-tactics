@@ -55,9 +55,8 @@ async function fillTeams(page) {
 }
 
 /**
- * Open one of the toolbar menus (ADR-0009 v31: 팀 구성 / 보드) and leave it open.
- * A menu closes on any pointer-down outside it, so a probe that then touches the board is
- * automatically back to a bare toolbar.
+ * Open the toolbar's 팀 구성 menu and leave it open. A menu closes on any pointer-down outside it,
+ * so a probe that then touches the board is automatically back to a bare toolbar.
  */
 async function openMenu(page, name) {
   const trigger = page.getByRole('button', { name, exact: true })
@@ -65,9 +64,8 @@ async function openMenu(page, name) {
   return trigger
 }
 
-/** Open 보드, press one of its rows, and let the menu close. */
+/** The board's own commands live in the side column since v35 — no menu to open. */
 async function boardMenuClick(page, itemName) {
-  await openMenu(page, '보드')
   await page.getByRole('button', { name: itemName }).click()
 }
 

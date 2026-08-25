@@ -73,7 +73,7 @@ function setup() {
  * gone. Opening one is now part of pressing anything inside it, so the tests say so out loud
  * rather than reaching for a button that is not on screen.
  */
-function menuButton(menu: '팀 구성' | '보드', name: RegExp): HTMLButtonElement {
+function menuButton(menu: '팀 구성', name: RegExp): HTMLButtonElement {
   const trigger = screen.getByRole('button', { name: menu })
   // its own act(): the card has to be rendered before the row inside it can be queried
   if (trigger.getAttribute('aria-expanded') !== 'true') act(() => trigger.click())
@@ -81,7 +81,7 @@ function menuButton(menu: '팀 구성' | '보드', name: RegExp): HTMLButtonElem
 }
 
 /** Open the menu, press the row, and let both renders settle. */
-async function pressInMenu(menu: '팀 구성' | '보드', name: RegExp) {
+async function pressInMenu(menu: '팀 구성', name: RegExp) {
   await act(async () => {
     screen.getByRole('button', { name: menu }).click()
   })
@@ -194,7 +194,9 @@ describe('AppShell (simple mode, ADR-0009)', () => {
       addStepRun(core, a!.id, makePath([a!.home, { x: a!.home.x + 8, y: a!.home.y }]).waypoints, 1)
       addStepRun(core, b!.id, makePath([b!.home, { x: b!.home.x + 8, y: b!.home.y }]).waypoints, 2)
     })
-    await pressInMenu('보드', /움직임 전체 지우기/)
+    await act(async () => {
+      screen.getByRole('button', { name: /움직임 전체 지우기/ }).click()
+    })
     const segs = core
       .getDocument()
       .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
@@ -313,13 +315,10 @@ describe('session A/B variants (PLAN-005 M5)', () => {
 describe('shell hierarchy (PLAN-006 M2)', () => {
   it('keeps the single simple-mode landmarks and all primary actions; no legacy chrome', async () => {
     const { container } = setup()
-    // Board-level actions are one press away, inside the toolbar menu that names them (v31).
-    for (const [menu, name] of [
-      ['팀 구성', /양 팀 채우기/],
-      ['보드', /움직임 전체 지우기/],
-      ['보드', /새로 시작/],
-    ] as const)
-      expect(menuButton(menu, name)).toBeTruthy()
+    // Team setup is a toolbar menu (v31); the board's own commands stand in the side column (v35).
+    expect(menuButton('팀 구성', /양 팀 채우기/)).toBeTruthy()
+    for (const name of [/움직임 전체 지우기/, /새로 시작/])
+      expect(screen.getByRole('button', { name })).toBeTruthy()
     /*
      * …and the transport is always on screen, no menu needed. EXACT names: the key guide's rows
      * are buttons too ("Space — 재생 단축키 설명"), and a loose /재생/ would no longer say which

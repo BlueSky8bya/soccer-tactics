@@ -14,8 +14,8 @@ Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness
 중복된 정적 설명문.
 
 - **고정 컬럼 0개.** 셸 = 상단바(48) + 캔버스(1fr). 재생바는 격자에서 나와 보드 위에 뜬다.
-- **팀 구성 ▾ / 보드 ▾** 상단바 팝오버가 옛 좌 패널의 컨트롤을 그대로 담는다(명령은 닫고,
-  설정은 열어 둔다).
+- **팀 구성 ▾** 상단바 팝오버(포메이션 + 양 팀 채우기). **정리·동작 설정은 사이드 열의 카드**다
+  (v35: 여백이 생겼으므로 메뉴 뒤에 둘 이유가 사라졌다 — 두 명령 모두 Ctrl+Z 한 번으로 복구).
 - **키 가이드**(`KeyGuide`, v33): **왼쪽 여백**(피치가 높이 제약이라 영원히 남는 잔디)의 200px 열.
   만들기/보기 2그룹 7행, 행마다 `[캡] 낱말`(38px). 키를 실제로 쥐면 그 행만 열리며 강조되고
   (ExposeHK 리허설), **클릭·포커스로도 열린다. 호버는 색만 바꾼다** — 열던 시절엔 포인터가 스치는
@@ -221,7 +221,7 @@ R5(pick dispatch)/R7(blur·lostpointercapture cancel)/R12-D(letterbox 7px)/R12-E
 ## Active Work
 
 `plans/ACTIVE_PLAN.md` PLAN-20260825-017 — **완료**(2026-08-25). 전면 캔버스 M1~M5 충족:
-5게이트 PASS(353 tests), 브라우저 210 checks ALL PASS(`pw/full-bleed` 31 — 레이아웃·발견성 계약 상시 감시).
+5게이트 PASS(353 tests), 브라우저 211 checks ALL PASS(`pw/full-bleed` 32 — 레이아웃·발견성 계약 상시 감시).
 직전 완료: `plans/completed/PLAN-20260825-016-interface-refit.md`.
 
 과거(참고): PLAN-20260823-014 — **전 축 완료**(A 재현 무결성 / B 단일 진실원 / C 문서 drift /

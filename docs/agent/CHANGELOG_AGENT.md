@@ -3603,3 +3603,34 @@ Validation: typecheck/lint/**353 tests**/build/harness PASS. 브라우저 **210 
 957 / 1102 / 1365 / 910 — v31 이후 불변. 라이트/다크 스크린샷 확인.
 
 Related: ADR-0009 v34, PLAN-20260825-017 R-6, CHG-20260825-215
+
+## CHG-20260825-217 — 정리·동작 설정 카드가 사이드 열로 (ADR-0009 v35)
+
+Date: 2026-08-25 · Type: UX · Level: L1
+
+Problem (사용자 2026-08-25, 스크린샷): "이 박스도 사이드로 옮겨줘" — `보드 ▾` 팝오버의
+정리(움직임 전체 지우기 · 새로 시작) + 동작 설정(공 휙 던지기).
+
+Change:
+- **`BoardActions`(신규)** — 왼쪽 열의 세 번째 카드. `보드 ▾` 메뉴는 삭제, 상단바에는 `팀 구성 ▾`만.
+  v31이 이걸 팝오버로 보낸 이유(보드에 내줄 공간이 없음)가 v33 이후 사라졌다 — 왼쪽 여백은 피치가
+  높이 제약이라 **어차피 못 쓰는 잔디**이고 카드 하나의 비용은 **0px**이다. 두 명령 모두 Ctrl+Z
+  한 번으로 복구된다.
+- **접힘 조건을 폭 → 여백으로.** `pw/hit-scale`이 1440×1000에서 회귀를 잡았다: 폭으로는 넓은 창인데
+  세로가 길어 슬랙이 **120px**뿐이라 224px 열이 터치라인을 덮고 왼쪽 선수를 드래그할 수 없었다.
+  슬랙 `W−109·(H−72)/72 ≥ 240`을 뷰포트로 풀면 **가로세로비 1.57**이라, 두 번째 미디어 조건을
+  `(max-aspect-ratio: 157/100)`으로 바꿨다.
+- **접힌 모드의 상세는 캡 옆 카드로.** 62px 열에서는 한 줄에 한 글자가 됐다. 여는 규칙(클릭·포커스·
+  키 유지)은 그대로.
+
+Files: src/ui/BoardActions.tsx(신규), src/ui/KeyGuide.tsx, src/ui/ToolbarMenus.tsx,
+src/ui/AppShell.tsx, src/ui/shell.module.css, src/ui/AppShell.test.tsx, pw/lib/harness.cjs,
+pw/step-view.cjs, pw/shell-feedback.cjs, pw/full-bleed.cjs,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/CURRENT_STATE.md,
+docs/agent/plans/ACTIVE_PLAN.md
+
+Validation: typecheck/lint/**353 tests**/build/harness PASS. 브라우저 **211 checks ALL PASS**.
+마킹 폭 1280/1440/1920 = 957 / 1102 / 1365 — 여전히 불변. 1440×1000(세로로 긴 창)에서 열이 접히고
+드래그가 다시 통한다.
+
+Related: ADR-0009 v35, PLAN-20260825-017 R-7, CHG-20260825-216

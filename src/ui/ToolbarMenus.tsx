@@ -1,18 +1,14 @@
-import { createEmptyDocument } from '@/domain'
-import { applyFormations, seedDefaultTeams } from '@/editor/commands'
-import { replaceDocument } from '@/editor/moreCommands'
-import { clearAllMovements } from '@/editor/stepCommands'
+import { applyFormations } from '@/editor/commands'
 import { useEditor, useEditorSnapshot } from '@/editor/EditorContext'
 import { FORMATIONS } from '@/presets/formations'
 import { MenuButton } from './MenuButton'
 import { SelectMenu } from './SelectMenu'
 import { useState } from 'react'
-import { useUiStore } from '@/editor/uiStore'
 import { t } from './i18n'
 import styles from './shell.module.css'
 
 /*
- * WHAT THE LEFT COLUMN BECAME (ADR-0009 v31).
+ * WHAT THE LEFT COLUMN BECAME (ADR-0009 v31; 정리·설정 moved back to the side in v35).
  *
  * 팀 구성 and 정리 were four cards standing in a 222px column all session — for two buttons you
  * press once at the start of a board and two you press rarely. Measured, that column plus the
@@ -70,66 +66,6 @@ export function TeamMenu() {
         title={`${home?.name ?? 'Home'} ${homeF} · ${away?.name ?? 'Away'} ${awayF}`}
       >
         {t('panel.fill')}
-      </button>
-    </MenuButton>
-  )
-}
-
-/** 보드 — the two destructive commands and the one behaviour switch. */
-export function BoardMenu() {
-  const core = useEditor()
-  const flashToast = useUiStore((s) => s.flashToast)
-  const ballFling = useUiStore((s) => s.ballFling)
-  const setBallFling = useUiStore((s) => s.setBallFling)
-  return (
-    <MenuButton label={t('panel.boardMenu')} ariaLabel={t('panel.boardMenu')}>
-      <div className={styles.sectionLabel}>{t('panel.cleanup')}</div>
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.panelBtn} ${styles.btnQuietDanger}`}
-        onClick={() => {
-          const n = clearAllMovements(core)
-          flashToast(n > 0 ? t('panel.clearAllDone', { n }) : t('panel.clearHint'))
-        }}
-        title={`${t('panel.clearAll')} (X)`}
-      >
-        {t('panel.clearAll')}
-        <span className={styles.btnKbd}>X</span>
-      </button>
-      <button
-        type="button"
-        className={`${styles.btn} ${styles.panelBtn} ${styles.btnQuietDanger}`}
-        onClick={() => {
-          replaceDocument(core, seedDefaultTeams(createEmptyDocument({ title: t('doc.untitled') })))
-          const u = useUiStore.getState()
-          u.clearSelection()
-          u.returnToAuthoringStart()
-          // the board in front of you is a different board now — same signal the variant switch
-          // uses, so "it changed" always looks the same wherever it comes from
-          u.announceIdentitySwap()
-        }}
-        title={`${t('panel.reset')} (Shift+R)`}
-      >
-        {t('panel.reset')}
-        <span className={styles.btnKbd}>⇧R</span>
-      </button>
-      <div className={styles.menuSep} aria-hidden="true" />
-      <div className={styles.sectionLabel}>{t('panel.settings')}</div>
-      {/* One row, one line (user 2026-08-24): a switch and its name. The full sentence lives in
-              the tooltip and in the hint that appears with the feature. */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={ballFling}
-        className={styles.headerSwitch}
-        data-menu-keep="true"
-        onClick={() => setBallFling(!ballFling)}
-        title={t('setting.ballFlingHint')}
-      >
-        <span className={styles.switchTrack} aria-hidden="true">
-          <span className={styles.switchKnob} />
-        </span>
-        {t('setting.ballFling')}
       </button>
     </MenuButton>
   )

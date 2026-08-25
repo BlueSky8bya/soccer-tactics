@@ -86,15 +86,12 @@ module.exports = {
      * pointer arrived and then sat perfectly still under the click. A control that does not move
      * when pressed is the half of the feel that reads as cheap.
      */
-    /*
-     * The last one lives in a toolbar menu since ADR-0009 v31 — the side column it used to stand
-     * in is gone — so it has to be opened before it can be pressed. Same surface, same rule.
-     */
     const pressables = [
       ['[class*=stepChip]', 'step chip', null],
       ['[class*=stepAll]', '전체 cell', null],
       ['[class*=variantSeg]', 'variant chip', null],
-      ['[class*=panelBtn]', 'panel button', '보드'],
+      // back in the open since v35: the board's own commands stand in the side column
+      ['[class*=panelBtn]', 'panel button', null],
     ]
     for (const [sel, name, menu] of pressables) {
       if (menu) await h.openMenu(page, menu)

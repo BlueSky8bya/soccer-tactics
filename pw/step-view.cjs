@@ -462,14 +462,9 @@ module.exports = {
        */
       await h.boardMenuClick(page, /움직임 전체 지우기/)
       await page.waitForTimeout(300)
-      // The switch lives in the 보드 menu now (v31); reading or flipping it means opening it.
+      // The switch stands in the side column (v35) — nothing to open before reading it.
       const flingSwitch = page.getByRole('switch', { name: /공 휙 던지기/ })
-      const readFling = async () => {
-        await h.openMenu(page, '보드')
-        const v = await flingSwitch.getAttribute('aria-checked')
-        await page.keyboard.press('Escape')
-        return v
-      }
+      const readFling = () => flingSwitch.getAttribute('aria-checked')
       out.push(
         h.check(
           'the throw is off by default',
@@ -499,9 +494,7 @@ module.exports = {
         ),
       )
 
-      await h.openMenu(page, '보드')
       await flingSwitch.click()
-      await page.keyboard.press('Escape')
       await page.waitForTimeout(80)
       out.push(
         h.check(

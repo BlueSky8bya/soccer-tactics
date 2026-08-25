@@ -99,7 +99,6 @@ module.exports = {
     // ---- menus, hints, zen ------------------------------------------------
     const { context, page, consoleErrors } = await h.openBoard({ width: 1440, height: 900, dpr: 1 })
     const teamBtn = page.getByRole('button', { name: '팀 구성', exact: true })
-    const boardBtn = page.getByRole('button', { name: '보드', exact: true })
 
     out.push(h.check('no docked column survives', (await page.locator('aside').count()) === 0))
     /*
@@ -131,25 +130,21 @@ module.exports = {
       ),
     )
 
-    await boardBtn.click()
+    // The board's own commands and its one setting stand in the side column (v35) — no menu.
     const sw = page.getByRole('switch', { name: /공 휙 던지기/ })
+    out.push(h.check('the board settings stand in the column', await sw.isVisible()))
     await sw.click()
     out.push(
-      h.check(
-        'a setting leaves the card open',
-        (await sw.isVisible()) && (await sw.getAttribute('aria-checked')) === 'true',
-      ),
+      h.check('and the switch flips in place', (await sw.getAttribute('aria-checked')) === 'true'),
     )
     await sw.click()
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(150)
-    out.push(h.check('Escape closes the card', (await sw.count()) === 0))
-    out.push(
-      h.check(
-        'and hands focus back to the trigger',
-        await page.evaluate(() => document.activeElement?.textContent?.includes('보드')),
-      ),
-    )
+    for (const name of [/움직임 전체 지우기/, /새로 시작/])
+      out.push(
+        h.check(
+          `${String(name)} is one press away`,
+          await page.getByRole('button', { name }).isVisible(),
+        ),
+      )
 
     // ExposeHK's rehearsal: holding the real key opens that key's set, and only that one
     await page.mouse.move(700, 400)

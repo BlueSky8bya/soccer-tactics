@@ -12,7 +12,7 @@ import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
 import { SelectionActionBar } from './SelectionActionBar'
 import { KeyGuide } from './KeyGuide'
-import { BoardMenu, TeamMenu } from './ToolbarMenus'
+import { TeamMenu } from './ToolbarMenus'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { StepBar } from './StepBar'
 import { t } from './i18n'
@@ -266,7 +266,6 @@ export function AppShell() {
           {__APP_VERSION__}
         </button>
           <TeamMenu />
-          <BoardMenu />
         </span>
         <span className={styles.headerCenter}>
           <span className={styles.brand}>{t('app.brand')}</span>

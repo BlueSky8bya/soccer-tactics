@@ -3,6 +3,7 @@ import { useUiStore } from '@/editor/uiStore'
 import styles from './shell.module.css'
 import { DRAW_KEY_GUIDE, GUIDE_GROUPS, KEY_GUIDE, type GuideKey } from './keymap'
 import { useActiveCues } from './useActiveCues'
+import { BoardActions } from './BoardActions'
 import { t } from './i18n'
 
 /**
@@ -103,6 +104,7 @@ export function KeyGuide() {
             })}
         </div>
       ))}
+      <BoardActions />
       {/*
        * The way out of the guide and into the whole list. It also gives the column a purpose
        * statement: without it, nine keycaps in a card are a thing you have to guess the job of.
@@ -114,7 +116,7 @@ export function KeyGuide() {
         title={t('topbar.help')}
       >
         <span className={styles.kbd}>?</span>
-        {t('guide.all')}
+        <span className={styles.guideAllLabel}>{t('guide.all')}</span>
       </button>
     </div>
   )

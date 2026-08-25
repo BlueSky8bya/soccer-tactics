@@ -2969,12 +2969,18 @@
 }
 
 /*
- * Narrow windows: the slack shrinks with the width, so the guide gives up its words and keeps its
- * caps. The key is the part you cannot infer — `Alt` is meaningless without the cap, `경로` is
- * merely nice — and the words come back the moment they are affordable. Hover and holding the key
- * still open the full detail.
+ * WHEN THERE IS NO GRASS TO STAND ON, the guide gives up its words and keeps its caps.
+ *
+ * The condition is not "narrow window" — it is "no slack". The pitch is height-constrained, so the
+ * grass beside it is `W_board − 109·(H_board − 72)/72`, and the full-width column (224 + 16) fits
+ * only while that is ≥ 240. Solving it for the viewport gives an aspect of about 1.57 at every
+ * laptop height (1.565 at 900, 1.556 at 1080), which is why the second query is an ASPECT and not a
+ * width: a 1440×1000 window is wide by any width rule and still has only 120px of grass, and the
+ * column would then sit on the touchline (caught by `pw/hit-scale`).
+ *
+ * The cap is the part you cannot infer — `Alt` is meaningless without it, `경로` is merely nice.
  */
-@media (max-width: 1180px) {
+@media (max-width: 1180px), (max-aspect-ratio: 157/100) {
   .keyGuide {
     --st-guide-w: 62px;
     gap: var(--st-space-2);
@@ -3037,14 +3043,15 @@
   outline-offset: 1px;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1180px), (max-aspect-ratio: 157/100) {
   .guideAll {
     padding: 0;
     width: 30px;
     justify-content: center;
+    align-self: center;
   }
 
-  .guideAll span:not([class*='kbd']) {
+  .guideAllLabel {
     display: none;
   }
 }
@@ -3053,5 +3060,103 @@
   .guideAll:hover,
   .guideAll:active {
     transform: none;
+  }
+}
+
+/*
+ * The action card in the side column (v35). `.panelBtn` was drawn for the old 222px column and
+ * fits the 224px guide unchanged; what it needs here is a label that TRUNCATES instead of pushing
+ * its key cap off the end, and a switch row that lines up with the buttons above it.
+ */
+.panelBtnLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guideGroup .panelBtn,
+.guideGroup .headerSwitch {
+  width: 100%;
+}
+
+.guideGroup .headerSwitch {
+  height: 34px;
+  padding: 0 var(--st-space-2);
+  gap: var(--st-space-2);
+}
+
+/* Narrow windows: the column is caps-only, so the actions keep their key and drop their sentence.
+   Both are one Ctrl+Z away, and both name themselves in their tooltip. */
+@media (max-width: 1180px), (max-aspect-ratio: 157/100) {
+  .guideGroup .panelBtnLabel {
+    display: none;
+  }
+
+  .guideGroup .panelBtn {
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  .guideGroup .btnKbd {
+    margin-left: 0;
+  }
+
+  .guideGroup .headerSwitch {
+    justify-content: center;
+  }
+
+  .guideGroup .menuSep {
+    margin: var(--st-space-1) 0;
+  }
+
+  /*
+   * A 62px column cannot hold a sentence — the detail came out one glyph per line. So in this mode
+   * the drawer stops being a drawer and becomes a card BESIDE the cap. It only ever appears
+   * because the user clicked, held the key, or tabbed to it, which is the same rule as everywhere
+   * else: geometry moves on request.
+   */
+  .guideDrawer {
+    position: absolute;
+    left: calc(100% + var(--st-space-2));
+    top: calc(var(--st-space-2) * -1);
+    z-index: 3;
+    display: none;
+    width: 244px;
+    grid-template-rows: none;
+    padding: var(--st-space-3) var(--st-space-2);
+    background: var(--st-surface);
+    border: 1px solid var(--st-border);
+    border-radius: var(--st-radius-card);
+    box-shadow: var(--st-depth-overlay);
+    animation: guideAside var(--st-spring-overlay-ms) var(--st-spring-overlay) both;
+  }
+
+  .guideDrawer[data-open] {
+    display: block;
+  }
+
+  .guideDrawerInner {
+    overflow: visible;
+  }
+
+  .guideDetail {
+    margin-left: var(--st-space-2);
+  }
+}
+
+@keyframes guideAside {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guideDrawer {
+    animation: none;
   }
 }
