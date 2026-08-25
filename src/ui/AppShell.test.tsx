@@ -336,6 +336,25 @@ describe('shell hierarchy (PLAN-006 M2)', () => {
   })
 })
 
+describe('discoverability (ADR-0009 v32)', () => {
+  it('a first visit can see the keys, but is not explained at', () => {
+    const { container } = setup()
+    /*
+     * v31 made every hint contextual and that hid the entrance: a first-time visitor never holds
+     * Ctrl, so they never learn Ctrl is what puts a player on the pitch (user 2026-08-25). The
+     * rail is the standing INDEX — one key, one word — and the explanation still waits for the
+     * state it belongs to.
+     */
+    const rail = container.querySelector('[class*="hintRail"]')!
+    expect(rail).toBeTruthy()
+    const keys = [...rail.querySelectorAll('[class*="kbd"]')].map((k) => k.textContent)
+    for (const k of ['Ctrl', 'Alt', 'Shift', '1~9', 'X', '⇧R']) expect(keys).toContain(k)
+    // …and nothing is unfolded or lit while the board is idle
+    expect(container.querySelector('[class*="hintRows"]')).toBeNull()
+    expect(rail.querySelector('[data-on="true"]')).toBeNull()
+  })
+})
+
 describe('playback staging (PLAN-006 M5)', () => {
   it('marks the shell as playing so chrome can recede, and clears it on stop', async () => {
     const { container } = setup()

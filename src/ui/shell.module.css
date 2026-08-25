@@ -2759,9 +2759,81 @@
   z-index: 30;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 6px;
   pointer-events: none;
+  max-width: calc(100% - var(--st-space-6));
+}
+
+/*
+ * The rail (v32): one line, one key per chip, one word per key. It is an INDEX — it exists so a
+ * first-time visitor knows a key is there at all. It never grows; the detail is the rows below.
+ */
+.hintRail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.hintKey {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 4px;
+  border-radius: var(--st-radius-pill);
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-depth-rest);
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: var(--st-text-3);
+  white-space: nowrap;
+  /* quiet at rest: it is furniture until the key it names is the key in your hand */
+  opacity: 0.72;
+  transition:
+    opacity var(--st-motion-feedback) var(--st-ease-standard),
+    background-color var(--st-motion-feedback) var(--st-ease-standard),
+    border-color var(--st-motion-feedback) var(--st-ease-standard),
+    color var(--st-motion-feedback) var(--st-ease-standard),
+    transform var(--st-spring-press-ms) var(--st-spring-press);
+}
+
+/*
+ * Held. The chip is the ANCHOR for the rows that just unfolded underneath it, so it has to change
+ * enough to be found in peripheral vision — colour, weight and a small lift, all at once.
+ */
+.hintKey[data-on='true'] {
+  opacity: 1;
+  background: var(--st-accent-soft);
+  border-color: var(--st-accent);
+  color: var(--st-accent-text, var(--st-accent));
+  transform: translateY(-1px);
+  box-shadow: var(--st-depth-raised);
+}
+
+.hintKey[data-on='true'] .kbd {
+  color: var(--st-accent-text, var(--st-accent));
+  border-color: var(--st-accent);
+  background: transparent;
+}
+
+.hintKeyWord {
+  font-weight: 500;
+}
+
+.hintRows {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   max-width: min(38%, 340px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hintKey {
+    transition: none;
+  }
 }
 
 .boardHint {

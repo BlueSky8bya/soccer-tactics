@@ -3488,3 +3488,38 @@ Validation: typecheck/lint/**350 tests**/build/harness PASS. 브라우저 **203 
 바 간섭 없음, 메뉴 열림/닫힘 규칙, Ctrl/공 힌트와 3줄 상한, zen.
 
 Related: ADR-0009 v31, PLAN-20260825-017, PLAN-20260825-016(M4 대체), ADR-0001
+
+## CHG-20260825-214 — 서 있는 키 레일 + 맥락 확장 (ADR-0009 v32)
+
+Date: 2026-08-25 · Type: UX · Level: L1
+
+Problem (사용자 2026-08-25, v31 직후): "단축키가 아예 다 사라져서 처음 사이트 들어가는 사람들은
+뭘 어떻게 해야 할지 모를 것 같은데, 간단한 단축키 Ctrl·숫자키·Alt·X·Shift R 등은 보여줬다가 그
+맥락 행동을 하면 단축키가 확장돼서 하이라이팅 하게 해줘."
+
+맞는 지적이다. v31의 판단(설명문이 화면 3분의 1을 상시 점유하는 건 틀렸다)은 유효하지만, **전부**
+맥락으로 옮긴 것이 과했다. 맥락 힌트는 정의상 **이미 아는 사람에게만 보인다** — 처음 온 사람은
+Ctrl을 누를 이유가 없으니 Ctrl이 선수를 놓는 키라는 걸 배울 길이 없다.
+
+Change — 성격이 다른 두 층으로 나눴다:
+- **레일(색인, 상시)**: 보드 좌상단 한 줄. 칩 하나에 키 하나 + **낱말 하나** —
+  `Ctrl 선수` `Alt 경로` `Shift 여럿` `1~9 단계` `Space 재생` `X 지우기` `⇧R 새로` `F 비우기`.
+  실측 **612×27px**. (낱말을 네 음절로 두면 760px에 두 줄이 됐다 — 색인이 문단이 되는 지점.)
+- **행(설명, 맥락)**: 기존 `useActiveCues` 게이트 그대로, 최대 3줄, 유휴 보드 0줄.
+- **잇는 것은 하이라이트**: 행이 펼쳐지는 순간 그 키의 칩이 액센트로 켜지고 1px 뜬다. 눌린 키와
+  나타난 줄이 눈으로 연결돼야 확장이 학습이 된다.
+- **그리기 모드**는 펜의 어휘로 갈아탄다(`V / P / E`, `Ctrl+Z`, `Delete`, `D`) — 펜의 키는 쥐는
+  상태가 아니라 레일만 있고 행이 없다.
+
+컬럼이 돌아온 것이 아니다: 옛 패널은 두 개 × 전체 높이(460px 폭)였고, 레일은 한 줄 27px이다.
+보드 점유율은 v31 그대로(1440에서 마킹 1102).
+
+Files: src/ui/keymap.ts, src/ui/BoardHints.tsx, src/ui/shell.module.css, src/ui/AppShell.test.tsx,
+pw/full-bleed.cjs, docs/agent/decisions/ADR-0009-simple-mode-interaction.md,
+docs/agent/plans/ACTIVE_PLAN.md, docs/agent/CURRENT_STATE.md
+
+Validation: typecheck/lint/**351 tests**/build/harness PASS. 브라우저 **206 checks ALL PASS**
+(`full-bleed` 24 → 27: 유휴 레일 존재·한 줄·켜진 칩 0, Ctrl 시 정확히 한 칩만 점등, 키를 떼면
+행만 사라지고 레일은 남음). 라이트/다크 스크린샷 확인.
+
+Related: ADR-0009 v32(v31 §6 부분 대체), PLAN-20260825-017 R-4, CHG-20260825-213

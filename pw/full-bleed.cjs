@@ -10,8 +10,9 @@
  * Three things are pinned:
  *   1. the board fills the window (no docked column may reappear),
  *   2. the PITCH MARKINGS end above the floating transport (the bar may cover grass, never play),
- *   3. the guide is a STATE — nothing on an idle board, at most three rows while a cue is live,
- *      and gone again when the key comes up.
+ *   3. the guide is an INDEX PLUS A STATE (v32) — a one-line key rail always standing, no
+ *      expanded rows on an idle board, at most three rows while a cue is live with its rail chip
+ *      lit, and the rows gone again when the key comes up.
  */
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -36,7 +37,9 @@ const geometry = (page) =>
     }
   })
 
-const hintRows = (page) => page.locator('[class*=boardHints] > div')
+const hintRows = (page) => page.locator('[class*=hintRows] > div')
+const railKeys = (page) => page.locator('[class*=hintRail] > span')
+const litKeys = (page) => page.locator('[class*=hintRail] > span[data-on="true"]')
 
 module.exports = {
   id: 'full-bleed',
@@ -84,8 +87,18 @@ module.exports = {
     const boardBtn = page.getByRole('button', { name: '보드', exact: true })
 
     out.push(h.check('no docked column survives', (await page.locator('aside').count()) === 0))
+    /*
+     * v32: an idle board is not silent — it carries the one-line rail, because a gesture you only
+     * learn by already performing it is not discoverable (user 2026-08-25). What it must not carry
+     * is EXPLANATION: no expanded rows, and no chip lit, until you are actually in a state.
+     */
+    const railCount = await railKeys(page).count()
+    out.push(h.check('an idle board keeps the key rail', railCount >= 6, `${railCount} keys`))
     out.push(
-      h.check('an idle board says nothing', (await page.locator('[class*=boardHints]').count()) === 0),
+      h.check('the rail fits one line', (await page.evaluate(() => Math.round(document.querySelector('[class*=hintRail]').getBoundingClientRect().height))) < 40),
+    )
+    out.push(
+      h.check('but explains nothing until asked', (await hintRows(page).count()) === 0 && (await litKeys(page).count()) === 0),
     )
 
     await teamBtn.click()
@@ -128,6 +141,7 @@ module.exports = {
     await page.keyboard.down('Control')
     await page.waitForTimeout(420)
     const ctrl = await hintRows(page).allTextContents()
+    const lit = await litKeys(page).allTextContents()
     await page.keyboard.up('Control')
     out.push(
       h.check(
@@ -136,10 +150,22 @@ module.exports = {
         ctrl.join(' | '),
       ),
     )
+    out.push(
+      h.check(
+        'and the rail chip it came from lights up',
+        lit.length === 1 && lit[0].startsWith('Ctrl'),
+        lit.join(' | ') || 'nothing lit',
+      ),
+    )
     out.push(h.check('at most three rows', ctrl.length <= 3, `${ctrl.length} rows`))
     await page.waitForTimeout(600)
     out.push(
-      h.check('and they leave with the key', (await page.locator('[class*=boardHints]').count()) === 0),
+      h.check(
+        'the rows leave with the key, the rail stays',
+        (await hintRows(page).count()) === 0 &&
+          (await litKeys(page).count()) === 0 &&
+          (await railKeys(page).count()) === railCount,
+      ),
     )
 
     // selection — the "I clicked this, now what" families

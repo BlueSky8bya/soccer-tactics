@@ -16,7 +16,10 @@ Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness
 - **고정 컬럼 0개.** 셸 = 상단바(48) + 캔버스(1fr). 재생바는 격자에서 나와 보드 위에 뜬다.
 - **팀 구성 ▾ / 보드 ▾** 상단바 팝오버가 옛 좌 패널의 컨트롤을 그대로 담는다(명령은 닫고,
   설정은 열어 둔다).
-- **맥락 힌트**(`BoardHints`): `useActiveCues`가 켠 상태의 줄만 최대 3줄. 유휴 보드에는 없음.
+- **키 레일 + 맥락 힌트**(`BoardHints`, v32): 보드 좌상단 **한 줄 색인**(키 하나 + 낱말 하나,
+  612×27px)이 상시 서 있고, 그 키를 실제로 쥐면 **그 칩이 켜지며** 설명 줄이 최대 3줄 펼쳐진다.
+  유휴 보드에는 펼친 줄 0·켜진 칩 0. (v31의 "상시 노출 0"은 첫 방문자에게 아무것도 가르치지
+  못해 사용자 지적으로 개정 — CHG-214.)
 - **피치는 바 위에서 끝난다**(`BOARD_SAFE_BOTTOM_PX = 72`, 유도값). 잔디는 창 끝까지 — 좌표 손실 없음.
 - **F(zen) = 떠 있는 크롬 감추기**(접을 패널이 없다). zen은 72px을 피치에 돌려준다.
 
@@ -215,7 +218,7 @@ R5(pick dispatch)/R7(blur·lostpointercapture cancel)/R12-D(letterbox 7px)/R12-E
 ## Active Work
 
 `plans/ACTIVE_PLAN.md` PLAN-20260825-017 — **완료**(2026-08-25). 전면 캔버스 M1~M5 충족:
-5게이트 PASS(350 tests), 브라우저 203 checks ALL PASS(신규 `pw/full-bleed` 24 — 레이아웃 계약 상시 감시).
+5게이트 PASS(351 tests), 브라우저 206 checks ALL PASS(신규 `pw/full-bleed` 27 — 레이아웃·발견성 계약 상시 감시).
 직전 완료: `plans/completed/PLAN-20260825-016-interface-refit.md`.
 
 과거(참고): PLAN-20260823-014 — **전 축 완료**(A 재현 무결성 / B 단일 진실원 / C 문서 drift /

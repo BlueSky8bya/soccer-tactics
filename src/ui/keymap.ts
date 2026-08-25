@@ -201,3 +201,48 @@ export const KEYMAP_GROUPS: { title: string; items: Binding[] }[] = [
   { title: '재생', items: Object.values(KEYMAP.playback) },
   { title: '편집', items: Object.values(KEYMAP.edit) },
 ]
+
+/**
+ * THE KEY RAIL (ADR-0009 v32, user 2026-08-25: 단축키가 아예 다 사라져서 처음 사이트 들어가는
+ * 사람들은 뭘 어떻게 해야 할지 모를 것 같은데).
+ *
+ * v31 made the whole guide contextual, and contextual means INVISIBLE UNTIL YOU ALREADY KNOW: a
+ * first-time visitor never holds Ctrl, so they never learn that Ctrl is what puts a player on the
+ * pitch. The fix is not to bring the wall back — it is to keep a standing INDEX and let the
+ * context supply the detail.
+ *
+ * Each rail entry is one key and ONE WORD. The word is what the key is for, not how it works; the
+ * how arrives as full rows the moment the key is actually held (`cue`), and the entry itself lights
+ * up so the eye can connect the two. Entries without a cue are single-press commands — nothing to
+ * hold, so the word IS the whole hint.
+ */
+export interface RailKey {
+  label: string
+  /** One word. If it needs a sentence it belongs in the rows, not here. */
+  word: string
+  /** The state in which this key's full rows unfold and the chip lights up. */
+  cue?: Cue
+}
+
+/*
+ * One word each, and they are SHORT on purpose: eight chips at four syllables ran 760px and
+ * wrapped to a second line, at which point the index is a paragraph again (measured 1440×900).
+ */
+export const RAIL_KEYS: readonly RailKey[] = [
+  { label: 'Ctrl', word: '선수', cue: 'ctrl' },
+  { label: 'Alt', word: '경로', cue: 'alt' },
+  { label: 'Shift', word: '여럿', cue: 'shift' },
+  { label: '1~9', word: '단계' },
+  { label: 'Space', word: '재생', cue: 'space' },
+  { label: 'X', word: '지우기' },
+  { label: '⇧R', word: '새로' },
+  { label: 'F', word: '비우기' },
+]
+
+/** The pen owns the board in draw mode, so the rail says the pen's keys instead. */
+export const DRAW_RAIL_KEYS: readonly RailKey[] = [
+  { label: 'V / P / E', word: '선택 · 펜 · 지우개' },
+  { label: 'Ctrl+Z', word: '한 획 되돌리기' },
+  { label: 'Delete', word: '고른 것 지우기' },
+  { label: 'D', word: '전술 보드로' },
+]
