@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { useEditor, useEditorSnapshot, useVariantSession } from '@/editor/EditorContext'
 import { useCompiled } from '@/editor/useCompiled'
 import { removeDrawings } from '@/editor/moreCommands'
@@ -12,6 +18,9 @@ import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
 import { SelectionActionBar } from './SelectionActionBar'
 import { KeyGuide } from './KeyGuide'
+import { sideColumns } from './sideColumns'
+import { NO_SIDE_ROOM, useMediaQuery } from './useMediaQuery'
+import { BOARD_SAFE_BOTTOM_PX } from './pitch/useSvgMetrics'
 import { TeamMenu } from './ToolbarMenus'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { StepBar } from './StepBar'
@@ -63,6 +72,32 @@ export function AppShell() {
    */
   const pitchFrameRef = useRef<HTMLDivElement>(null)
   useBoardBreath(pitchFrameRef)
+  /*
+   * The side columns are a SHARE of the grass the pitch cannot use, and that share is measured,
+   * not guessed: 263px of slack at 1280×800 but 800px on a 1905×858 window, where fixed columns
+   * looked starved and wrapped their text mid-phrase (user 2026-08-25). One measurement publishes
+   * four numbers as custom properties — the stylesheet lays the columns out with them and
+   * `usePitchView` reads the reserves off the same root, so the two cannot drift.
+   */
+  const boardRef = useRef<HTMLElement>(null)
+  const oneColumn = useMediaQuery(NO_SIDE_ROOM)
+  const [cols, setCols] = useState<ReturnType<typeof sideColumns> | null>(null)
+  useEffect(() => {
+    const el = boardRef.current
+    if (!el || oneColumn) {
+      setCols(null)
+      return
+    }
+    const measure = () => {
+      const r = el.getBoundingClientRect()
+      const pad = 12 * 2 // .pitchAreaSimple padding, both sides
+      setCols(sideColumns(r.width - pad, r.height - pad, BOARD_SAFE_BOTTOM_PX))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [oneColumn])
   const [gifBusy, setGifBusy] = useState(false)
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
   const theme = useTheme()
@@ -248,6 +283,18 @@ export function AppShell() {
       data-simple="true"
       data-playing={ui.playback.playing}
       data-zen={ui.zen}
+      style={
+        cols
+          ? ({
+              '--st-guide-w': `${cols.widthLeft}px`,
+              '--st-guide-right-w': `${cols.widthRight}px`,
+              '--st-reserve-left': `${cols.reserveLeft}px`,
+              '--st-reserve-right': `${cols.reserveRight}px`,
+              '--st-guide-x': `${cols.insetLeft}px`,
+              '--st-guide-right-x': `${cols.insetRight}px`,
+            } as CSSProperties)
+          : undefined
+      }
     >
       <header className={styles.top}>
         {/* The toolbar's left cell is the DOCUMENT side: which board this is, what is on it, and
@@ -352,7 +399,7 @@ export function AppShell() {
         </span>
       </header>
 
-      <main className={styles.pitchAreaSimple}>
+      <main className={styles.pitchAreaSimple} ref={boardRef}>
         <div className={styles.pitchFrame} data-boost={boosted} ref={pitchFrameRef}>
           <SimplePitch />
         </div>

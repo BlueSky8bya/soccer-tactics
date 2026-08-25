@@ -63,6 +63,7 @@ module.exports = {
     'the board fills the window, the pitch markings stay clear of the floating transport, and the guide only appears while a cue is live',
   async run(h) {
     const out = []
+    const colWidths = {}
 
     for (const vp of VIEWPORTS) {
       const { context, page } = await h.openBoard({ ...vp, dpr: 1 })
@@ -92,6 +93,7 @@ module.exports = {
           `guide ends ${guide.right}, markings start ${g.marksLeft}`,
         ),
       )
+      colWidths[tag] = guide.width
       const marksRight = g.marksLeft + g.marksW
       out.push(
         h.check(
@@ -115,6 +117,19 @@ module.exports = {
       )
       await context.close()
     }
+
+    /*
+     * The columns are a SHARE of the grass, not a constant: 263px of slack at 1280×800 against
+     * 479px at 1920×1080, and fixed columns looked starved on the wide one and wrapped their text
+     * mid-phrase (user 2026-08-25: 너무 너비가 짧아서 보기 힘들어).
+     */
+    out.push(
+      h.check(
+        'the column grows with the grass it has',
+        colWidths['1920x1080'] > colWidths['1280x800'],
+        `1280 ${colWidths['1280x800']}px → 1920 ${colWidths['1920x1080']}px`,
+      ),
+    )
 
     // ---- menus, hints, zen ------------------------------------------------
     const { context, page, consoleErrors } = await h.openBoard({ width: 1440, height: 900, dpr: 1 })

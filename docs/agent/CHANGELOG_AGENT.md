@@ -3670,3 +3670,31 @@ Validation: typecheck/lint/**353 tests**/build/harness PASS. 브라우저 **215 
 밖(마킹 끝 1310 < 열 시작 1366). 마킹 폭 957 / 1102 / 1365 불변. 라이트/다크 확인.
 
 Related: ADR-0009 v36, PLAN-20260825-017 R-8, CHG-20260825-217
+
+## CHG-20260825-219 — 열 폭을 슬랙의 몫으로, 넓은 창에서는 보드에 붙인다 (ADR-0009 v37)
+
+Date: 2026-08-25 · Type: UX · Level: L2
+
+Problem (사용자 2026-08-25, 창 ≈1905×858): "비율들이 너무 멋 없는데.. 너무 너비가 짧아서 보기
+힘들어." 실측: 그 창의 가로 슬랙 **800px** 중 열은 **136px**만 사용, 남은 664px는 빈 잔디였고 안내
+문장이 어절 중간에서 접혔다. 슬랙은 263/272/479/800/1119로 창마다 크게 다르다 — 상수로는 못 맞춘다.
+
+Change:
+- **`sideColumns.ts`(신규, 순수 + 테스트 5)** — 폭 = 슬랙의 몫(왼 0.72 / 오른 0.28), 하한 136/52,
+  상한 288/122(288은 `DESIGN_RESEARCH §4c`의 230~340 밴드 안). 실측 폭 1280 **155/52** · 1440
+  **163/52** · 1920 **288/110** · 1905×858 **288/122**.
+- **보드에 붙는다** — 남는 몫의 절반만큼 열이 안쪽으로 들어간다(1905×858에서 x=12 → **x=179**).
+  잔디는 읽을 것이 없는 창 가장자리로 모인다.
+- **한 번의 측정, 네 개의 변수** — `AppShell`이 `ResizeObserver`로 보드를 재고 CSS 변수를 심는다.
+  스타일시트가 열을 그리고 `usePitchView`가 같은 루트에서 예약값을 읽는다. `tokens.css` 값은
+  첫 페인트 기본값으로 남는다.
+
+Files: src/ui/sideColumns.ts(신규), src/ui/sideColumns.test.ts(신규), src/ui/AppShell.tsx,
+src/ui/shell.module.css, pw/full-bleed.cjs,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/CURRENT_STATE.md,
+docs/agent/plans/ACTIVE_PLAN.md
+
+Validation: typecheck/lint/**358 tests**/build/harness PASS. 브라우저 **216 checks ALL PASS**
+(신규: 열이 자기 몫만큼 자란다 — 1280 155px → 1920 288px). 마킹 폭 957/1102/1365 불변.
+
+Related: ADR-0009 v37, PLAN-20260825-017 R-9, CHG-20260825-218
