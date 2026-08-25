@@ -121,7 +121,7 @@ export function clampToView(p: { x: number; y: number }, v: PitchView): { x: num
 export const BOARD_SAFE_BOTTOM_PX = 72
 
 /**
- * The strip the key guide claims on the left (ADR-0009 v33): `--st-guide-w` (200) + the 12px it is
+ * The strip the key guide claims on the left (ADR-0009 v33): `--st-guide-w` (224) + the 16px it is
  * inset by + 16px of grass between it and the pitch. Capped at the slack — see `safeLeft`.
  */
-export const BOARD_SAFE_LEFT_PX = 228
+export const BOARD_SAFE_LEFT_PX = 256

@@ -352,7 +352,13 @@ describe('discoverability (ADR-0009 v32)', () => {
     const guide = container.querySelector('[class*="keyGuide"]')!
     expect(guide).toBeTruthy()
     const caps = [...guide.querySelectorAll('[class*="guideCap"]')].map((k) => k.textContent)
-    for (const k of ['Ctrl', 'Alt', 'Shift', '1~9', 'X', '⇧R']) expect(caps).toContain(k)
+    /*
+     * X and ⇧R are deliberately NOT here: their buttons carry their own caps inside the 보드 menu,
+     * which is where ExposeHK says a shortcut label belongs — on the command, not in a list beside
+     * it (v34).
+     */
+    for (const k of ['Ctrl', 'Alt', 'Shift', '1~9', 'Space', 'F']) expect(caps).toContain(k)
+    for (const k of ['X', '⇧R']) expect(caps).not.toContain(k)
     // …every drawer shut, nothing held
     expect(guide.querySelector('[data-open]')).toBeNull()
     expect(guide.querySelector('[data-held]')).toBeNull()

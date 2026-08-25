@@ -175,7 +175,7 @@
    * this width plus the 12px it is inset by plus a hair of grass — that constant is what tells the
    * pitch to lay itself out beside the guide rather than under it.
    */
-  --st-guide-w: 200px;
+  --st-guide-w: 224px;
 
   --st-hit-token: 28px;
   --st-hit-handle: 16px;

@@ -184,16 +184,35 @@ module.exports = {
       ),
     )
 
-    // pointer: hover opens, click pins, clicking away unpins
+    /*
+     * Pointer: hover must NOT open anything. It used to, and sweeping down the column opened and
+     * shut drawer after drawer, shoving every row below them around (user 2026-08-25: 호버링 했을
+     * 때 움직임이 너무 많아서 어지럽고). Geometry moves only when the user asks: a click, or the key.
+     */
     const altRow = page.locator('button[class*=guideRow][aria-label^="Alt"]')
+    const rowsTop = () =>
+      page.$$eval('button[class*=guideRow]', (els) => els.map((e) => Math.round(e.getBoundingClientRect().y)))
+    // let the Ctrl drawer finish closing first: the cue's exit gate is 340ms and the drawer spring
+    // is 317ms on top of that, so a baseline taken any earlier is a moving target.
+    await page.waitForTimeout(500)
+    const beforeHover = await rowsTop()
     await altRow.hover()
-    await page.waitForTimeout(200)
-    out.push(h.check('hover opens a key', (await altRow.getAttribute('aria-expanded')) === 'true'))
+    await page.waitForTimeout(400)
+    out.push(
+      h.check('hover opens nothing', (await altRow.getAttribute('aria-expanded')) === 'false'),
+    )
+    out.push(
+      h.check(
+        'and moves no row',
+        JSON.stringify(await rowsTop()) === JSON.stringify(beforeHover),
+        `before ${JSON.stringify(beforeHover)} after ${JSON.stringify(await rowsTop())}`,
+      ),
+    )
     await altRow.click()
     await page.mouse.move(900, 500)
     await page.waitForTimeout(250)
     out.push(
-      h.check('a click pins it open', (await altRow.getAttribute('aria-expanded')) === 'true'),
+      h.check('a click opens it and keeps it open', (await altRow.getAttribute('aria-expanded')) === 'true'),
     )
     await page.mouse.click(900, 500)
     await page.waitForTimeout(250)

@@ -306,19 +306,14 @@ export const KEY_GUIDE: readonly GuideKey[] = [
     group: '보기',
     rows: [KEYMAP.playback.zen],
   },
-  {
-    label: 'X',
-    word: '지우기',
-    group: '정리',
-    rows: [KEYMAP.edit.clearAll, KEYMAP.edit.undo],
-  },
-  {
-    label: '⇧R',
-    word: '새로',
-    group: '정리',
-    rows: [KEYMAP.edit.reset],
-  },
 ]
+
+/*
+ * X and ⇧R are NOT here on purpose. Their buttons live in the 보드 menu and each row prints its own
+ * cap right on the button — which is ExposeHK's actual finding: the label belongs ON the command,
+ * not in a second list beside it. Repeating them here bought two more rows and no new knowledge
+ * (user 2026-08-25: 꼭 왼쪽에 안 몰려있어도 돼).
+ */
 
 /** The pen owns the board in draw mode, so the guide says the pen's keys instead. */
 export const DRAW_KEY_GUIDE: readonly GuideKey[] = [

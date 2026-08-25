@@ -3572,3 +3572,34 @@ Validation: typecheck/lint/**353 tests**/build/harness PASS. 브라우저 **209 
 열림·클릭으로 고정·보드를 건드리면 해제. 라이트/다크 스크린샷 확인.
 
 Related: ADR-0009 v33(v32 레일 대체), PLAN-20260825-017 R-5, CHG-20260825-214, CHG-20260825-213
+
+## CHG-20260825-216 — 호버는 색만, 여백은 동심 규칙으로, 열은 7행 (ADR-0009 v34)
+
+Date: 2026-08-25 · Type: UX · Level: L1
+
+Problem (사용자 2026-08-25, 스크린샷): "호버링 했을 때 움직임이 너무 많아서 어지럽고 사진 보면
+패딩이 아예 없어서 전혀 이쁘지가 않아. 그리고 꼭 왼쪽에 안 몰려있어도 돼."
+
+Change:
+- **호버가 서랍을 열던 것 폐지.** v33은 호버·포커스·클릭·키 유지 넷 다 열었고, 포인터가 열을
+  스치기만 해도 서랍이 연달아 열려 아래 행 전부가 밀렸다. 근거(ExposeHK)가 말한 것은 **키를
+  쥐면 연다**이지 포인터가 지나가면 연다가 아니다. 이제 기하는 **클릭 · Tab · 키 유지**에서만
+  움직이고, 호버는 배경/캡 테두리 색만 바꾼다. 남은 변형은 `:active` `scale(0.98)` 하나.
+- **간격 재설계(동심)**: 그룹 카드 반경 stage(22) + 패딩 12 → 행 반경 control(10). 22−12=10,
+  사다리 자신의 규칙. 행 34→**38px**, 행 간 4, 캡 패딩 5/8, 상세 들여쓰기 16 + 헤어라인 12,
+  열 폭 200→**224px**.
+- **행 9 → 7**: `X`·`⇧R` 제거. 두 열로 나누면 가로 슬랙(1440에서 **271px**)을 넘어 보드가 폭
+  제약으로 바뀌고 마킹이 1102→**944(-14%)**가 된다(실측). 대신 그 두 키는 `보드 ▾` 메뉴의 자기
+  버튼에 캡이 이미 붙어 있다 — ExposeHK의 원래 주장대로 라벨이 **명령 위에** 있는 자리다.
+
+Files: src/ui/KeyGuide.tsx, src/ui/keymap.ts, src/ui/shell.module.css, src/ui/tokens.css,
+src/ui/pitch/useSvgMetrics.ts, src/ui/AppShell.test.tsx, pw/full-bleed.cjs,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/plans/ACTIVE_PLAN.md,
+docs/agent/CURRENT_STATE.md
+
+Validation: typecheck/lint/**353 tests**/build/harness PASS. 브라우저 **210 checks ALL PASS**
+(`full-bleed` 30 → 31). 새 계약: **호버는 아무것도 열지 않고 어떤 행도 움직이지 않는다**(행 top
+좌표 7개 호버 전후 비교), 클릭은 열고 유지, 보드를 건드리면 닫힘. 마킹 폭 1280/1440/1920/1024 =
+957 / 1102 / 1365 / 910 — v31 이후 불변. 라이트/다크 스크린샷 확인.
+
+Related: ADR-0009 v34, PLAN-20260825-017 R-6, CHG-20260825-215

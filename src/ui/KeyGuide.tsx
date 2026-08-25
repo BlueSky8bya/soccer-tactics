@@ -18,8 +18,12 @@ import { t } from './i18n'
  *
  * How it behaves comes from the literature (see `KEY_GUIDE` for the citations):
  *   · a key opens while it is REALLY HELD (ExposeHK's rehearsal — the hand is already on the key),
- *   · hover and keyboard focus open it too, because a hint nobody can reach is not a hint,
- *   · a click PINS it open, so reading is not a race against your own hand,
+ *   · a CLICK opens and keeps it open, and so does keyboard focus — a hint nobody can reach is not
+ *     a hint,
+ *   · HOVER DOES NOT OPEN ANYTHING. It used to, and sweeping the pointer past the column then
+ *     opened and shut drawers one after another, shoving every row below them up and down
+ *     (user 2026-08-25: 호버링 했을 때 움직임이 너무 많아서 어지럽고). Hover now only tints, which
+ *     is the whole job it should ever have had: say "this is pressable", change no geometry,
  *   · and the detail opens UNDER its own row, inside the column — never over the board. The row
  *     you are pointing at does not move (only what is below it does), so the target stays where
  *     you aimed (CommandMaps: stability beats reflow), and the pitch stays uncovered
@@ -29,7 +33,7 @@ export function KeyGuide() {
   const cues = useActiveCues()
   const drawing = useUiStore((s) => s.annotate.on)
   const guide = drawing ? DRAW_KEY_GUIDE : KEY_GUIDE
-  const [hovered, setHovered] = useState<string | null>(null)
+  const [focused, setFocused] = useState<string | null>(null)
   const [pinned, setPinned] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -60,7 +64,7 @@ export function KeyGuide() {
             .filter((k) => k.group === group)
             .map((k) => {
               const held = heldOf(k)
-              const open = held || hovered === k.label || pin === k.label
+              const open = held || focused === k.label || pin === k.label
               return (
                 <div key={k.label} className={styles.guideItem}>
                   <button
@@ -73,10 +77,8 @@ export function KeyGuide() {
                        "Space 재생" next to the transport's 재생 button is two buttons with one
                        name, and a screen reader user cannot tell which is the play button. */
                     aria-label={`${k.label} — ${k.word} 단축키 설명`}
-                    onPointerEnter={() => setHovered(k.label)}
-                    onPointerLeave={() => setHovered((h) => (h === k.label ? null : h))}
-                    onFocus={() => setHovered(k.label)}
-                    onBlur={() => setHovered((h) => (h === k.label ? null : h))}
+                    onFocus={() => setFocused(k.label)}
+                    onBlur={() => setFocused((f) => (f === k.label ? null : f))}
                     onClick={() => setPinned((p) => (p === k.label ? null : k.label))}
                   >
                     <span className={styles.guideCap}>{k.label}</span>
