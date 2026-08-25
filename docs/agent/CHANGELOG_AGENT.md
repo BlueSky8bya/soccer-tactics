@@ -3747,3 +3747,25 @@ Validation: typecheck/lint/**359 tests**/build/harness PASS. 브라우저 **216 
 마킹 폭 불변.
 
 Related: ADR-0009 v39, PLAN-20260825-017 R-11, CHG-20260825-220
+
+## CHG-20260825-222 — 열려 있는 줄은 하나뿐 (ADR-0009 v40)
+
+Date: 2026-08-25 · Type: FIX/UX · Level: L1
+
+Problem (사용자 2026-08-25): "그래도 높이가 넘쳐." v36의 상한은 **서랍 하나**를 전제로 쟀는데
+cue는 배타적이지 않다 — Ctrl+Shift 동시 유지에 재생 중 Space, 거기에 클릭 고정까지 겹치면 서랍이
+셋 열려 열이 창 밖으로 나갔다.
+
+Change:
+- **동시에 열리는 줄 1개**: 손에 쥔 키 > 고정 > 포커스. 쥔 키가 이기는 이유는 그게 리허설이라서다.
+- **재생 중에는 cue로 열지 않는다** — 그 순간은 보드의 것이고, 배속은 이미 보드 위 알약이 말한다.
+- 결과: 열 높이 상한 = 바닥 + 가장 큰 서랍 하나 = **660px**(1280×800 보드 728, 1907×901 보드 889).
+
+Files: src/ui/KeyGuide.tsx, pw/full-bleed.cjs,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/CURRENT_STATE.md,
+docs/agent/plans/ACTIVE_PLAN.md
+
+Validation: typecheck/lint/**359 tests**/build/harness PASS. 브라우저 **218 checks ALL PASS**
+(신규 2: 고정+Ctrl+Shift에도 open 1·held 1, 열이 보드 안 660 ≤ 888).
+
+Related: ADR-0009 v40, PLAN-20260825-017 R-12, CHG-20260825-221

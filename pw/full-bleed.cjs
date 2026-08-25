@@ -233,6 +233,39 @@ module.exports = {
     await page.waitForTimeout(350)
 
     /*
+     * …and cues are NOT exclusive. Ctrl and Shift get held together all the time, and while a pin
+     * is up as well "every row whose cue is live" opened three drawers at once and ran the column
+     * off the bottom of the screen (user 2026-08-25: 그래도 높이가 넘쳐). Exactly one row is ever
+     * open: the key in your hand first, then the pin, then focus.
+     */
+    await page.locator('button[class*=guideRow][aria-label^="Space"]').click() // pin one
+    await page.keyboard.down('Control')
+    await page.keyboard.down('Shift')
+    await page.waitForTimeout(500)
+    const many = await guideBox(page)
+    const openCount = await openRows(page).count()
+    const heldCount = await heldRows(page).count()
+    await page.keyboard.up('Control')
+    await page.keyboard.up('Shift')
+    out.push(
+      h.check(
+        'two modifiers and a pin still open exactly one row',
+        openCount === 1 && heldCount === 1,
+        `${openCount} open, ${heldCount} held`,
+      ),
+    )
+    out.push(
+      h.check(
+        'so the column cannot outgrow the board',
+        many.bottom <= many.boardBottom,
+        `column ends ${many.bottom}, board ends ${many.boardBottom}`,
+      ),
+    )
+    await page.waitForTimeout(400)
+    await page.locator('button[class*=guideRow][aria-label^="Space"]').click() // unpin
+    await page.waitForTimeout(300)
+
+    /*
      * Pointer: hover must NOT open anything. It used to, and sweeping down the column opened and
      * shut drawer after drawer, shoving every row below them around (user 2026-08-25: 호버링 했을
      * 때 움직임이 너무 많아서 어지럽고). Geometry moves only when the user asks: a click, or the key.

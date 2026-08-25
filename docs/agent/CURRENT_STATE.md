@@ -24,7 +24,8 @@ Harness Protocol: project-initializing_260712.md (schema 1.1) — `agent-harness
   심고 피치도 그 값을 읽는다.
 - **키 가이드**(`KeyGuide`, v33~v36): **왼쪽 여백**(피치가 높이 제약이라 영원히 남는 잔디)의 200px 열.
   만들기/보기 2그룹 7행, 행마다 `[캡] 낱말`(38px). 키를 실제로 쥐면 그 행만 열리며 강조되고
-  (ExposeHK 리허설), **클릭·포커스로도 열린다. 호버는 색만 바꾼다** — 열던 시절엔 포인터가 스치는
+  (ExposeHK 리허설), **클릭·포커스로도 열린다. 열린 줄은 언제나 하나**(쥔 키 > 고정 > 포커스,
+  재생 중엔 cue로 열지 않음 — v40). **호버는 색만 바꾼다** — 열던 시절엔 포인터가 스치는
   것만으로 아래 행이 전부 밀려 어지러웠다(v34). 상세는 **열 안에서만** 열려 피치를 덮지 않는다.
   예약은 슬랙 상한이라 **보드 점유율은 그대로**(마킹 1102 @1440). 근거: `docs/product/
   DISCOVERABILITY_RESEARCH_2026-08-25.md`. (v31 "상시 노출 0" → v32 상단 레일 → v33 여백 열,
@@ -227,7 +228,7 @@ R5(pick dispatch)/R7(blur·lostpointercapture cancel)/R12-D(letterbox 7px)/R12-E
 ## Active Work
 
 `plans/ACTIVE_PLAN.md` PLAN-20260825-017 — **완료**(2026-08-25). 전면 캔버스 M1~M5 충족:
-5게이트 PASS(359 tests), 브라우저 216 checks ALL PASS(`pw/full-bleed` 37 — 레이아웃·발견성 계약 상시 감시).
+5게이트 PASS(359 tests), 브라우저 218 checks ALL PASS(`pw/full-bleed` 37 — 레이아웃·발견성 계약 상시 감시).
 직전 완료: `plans/completed/PLAN-20260825-016-interface-refit.md`.
 
 과거(참고): PLAN-20260823-014 — **전 축 완료**(A 재현 무결성 / B 단일 진실원 / C 문서 drift /

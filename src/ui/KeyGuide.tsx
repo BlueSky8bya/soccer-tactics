@@ -35,6 +35,7 @@ export function KeyGuide() {
   const cues = useActiveCues()
   const drawing = useUiStore((s) => s.annotate.on)
   const guide = drawing ? DRAW_KEY_GUIDE : KEY_GUIDE
+  const playing = useUiStore((s) => s.playback.playing)
   const [focused, setFocused] = useState<string | null>(null)
   // Same condition the stylesheet folds the columns on — one query, two consumers.
   const oneColumn = useMediaQuery(NO_SIDE_ROOM)
@@ -55,7 +56,25 @@ export function KeyGuide() {
   // derived, not an effect: there is no external system to synchronise with here.
   const pin = pinned && guide.some((k) => k.label === pinned) ? pinned : null
 
-  const heldOf = (k: GuideKey) => !!k.cue && cues.has(k.cue)
+  /*
+   * EXACTLY ONE ROW IS EVER OPEN.
+   *
+   * Cues are not exclusive — Ctrl and Shift are held together all the time, and the play running
+   * lights Space on top of them — so "open every row whose cue is live" stacked three drawers at
+   * once and ran the column off the bottom of the screen (user 2026-08-25: 그래도 높이가 넘쳐;
+   * measured, three open sets are ~250px more than the tallest one). Bounding the height is not a
+   * styling problem, it is this rule.
+   *
+   * Order: the key in your HAND wins (that is the rehearsal ExposeHK is built on), then what you
+   * pinned, then what you tabbed to.
+   *
+   * …and none of them while the play runs. The board owns those seconds (the same reason the
+   * chrome recedes), and the one thing worth saying then — the boost — is already on the pitch as
+   * its own pill.
+   */
+  const held = playing ? [] : guide.filter((k) => k.cue && cues.has(k.cue))
+  const openLabel = held[0]?.label ?? pin ?? focused ?? null
+  const heldOf = (k: GuideKey) => held[0]?.label === k.label
 
   return (
     <>
@@ -68,14 +87,14 @@ export function KeyGuide() {
             {guide
               .filter((k) => k.group === group)
               .map((k) => {
-                const held = heldOf(k)
-                const open = held || focused === k.label || pin === k.label
+                const isHeld = heldOf(k)
+                const open = openLabel === k.label
                 return (
                   <div key={k.label} className={styles.guideItem}>
                     <button
                       type="button"
                       className={styles.guideRow}
-                      data-held={held || undefined}
+                      data-held={isHeld || undefined}
                       data-open={open || undefined}
                       aria-expanded={open}
                       /* Its own name, or it competes with the real control that shares the word —
