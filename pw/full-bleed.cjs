@@ -181,6 +181,42 @@ module.exports = {
         ),
       )
 
+    /*
+     * A shortcut hint that has to be leaned into is not a hint (user 2026-08-26: 여기 단축키 안내
+     * 글씨가 너무 작아). The cap in the action column never reads smaller than the cap in the key
+     * guide opposite it — 11.5px — whichever width tier the column landed in, and where the column
+     * says the words out loud the cap grows with them.
+     */
+    const capType = await page.evaluate(() => {
+      const card = [...document.querySelectorAll('[class*=guideGroup]')].find((g) =>
+        g.querySelector('[class*=actionBtn]'),
+      )
+      const cap = card.querySelector('[class*=actionKey]')
+      const label = card.querySelector('[class*=actionLabel]')
+      const guideCap = document.querySelector('[class*=guideCap]')
+      const px = (el) => (el ? parseFloat(getComputedStyle(el).fontSize) : 0)
+      return {
+        cap: px(cap),
+        guideCap: px(guideCap),
+        label: getComputedStyle(label).display === 'none' ? null : px(label),
+        colW: Math.round(card.getBoundingClientRect().width),
+      }
+    })
+    out.push(
+      h.check(
+        'the shortcut cap is never smaller than the guide it echoes',
+        capType.cap >= capType.guideCap,
+        `cap ${capType.cap}px vs guide ${capType.guideCap}px (column ${capType.colW}px)`,
+      ),
+    )
+    out.push(
+      h.check(
+        'and where the column says the words, the caps grow with them',
+        capType.label === null || (capType.label >= 13.5 && capType.cap >= 12),
+        `label ${capType.label}px, cap ${capType.cap}px`,
+      ),
+    )
+
     // ExposeHK's rehearsal: holding the real key opens that key's set, and only that one
     await page.mouse.move(700, 400)
     await page.keyboard.down('Control')

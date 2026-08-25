@@ -3769,3 +3769,25 @@ Validation: typecheck/lint/**359 tests**/build/harness PASS. 브라우저 **218 
 (신규 2: 고정+Ctrl+Shift에도 open 1·held 1, 열이 보드 안 660 ≤ 888).
 
 Related: ADR-0009 v40, PLAN-20260825-017 R-12, CHG-20260825-221
+
+## CHG-20260826-223 — 단축키 캡은 각주가 아니다 (ADR-0009 v41)
+
+Date: 2026-08-26 · Type: FIX/UX · Level: L1
+
+Problem (사용자 2026-08-26, 스크린샷): "여기 단축키 안내 글씨가 너무 작아 다시 개선해줘."
+정리·동작 카드의 캡(X, ⇧R)은 62px 열 시절의 10px/`--st-text-3`(5.3:1) 그대로였는데, v37 이후
+열은 280px까지 자란다 — 넓은 카드 안에서 각주 크기로 남았다.
+
+Change:
+- `.actionKey` 10px → **11.5px**(맞은편 `guideCap`과 같은 하한), 색 `--st-text-3` → `--st-text-2`(6.9:1).
+- 낱말이 나오는 폭(≥140px): 낱말 12.5 → **13.5px**, 캡 **12px**.
+- 신규 티어 `@container (min-width: 210px)`: 낱말 **15px** · 캡 **13px** · 행 38 → **42px**.
+  근거(실측): 192px 열에서 "움직임 전체 지우기"는 13.5px에 여유 0, 15px이면 11px 넘침.
+
+Files: src/ui/shell.module.css, pw/full-bleed.cjs,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/CURRENT_STATE.md
+
+Validation: typecheck/lint/**359 tests**/build/harness PASS. `pw/full-bleed` **41 checks ALL PASS**
+(신규 2: 캡 ≥ 맞은편 캡 / 낱말이 보이면 낱말 ≥13.5·캡 ≥12). 라이트·다크 스크린샷 확인.
+
+Related: ADR-0009 v41, CHG-20260825-222

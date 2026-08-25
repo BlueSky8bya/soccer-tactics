@@ -3210,11 +3210,17 @@
   border-radius: var(--st-radius-control);
 }
 
+/*
+ * The cap is the ANSWER to "which key does this", so it has to be readable at a glance rather than
+ * merely present (user 2026-08-26: 여기 단축키 안내 글씨가 너무 작아). 10px on the third text tone was
+ * a footnote; 11.5px on the second is what the key guide in the opposite column already uses, so a
+ * shortcut looks the same on both sides of the board.
+ */
 .actionKey {
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: var(--st-text-3);
+  color: var(--st-text-2);
   line-height: 1;
 }
 
@@ -3249,7 +3255,7 @@
 
   .actionLabel {
     display: block;
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3258,6 +3264,7 @@
 
   .actionKey {
     margin-left: auto;
+    font-size: 12px;
   }
 
   .actionSwitch {
@@ -3269,5 +3276,32 @@
   .actionSwitch .actionLabel {
     font-weight: 500;
     color: var(--st-text-2);
+  }
+}
+
+/*
+ * PAST ~210px THE WORDS GET TO BE READ, not merely fitted (v41). The tier exists because the
+ * column's width is a share of the grass: at 192px "움직임 전체 지우기" fills the row to the pixel at
+ * 13.5px (measured), so growing the type there would ellipsise the very name it was meant to make
+ * legible. Where the column is wider than the sentence needs, that leftover goes into the type
+ * instead of into empty grass — same information, read without leaning in.
+ */
+@container (min-width: 210px) {
+  .actionBtn {
+    height: 42px;
+    gap: var(--st-space-3);
+  }
+
+  .actionLabel {
+    font-size: 15px;
+  }
+
+  .actionKey {
+    font-size: 13px;
+  }
+
+  .actionSwitch {
+    height: 38px;
+    gap: var(--st-space-3);
   }
 }
