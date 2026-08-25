@@ -97,6 +97,13 @@
       "describe": "one token selected: the first leg stretches and everything downstream is frozen; more than one selected: the entire chain translates. Measured in metres, both directions."
     },
     {
+      "id": "full-bleed",
+      "file": "full-bleed.cjs",
+      "status": "present",
+      "covers": "ADR-0009 v31 — 전면 캔버스 레이아웃 계약 (사용자 2026-08-25 \"레이아웃 비율을 더 개혁적으로\")",
+      "describe": "the board fills the window at every laptop size, the pitch markings stay clear of the floating transport, toolbar menus open/close by their own rules, and the guide appears only while a cue is live"
+    },
+    {
       "id": "historical-22",
       "status": "missing",
       "covers": "2026-08-22 session",

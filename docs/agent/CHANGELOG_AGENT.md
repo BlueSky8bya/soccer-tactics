@@ -3440,3 +3440,51 @@ Files: src/ui/keymap.ts, pw/home-drag.cjs(신규), pw/audit-manifest.json
 Validation: typecheck/lint/**350 tests**/build/harness PASS. 브라우저 **179 checks ALL PASS**(신규 3).
 
 Related: ADR-0009 v16b, CHG-20260822-141, CHG-20260820-065
+
+## CHG-20260825-213 — 전면 캔버스: 고정 컬럼 0개, 크롬은 보드 위에 뜬다 (ADR-0009 v31)
+
+Date: 2026-08-25 · Type: UX/STRUCT · Level: L2
+
+Problem (사용자 2026-08-25): "애플 형식으로 다 했다고 하는데, 레이아웃 비율 수정을 좀 더
+개혁적으로 해봐."
+
+맞는 지적이었다. 색·반경·스프링은 PLAN-016에서 애플 어휘로 맞췄지만 **골격은 2010년대
+IDE**였다 — 좌 도구 컬럼, 우 인스펙터 컬럼, 하단 도킹 바. 실측하니 1440에서 사이드 크롬이
+**460px = 화면 32%**(1280에선 36%)였고, 그 안 카드 6장 중 **5장이 정적 설명문**이며 같은 내용이
+`?` 오버레이에 전부 다시 있었다.
+
+Change:
+- **셸 = 상단바(48) + 캔버스(1fr)**. `sideLeft`/`sideRight` 및 `SidePanels.tsx` 삭제.
+- **재생바는 격자에서 나와 캔버스 위에 뜬다**(`.bottomWrap` absolute). 컬럼 폭에 맞춰 좌우
+  패딩으로 재중심 잡던 보정도 함께 사라졌다 — 보드와 바가 같은 상자를 쓰니 중앙이 곧 중앙이다.
+- **피치 마킹은 바 위에서 끝난다**: `usePitchView(..., safeBottom)` + `BOARD_SAFE_BOTTOM_PX = 72`
+  (유도값, ADR-0009 v31 §4). 잔디는 창 끝까지 유지 — 펜·포인터 좌표를 잃지 않는다.
+- **`ToolbarMenus`(신규)**: 팀 구성 ▾ / 보드 ▾ 팝오버가 옛 좌 패널의 컨트롤을 그대로 담는다.
+  명령을 누르면 닫히고 설정(`data-menu-keep`)은 열려 있다. `MenuButton`(신규)이 껍데기.
+- **`BoardHints`(신규)**: 상시 조작법 패널 대신, `useActiveCues`가 켠 상태의 줄만 **최대 3줄**
+  보드 좌상단. 유휴 보드에는 아무것도 없다. `aria-hidden` — 접근 경로는 `?` 오버레이.
+- **F(zen) 재정의**: 접을 패널이 없으므로 "떠 있는 크롬 감추기"가 된다. zen은 바가 비운 72px을
+  피치에 돌려준다(1440에서 1102 → 1208).
+
+실측 결과 — 그려진 피치 폭:
+
+| 창 | 전 | 후 | 창 폭 대비 |
+| --- | --- | --- | --- |
+| 1024×768 | ~540 | **910** | 89% |
+| 1280×800 | 767 | **957** | 75% |
+| 1440×900 | 921 | **1102** | 77% |
+
+Files: src/ui/shell.module.css, src/ui/AppShell.tsx, src/ui/MenuButton.tsx(신규),
+src/ui/ToolbarMenus.tsx(신규), src/ui/BoardHints.tsx(신규), src/ui/SidePanels.tsx(삭제),
+src/ui/pitch/useSvgMetrics.ts, src/ui/pitch/SimplePitch.tsx, src/ui/i18n/ko.ts,
+src/ui/tour/tourSteps.ts, src/ui/AppShell.test.tsx, src/ui/tour/tour.test.tsx,
+pw/lib/harness.cjs, pw/step-view.cjs, pw/shell-feedback.cjs, pw/full-bleed.cjs(신규),
+pw/audit-manifest.json,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/plans/ACTIVE_PLAN.md,
+docs/agent/PROJECT_MAP.md, docs/agent/CURRENT_STATE.md
+
+Validation: typecheck/lint/**350 tests**/build/harness PASS. 브라우저 **203 checks ALL PASS**
+(팝오버 이전에 맞춰 기존 프로브 갱신 + 신규 `pw/full-bleed` 24 checks) — 세 해상도 보드 점유·
+바 간섭 없음, 메뉴 열림/닫힘 규칙, Ctrl/공 힌트와 3줄 상한, zen.
+
+Related: ADR-0009 v31, PLAN-20260825-017, PLAN-20260825-016(M4 대체), ADR-0001

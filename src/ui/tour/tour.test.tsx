@@ -108,7 +108,10 @@ describe('interactive tour (first visit)', () => {
     expect(useUiStore.getState().tour.active).toBe(true)
     const dlg = screen.getByRole('dialog', { name: '튜토리얼' })
     expect(dlg.textContent).toContain(TOUR_STEPS[0]!.title)
-    // user performs step 1 (quick start)
+    // user performs step 1 (quick start) — the fill button lives in the 팀 구성 menu (v31)
+    await act(async () => {
+      screen.getByRole('button', { name: '팀 구성' }).click()
+    })
     await act(async () => {
       screen.getByRole('button', { name: /양 팀 채우기/ }).click()
     })

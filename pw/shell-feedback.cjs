@@ -86,13 +86,18 @@ module.exports = {
      * pointer arrived and then sat perfectly still under the click. A control that does not move
      * when pressed is the half of the feel that reads as cheap.
      */
+    /*
+     * The last one lives in a toolbar menu since ADR-0009 v31 — the side column it used to stand
+     * in is gone — so it has to be opened before it can be pressed. Same surface, same rule.
+     */
     const pressables = [
-      ['[class*=stepChip]', 'step chip'],
-      ['[class*=stepAll]', '전체 cell'],
-      ['[class*=variantSeg]', 'variant chip'],
-      ['[class*=panelBtn]', 'panel button'],
+      ['[class*=stepChip]', 'step chip', null],
+      ['[class*=stepAll]', '전체 cell', null],
+      ['[class*=variantSeg]', 'variant chip', null],
+      ['[class*=panelBtn]', 'panel button', '보드'],
     ]
-    for (const [sel, name] of pressables) {
+    for (const [sel, name, menu] of pressables) {
+      if (menu) await h.openMenu(page, menu)
       const box = await page.locator(sel).first().boundingBox()
       if (!box) {
         out.push(h.check(`${name} exists to press`, false, 'not found'))
@@ -106,6 +111,13 @@ module.exports = {
         (s) => getComputedStyle(document.querySelector(s)).transform,
         sel,
       )
+      /*
+       * A menu row is a COMMAND: completing the click closes the card and takes the element with
+       * it, and the spring-back would then be measured on nothing. Slide off the row before
+       * releasing — the press has already been recorded, and the release still has to land back
+       * at scale 1.
+       */
+      if (menu) await page.mouse.move(box.x + box.width / 2, box.y - 40)
       await page.mouse.up()
       await page.waitForTimeout(360)
       const released = await page.evaluate(
@@ -124,6 +136,7 @@ module.exports = {
           `pressed ${scaleOf(pressed).toFixed(3)} → released ${scaleOf(released).toFixed(3)}`,
         ),
       )
+      if (menu) await page.keyboard.press('Escape')
     }
 
     out.push(h.check('no console errors', consoleErrors.length === 0, consoleErrors.slice(0, 2).join(' | ')))

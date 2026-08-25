@@ -377,7 +377,7 @@ module.exports = {
        * sitting on a player cannot be clicked apart from them, and the probe would then be
        * measuring a player's run instead of the ball's pass.
        */
-      const clearAll = page.getByRole('button', { name: /움직임 전체 지우기/ })
+      const clearAll = () => h.boardMenuClick(page, /움직임 전체 지우기/)
       const dHome = await h.doc(page)
       const bare = []
       for (const gap of [12, 9, 7])
@@ -396,7 +396,7 @@ module.exports = {
         const setView = async () => {
           if (mode === '전체') await allCell(page).click()
         }
-        await clearAll.click()
+        await clearAll()
         await page.waitForTimeout(300)
         await chip(page, 1).click()
         await page.waitForTimeout(200)
@@ -460,14 +460,21 @@ module.exports = {
        * tactic we just built would pass for the wrong reason, with the ball refusing to move
        * whatever the switch said.
        */
-      await page.getByRole('button', { name: /움직임 전체 지우기/ }).click()
+      await h.boardMenuClick(page, /움직임 전체 지우기/)
       await page.waitForTimeout(300)
+      // The switch lives in the 보드 menu now (v31); reading or flipping it means opening it.
       const flingSwitch = page.getByRole('switch', { name: /공 휙 던지기/ })
+      const readFling = async () => {
+        await h.openMenu(page, '보드')
+        const v = await flingSwitch.getAttribute('aria-checked')
+        await page.keyboard.press('Escape')
+        return v
+      }
       out.push(
         h.check(
           'the throw is off by default',
-          (await flingSwitch.getAttribute('aria-checked')) === 'false',
-          await flingSwitch.getAttribute('aria-checked'),
+          (await readFling()) === 'false',
+          await readFling(),
         ),
       )
       out.push(
@@ -492,12 +499,14 @@ module.exports = {
         ),
       )
 
+      await h.openMenu(page, '보드')
       await flingSwitch.click()
+      await page.keyboard.press('Escape')
       await page.waitForTimeout(80)
       out.push(
         h.check(
           'switching it on restores both the gesture and its guide row',
-          (await flingSwitch.getAttribute('aria-checked')) === 'true' &&
+          (await readFling()) === 'true' &&
             (await page.getByText('빠르게 놓으면 굴러감').count()) > 0,
         ),
       )

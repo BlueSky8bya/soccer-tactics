@@ -46,10 +46,29 @@ async function openBoard(browser, viewport = DEFAULT_VIEWPORT) {
 
 /** Fill both teams so the board has 22 players and a holder. */
 async function fillTeams(page) {
+  // The team setup is a toolbar menu since ADR-0009 v31 — open it, then press the button.
+  await page.getByRole('button', { name: '팀 구성' }).click()
   await page.getByRole('button', { name: /양 팀 채우기/ }).click()
   await page.waitForFunction(() => (window.__stDoc?.players?.length ?? 0) >= 22, null, {
     timeout: 10000,
   })
+}
+
+/**
+ * Open one of the toolbar menus (ADR-0009 v31: 팀 구성 / 보드) and leave it open.
+ * A menu closes on any pointer-down outside it, so a probe that then touches the board is
+ * automatically back to a bare toolbar.
+ */
+async function openMenu(page, name) {
+  const trigger = page.getByRole('button', { name, exact: true })
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
+  return trigger
+}
+
+/** Open 보드, press one of its rows, and let the menu close. */
+async function boardMenuClick(page, itemName) {
+  await openMenu(page, '보드')
+  await page.getByRole('button', { name: itemName }).click()
 }
 
 /** The pitch <svg> element handle. */
@@ -136,6 +155,8 @@ async function runProbe(probe, { headed = false } = {}) {
       browser,
       openBoard: (vp) => openBoard(browser, vp),
       fillTeams,
+      openMenu,
+      boardMenuClick,
       pitch,
       toClient,
       toPitch,
@@ -164,6 +185,8 @@ module.exports = {
   DEFAULT_VIEWPORT,
   openBoard,
   fillTeams,
+  openMenu,
+  boardMenuClick,
   pitch,
   toClient,
   toPitch,

@@ -83,7 +83,7 @@ import { BallMark } from '@/renderer/Token'
 import styles from '@/renderer/pitch.module.css'
 import { playableEnd } from '@/editor/usePlayback'
 import { clientToPitch } from '@/renderer/pointer'
-import { clampToView, usePitchView } from './useSvgMetrics'
+import { BOARD_SAFE_BOTTOM_PX, clampToView, usePitchView } from './useSvgMetrics'
 import { t } from '../i18n'
 import { completedStepAt, stepOpensAt } from '../stepTiming'
 import { entityChipOf, entityColorOf, teamColorOf } from '../teamColor'
@@ -390,8 +390,18 @@ export function SimplePitch() {
       pos: stateAt(compiled, doc, at).ball.pos,
     }
   }
-  /** viewBox that fills the element — the surround IS the board, so the pen can use all of it. */
-  const view = usePitchView(svgRef, doc.pitch.length, doc.pitch.width)
+  /**
+   * viewBox that fills the element — the surround IS the board, so the pen can use all of it —
+   * with the strip the floating transport sits on kept clear of the MARKINGS (ADR-0009 v31).
+   * Zen hides the bar, so zen hands the pitch that strip back.
+   */
+  const view = usePitchView(
+    svgRef,
+    doc.pitch.length,
+    doc.pitch.width,
+    undefined,
+    ui.zen ? 0 : BOARD_SAFE_BOTTOM_PX,
+  )
   const flingDoneRef = useRef<(() => void) | null>(null)
   const flingKeyRef = useRef(0)
   /** Player under the DRAGGED ball (≤2.6m) — lights up so "give" vs "ground" is obvious. */

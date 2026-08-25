@@ -11,7 +11,8 @@ import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
 import { SelectionActionBar } from './SelectionActionBar'
-import { ActionsPanel, GuidePanel } from './SidePanels'
+import { BoardHints } from './BoardHints'
+import { BoardMenu, TeamMenu } from './ToolbarMenus'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { StepBar } from './StepBar'
 import { t } from './i18n'
@@ -249,6 +250,10 @@ export function AppShell() {
       data-zen={ui.zen}
     >
       <header className={styles.top}>
+        {/* The toolbar's left cell is the DOCUMENT side: which board this is, what is on it, and
+            what to do to all of it. Both menus used to be a 222px column standing there all
+            session for four buttons (v31). */}
+        <span className={styles.topLeft}>
         <button
           type="button"
           className={styles.versionBadge}
@@ -260,6 +265,9 @@ export function AppShell() {
         >
           {__APP_VERSION__}
         </button>
+          <TeamMenu />
+          <BoardMenu />
+        </span>
         <span className={styles.headerCenter}>
           <span className={styles.brand}>{t('app.brand')}</span>
           {variants && (
@@ -297,22 +305,6 @@ export function AppShell() {
           )}
         </span>
         <span className={styles.group}>
-          {/* One row, one line (user 2026-08-24): a switch and its name. The full sentence lives in
-              the tooltip and in the 조작법 row that appears with the feature. */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={ui.ballFling}
-            className={styles.headerSwitch}
-            onClick={() => ui.setBallFling(!ui.ballFling)}
-            title={t('setting.ballFlingHint')}
-          >
-            <span className={styles.switchTrack} aria-hidden="true">
-              <span className={styles.switchKnob} />
-            </span>
-            {t('setting.ballFling')}
-          </button>
-          <span className={styles.barDivider} aria-hidden="true" />
           <button
             type="button"
             className={styles.btn}
@@ -361,12 +353,12 @@ export function AppShell() {
         </span>
       </header>
 
-      <ActionsPanel />
       <main className={styles.pitchAreaSimple}>
         <div className={styles.pitchFrame} data-boost={boosted} ref={pitchFrameRef}>
           <SimplePitch />
         </div>
         {!ui.annotate.on && <StepPanel />}
+        <BoardHints />
         {/* Zen hid every surface that named the key that undoes it, so the only way back was
             knowing F already (user 2026-08-22: 다시 펼치는 F 단축키 안내가 어디에도 없어서).
             A button, not a caption — a pointer user must not need the keyboard to get out. */}
@@ -409,7 +401,6 @@ export function AppShell() {
           </div>
         )}
       </main>
-      <GuidePanel />
 
       <footer className={styles.bottomWrap}>
         {ui.annotate.on ? (

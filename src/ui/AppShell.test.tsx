@@ -11,7 +11,7 @@ import { makePath } from '@/editor/segmentCommands'
 import { BOOST_FACTOR, BOOST_SPEED, NORMAL_SPEED } from '@/editor/playbackRates'
 import { useUiStore } from '@/editor/uiStore'
 import { AppShell } from './AppShell'
-import { KEYMAP } from './keymap'
+import { GUIDE_PLAY_BINDINGS, KEYMAP } from './keymap'
 import { markTourSeen } from './tour/tourStorage'
 
 /** These commands refuse past step 9; every case here stays well inside, so assert non-null once. */
@@ -68,6 +68,28 @@ function setup() {
   return { core, ...utils }
 }
 
+/**
+ * 팀 구성 / 보드 are toolbar MENUS since ADR-0009 v31 — the left column they used to live in is
+ * gone. Opening one is now part of pressing anything inside it, so the tests say so out loud
+ * rather than reaching for a button that is not on screen.
+ */
+function menuButton(menu: '팀 구성' | '보드', name: RegExp): HTMLButtonElement {
+  const trigger = screen.getByRole('button', { name: menu })
+  // its own act(): the card has to be rendered before the row inside it can be queried
+  if (trigger.getAttribute('aria-expanded') !== 'true') act(() => trigger.click())
+  return screen.getByRole('button', { name }) as HTMLButtonElement
+}
+
+/** Open the menu, press the row, and let both renders settle. */
+async function pressInMenu(menu: '팀 구성' | '보드', name: RegExp) {
+  await act(async () => {
+    screen.getByRole('button', { name: menu }).click()
+  })
+  await act(async () => {
+    screen.getByRole('button', { name }).click()
+  })
+}
+
 describe('AppShell (simple mode, ADR-0009)', () => {
   it('renders pitch, ball, side panels, play bar and step chips', async () => {
     const { container } = setup()
@@ -80,9 +102,7 @@ describe('AppShell (simple mode, ADR-0009)', () => {
 
   it('fill button fills both teams with the ball assigned; one undo empties the pitch', async () => {
     const { core, container } = setup()
-    await act(async () => {
-      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
-    })
+    await pressInMenu('팀 구성', /양 팀 채우기/)
     expect(container.querySelectorAll('[data-kind="player"]').length).toBe(22)
     expect(core.getDocument().ball.initialHolderId).toBeDefined()
     await act(async () => {
@@ -93,9 +113,7 @@ describe('AppShell (simple mode, ADR-0009)', () => {
 
   it('badge click only SELECTS; the action bar picker sets the exact step (PLAN-005 M2)', async () => {
     const { core, container } = setup()
-    await act(async () => {
-      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
-    })
+    await pressInMenu('팀 구성', /양 팀 채우기/)
     const p = core.getDocument().players[0]!
     await act(async () => {
       addStepRun(core, p.id, makePath([p.home, { x: p.home.x + 10, y: p.home.y }]).waypoints, 1)
@@ -169,18 +187,14 @@ describe('AppShell (simple mode, ADR-0009)', () => {
 
   it('움직임 전체 지우기 removes all authored movements in one undo entry', async () => {
     const { core } = setup()
-    await act(async () => {
-      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
-    })
+    await pressInMenu('팀 구성', /양 팀 채우기/)
     const d = core.getDocument()
     const [a, b] = d.players
     await act(async () => {
       addStepRun(core, a!.id, makePath([a!.home, { x: a!.home.x + 8, y: a!.home.y }]).waypoints, 1)
       addStepRun(core, b!.id, makePath([b!.home, { x: b!.home.x + 8, y: b!.home.y }]).waypoints, 2)
     })
-    await act(async () => {
-      screen.getByRole('button', { name: /움직임 전체 지우기/ }).click()
-    })
+    await pressInMenu('보드', /움직임 전체 지우기/)
     const segs = core
       .getDocument()
       .scenes[0]!.timeline.tracks.flatMap((t) => t.segments)
@@ -199,9 +213,7 @@ describe('AppShell (simple mode, ADR-0009)', () => {
 
   it('step chip preview moves UI time only - no document revision (PLAN-005 M1)', async () => {
     const { core } = setup()
-    await act(async () => {
-      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
-    })
+    await pressInMenu('팀 구성', /양 팀 채우기/)
     const d = core.getDocument()
     const [a, b] = d.players
     await act(async () => {
@@ -233,9 +245,7 @@ describe('AppShell (simple mode, ADR-0009)', () => {
 
   it('a pass in step 2 starts after the step-1 run ends (steps drive the timing)', async () => {
     const { core } = setup()
-    await act(async () => {
-      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
-    })
+    await pressInMenu('팀 구성', /양 팀 채우기/)
     const d0 = core.getDocument()
     const holder = d0.players.find((p) => p.id === d0.ball.initialHolderId)!
     const runner = d0.players.find((p) => p.teamId === holder.teamId && p.id !== holder.id)!
@@ -276,9 +286,7 @@ describe('session A/B variants (PLAN-005 M5)', () => {
     // A active; B and C render as empty clone-in slots
     expect(screen.getByTitle(/지금 판을 B안으로 복제/)).toBeTruthy()
     expect(screen.getByTitle(/지금 판을 C안으로 복제/)).toBeTruthy()
-    await act(async () => {
-      screen.getByRole('button', { name: /양 팀 채우기/ }).click()
-    })
+    await pressInMenu('팀 구성', /양 팀 채우기/)
     await act(async () => {
       screen.getByTitle(/지금 판을 B안으로 복제/).click()
     })
@@ -305,15 +313,15 @@ describe('session A/B variants (PLAN-005 M5)', () => {
 describe('shell hierarchy (PLAN-006 M2)', () => {
   it('keeps the single simple-mode landmarks and all primary actions; no legacy chrome', async () => {
     const { container } = setup()
-    // primary actions all reachable by name
-    for (const name of [
-      /양 팀 채우기/,
-      /움직임 전체 지우기/,
-      /새로 시작/,
-      /재생/,
-      /처음으로/,
-      /반복/,
-    ])
+    // Board-level actions are one press away, inside the toolbar menu that names them (v31).
+    for (const [menu, name] of [
+      ['팀 구성', /양 팀 채우기/],
+      ['보드', /움직임 전체 지우기/],
+      ['보드', /새로 시작/],
+    ] as const)
+      expect(menuButton(menu, name)).toBeTruthy()
+    // …and the transport is always on screen, no menu needed.
+    for (const name of [/재생/, /처음으로/, /반복/])
       expect(screen.getByRole('button', { name })).toBeTruthy()
     // 공 투입 was dropped (user 2026-08-21): every document already starts with the ball on the
     // centre spot, so the button only re-centred it — the board never lacks a ball.
@@ -343,8 +351,13 @@ describe('playback staging (PLAN-006 M5)', () => {
   })
 
   it('the space-HOLD shortcut is announced as its own row, not buried in the Space hint', async () => {
-    const { container } = setup()
-    const rows = [...container.querySelectorAll('aside')].map((a) => a.textContent ?? '').join(' ')
+    setup()
+    /*
+     * The standing 조작법 column is gone (v31) — the hold is announced by the board hint that
+     * appears while the play runs, and by the `?` overlay. Both read the same KEYMAP rows, so the
+     * contract this test protects is the ROW ITSELF: one line for the hold, separate from Space.
+     */
+    const rows = GUIDE_PLAY_BINDINGS.map((b) => `${b.label} ${b.hint}`).join(' ')
     expect(rows).toContain('Space 꾹')
     // the factor is CHOSEN on the play button now: the hold row stays one line, and the pick
     // lives in its own gesture row (a wrapped hint hangs indented under the keycap)

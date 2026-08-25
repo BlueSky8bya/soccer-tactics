@@ -1,14 +1,22 @@
-/* Option 3 — Focused Hybrid (ADR-0006 D6, amended 2026-08-20):
-   light chrome, ONE docked right column (properties + help), pitch ≥ 65% width. */
-
+/*
+ * FULL-BLEED CANVAS (ADR-0009 v31, user 2026-08-25: 레이아웃 비율 수정을 좀 더 개혁적으로).
+ *
+ * There are no docked columns any more. Measured on the layout this replaces: the two side
+ * columns cost 460px — 32% of a 1440 window, 36% of a 1280 one — and five of the six cards in
+ * them were STATIC REFERENCE TEXT that the `?` overlay already carries in full. A third of the
+ * screen spent restating a cheat sheet is the opposite of "the board is the product" (ADR-0001).
+ *
+ * So the skeleton is two rows: a solid toolbar and the board. Everything else — transport,
+ * step panel, inspector, hints — FLOATS over the board and is allowed to disappear.
+ */
 .shell {
   display: grid;
-  grid-template-rows: 48px 1fr auto;
-  grid-template-columns: 60px 1fr 296px;
+  grid-template-rows: 48px 1fr;
+  grid-template-columns: 1fr;
   grid-template-areas:
-    'top top top'
-    'rail pitch side'
-    'bottom bottom bottom';
+    'top'
+    'pitch';
+  position: relative;
   height: 100%;
   background: var(--st-bg);
   color: var(--st-text);
@@ -499,31 +507,26 @@
 
 /* ---------- bottom ---------- */
 
+/*
+ * The transport FLOATS over the board (v31). It used to own a grid row, which cost the layout a
+ * full-width band for a centred pill — 595px of empty strip either side of it at 1440. Off the
+ * grid it costs nothing, and the board keeps the pixels.
+ *
+ * It no longer has to be re-centred against unequal side columns either: the board and the bar
+ * now share the same box, so `justify-content: center` centres on the pitch by construction.
+ */
 .bottomWrap {
-  grid-area: bottom;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   min-width: 0;
   display: flex;
   justify-content: center;
   padding: 4px 12px 12px;
   background: transparent;
   pointer-events: none;
-}
-
-/*
- * The footer spans all three columns, so it centred on the VIEWPORT while the board centres in the
- * middle column — and the two side columns are deliberately unequal (the guide needs more width
- * than the team setup), so the bar sat ~8px right of the pitch it belongs to (lab review,
- * 2026-08-24, measured board centre 1423.5 vs bar centre 1439.5). Matching the columns' own clamps
- * makes the bar's content box the pitch column, and centring inside it centres on the board.
- */
-.shell[data-simple='true'] .bottomWrap {
-  padding-left: clamp(222px, 14vw, 244px);
-  padding-right: clamp(238px, 15vw, 268px);
-}
-
-.shell[data-simple='true'][data-zen='true'] .bottomWrap {
-  padding-left: 12px;
-  padding-right: 12px;
+  z-index: 35;
 }
 
 /* ---------- formation picker ---------- */
@@ -653,20 +656,6 @@
 
 .helpBtn {
   font-weight: 600;
-}
-
-/* ---------- menus ---------- */
-
-.menu {
-  width: 260px;
-  padding: var(--st-space-2);
-}
-
-.menuItem {
-  justify-content: space-between;
-  width: 100%;
-  height: 32px;
-  font-size: 13px;
 }
 
 .status {
@@ -1007,52 +996,10 @@
 /* ---------- simple mode (ADR-0009) ---------- */
 
 /*
- * The pitch has a fixed 105:68 aspect and, at every laptop width, it is WIDTH-constrained inside
- * this grid — there is vertical slack it cannot use. So every pixel of side chrome comes straight
- * out of the board: fixed 260/304 columns cost 21% of the drawn pitch at 1280 and 17% at 1440.
- * Clamped columns give those pixels back where they are scarce and cap where they are not (by
- * 2560 the pitch is height-constrained, so widening the panels there costs nothing).
+ * v31: nothing to override any more — the shell skeleton IS the simple-mode skeleton. The
+ * attribute stays because the tour, the tests and the playback recede rules key off it, and
+ * because a shell that ever grows a second mode should have to say so.
  */
-.shell[data-simple='true'] {
-  grid-template-columns: clamp(222px, 14vw, 244px) 1fr clamp(238px, 15vw, 268px);
-  grid-template-areas:
-    'top top top'
-    'left pitch right'
-    'bottom bottom bottom';
-}
-
-.sideLeft {
-  grid-area: left;
-  display: flex;
-  flex-direction: column;
-  /* Cards are 8px inside, so 12px between them is a ratio of exactly 1.5 — the point at which
-     grouping goes multistable and the cards can read as one long field. 16px (2.0) clears it. */
-  gap: var(--st-space-4);
-  padding: var(--st-space-3);
-  background: transparent;
-  overflow: auto;
-  min-height: 0;
-}
-
-/*
- * The guide is REFERENCE — read, not operated — so it is the one column allowed to scroll when
- * the viewport is short. Measured: its content needs ~760px even at 300px wide, and a 1280x800
- * window only offers 657px, so no width setting makes it fit. A fade marks the cut as "more
- * below" instead of leaving it looking clipped; the full list also lives in the ? overlay.
- */
-.sideRight {
-  grid-area: right;
-  display: flex;
-  flex-direction: column;
-  gap: var(--st-space-4);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
-  padding: var(--st-space-3);
-  background: transparent;
-  overflow: auto;
-  min-height: 0;
-  font-size: 13px;
-}
 
 /*
  * Preference switch (PLAN-015). The whole row is the target — a 34px track alone is a Fitts
@@ -2368,16 +2315,13 @@
  * pitch should own attention. And 0.45 took panel text to ~2.1:1, which reads as *disabled* rather
  * than as deliberately quiet; 0.6 keeps it above 3:1 while still stepping clearly back.
  */
-.shell[data-playing='true'] .sideLeft,
-.shell[data-playing='true'] .sideRight,
 .shell[data-playing='true'] .simpleBar,
+.shell[data-playing='true'] .boardHints,
 .shell[data-playing='true'] .top {
   opacity: 0.6;
   transition: opacity var(--st-motion-transition) var(--st-ease-standard);
 }
 
-.shell .sideLeft,
-.shell .sideRight,
 .shell .top {
   transition: opacity var(--st-motion-transition) var(--st-ease-standard);
 }
@@ -2567,46 +2511,44 @@
 }
 
 /*
- * Short viewports (1280x800 and friends): the controls column is the one that must never be cut
- * off — it is operated, not read. Tighten its internal padding rather than its BETWEEN-card gap,
- * so the 2.0 grouping ratio survives while the column gets ~32px back.
+ * Short viewports (1280x800 and friends). Nothing is docked any more, so the only thing that can
+ * run out of room is a MENU: its card is the one surface that still stacks controls vertically.
  */
 @media (max-height: 860px) {
   .shell[data-simple='true'] .panelCard {
     padding: var(--st-space-3);
   }
-
-  .shell[data-simple='true'] .sideLeft,
-  .shell[data-simple='true'] .sideRight {
-    padding: var(--st-space-2) var(--st-space-3);
-  }
 }
 
 /*
- * Zen (F): chrome off, board only. Docked-by-default plus a one-key escape to full canvas is what
- * Photoshop, Blender, Figma, VS Code and Sketch have all shipped for decades — the panels stay
- * visible and discoverable by default, and the board can still take the whole window on demand.
- * The columns collapse on the overlay spring so the board grows into the space rather than
- * snapping; the panels themselves fade and stop taking pointer events.
+ * Zen (F) after v31: there are no columns left to collapse, so the key now hides the FLOATING
+ * chrome — transport, step panel, hints. The board was already the whole window; what zen buys is
+ * a board with nothing on top of it (a screenshot, a demo, a room looking at the tactic).
+ *
+ * Fade, not display:none — the surfaces keep their place so pressing F again does not reflow the
+ * board, and the escape hatch (`.zenExit`) stays visible for a pointer-only user.
  */
-.shell[data-simple='true'][data-zen='true'] {
-  grid-template-columns: 0 1fr 0;
-}
-
-.shell[data-simple='true'] {
-  transition: grid-template-columns var(--st-spring-overlay-ms) var(--st-spring-overlay);
-}
-
-.shell[data-zen='true'] .sideLeft,
-.shell[data-zen='true'] .sideRight {
+.shell[data-zen='true'] .bottomWrap,
+.shell[data-zen='true'] .stepPanel,
+.shell[data-zen='true'] .boardHints {
   opacity: 0;
   pointer-events: none;
-  padding-left: 0;
-  padding-right: 0;
+  transition: opacity var(--st-motion-transition) var(--st-ease-standard);
+}
+
+.bottomWrap,
+.stepPanel,
+.boardHints {
+  transition: opacity var(--st-motion-transition) var(--st-ease-standard);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shell[data-simple='true'] {
+  .shell[data-zen='true'] .bottomWrap,
+  .shell[data-zen='true'] .stepPanel,
+  .shell[data-zen='true'] .boardHints,
+  .bottomWrap,
+  .stepPanel,
+  .boardHints {
     transition: none;
   }
 }
@@ -2745,4 +2687,137 @@
 .gifBtn:focus-visible {
   outline: 2px solid var(--st-accent);
   outline-offset: 2px;
+}
+
+
+/* =========================================================================
+ * TOOLBAR MENUS (v31)
+ *
+ * The team setup and the cleanup actions used to be cards in a 222px column that stood there all
+ * session for two buttons you press once. They are POPOVERS now: the toolbar keeps a name you can
+ * find, and the board keeps the pixels.
+ *
+ * Opaque on purpose — A-04a. A menu floats, so it is allowed to blur; but it also carries the
+ * only text in the app you read while deciding something, and it opens over a pitch that may be
+ * mid-play. Solid surface, real shadow.
+ * ========================================================================= */
+.menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.menuBtn svg {
+  color: var(--st-text-3);
+  flex: none;
+}
+
+.menuPop {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 248px;
+  padding: var(--st-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  /* concentric: the rows inside are on --st-radius-s (8) and the padding is 8, so the card is 16 */
+  border-radius: var(--st-radius-m);
+  box-shadow: var(--st-depth-overlay);
+}
+
+/* A menu anchored to a control on the RIGHT half of the toolbar opens right-aligned, or it runs
+   off the window. */
+.menuPopRight {
+  left: auto;
+  right: 0;
+}
+
+.menuSep {
+  height: 1px;
+  background: var(--st-border);
+  margin: var(--st-space-2) 0;
+}
+
+
+/* =========================================================================
+ * BOARD HINTS (v31) — the guide is a state, not a wall
+ *
+ * The standing 조작법 column said everything at one volume, forever, and repeated what the `?`
+ * overlay already holds. What replaces it says ONE thing at a time and only while it is true:
+ * `useActiveCues()` already gates Ctrl/Alt/Shift/Space/공/선수/경로 through an anti-flicker gate
+ * (CUE_ENTER_MS 180 / CUE_EXIT_MS 340), so the strip cannot strobe (WCAG 2.3.1 territory).
+ *
+ * Idle board: nothing here at all.
+ * ========================================================================= */
+.boardHints {
+  position: absolute;
+  top: var(--st-space-4);
+  left: var(--st-space-4);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  max-width: min(38%, 340px);
+}
+
+.boardHint {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 11px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--st-text);
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-pill);
+  box-shadow: var(--st-depth-raised);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* each row arrives on the overlay spring rather than blinking into existence */
+  animation: hintIn var(--st-spring-overlay-ms) var(--st-spring-overlay) both;
+}
+
+.boardHintLabel {
+  font-weight: 650;
+  color: var(--st-accent-text, var(--st-accent));
+  flex: none;
+}
+
+.boardHintText {
+  color: var(--st-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes hintIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardHint {
+    animation: none;
+  }
+}
+
+
+/* The toolbar's left cell: identity + the two document menus, as one group (v31). */
+.topLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--st-space-2);
+  justify-self: start;
+  min-width: 0;
 }
