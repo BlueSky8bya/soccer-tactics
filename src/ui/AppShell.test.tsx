@@ -320,8 +320,12 @@ describe('shell hierarchy (PLAN-006 M2)', () => {
       ['보드', /새로 시작/],
     ] as const)
       expect(menuButton(menu, name)).toBeTruthy()
-    // …and the transport is always on screen, no menu needed.
-    for (const name of [/재생/, /처음으로/, /반복/])
+    /*
+     * …and the transport is always on screen, no menu needed. EXACT names: the key guide's rows
+     * are buttons too ("Space — 재생 단축키 설명"), and a loose /재생/ would no longer say which
+     * control it means — which is the same ambiguity a screen reader would hit.
+     */
+    for (const name of ['재생', '처음으로', '반복'])
       expect(screen.getByRole('button', { name })).toBeTruthy()
     // 공 투입 was dropped (user 2026-08-21): every document already starts with the ball on the
     // centre spot, so the button only re-centred it — the board never lacks a ball.
@@ -342,16 +346,43 @@ describe('discoverability (ADR-0009 v32)', () => {
     /*
      * v31 made every hint contextual and that hid the entrance: a first-time visitor never holds
      * Ctrl, so they never learn Ctrl is what puts a player on the pitch (user 2026-08-25). The
-     * rail is the standing INDEX — one key, one word — and the explanation still waits for the
-     * state it belongs to.
+     * guide is the standing INDEX — one key, one word, grouped by what it is for — and the
+     * explanation still waits until it is asked for.
      */
-    const rail = container.querySelector('[class*="hintRail"]')!
-    expect(rail).toBeTruthy()
-    const keys = [...rail.querySelectorAll('[class*="kbd"]')].map((k) => k.textContent)
-    for (const k of ['Ctrl', 'Alt', 'Shift', '1~9', 'X', '⇧R']) expect(keys).toContain(k)
-    // …and nothing is unfolded or lit while the board is idle
-    expect(container.querySelector('[class*="hintRows"]')).toBeNull()
-    expect(rail.querySelector('[data-on="true"]')).toBeNull()
+    const guide = container.querySelector('[class*="keyGuide"]')!
+    expect(guide).toBeTruthy()
+    const caps = [...guide.querySelectorAll('[class*="guideCap"]')].map((k) => k.textContent)
+    for (const k of ['Ctrl', 'Alt', 'Shift', '1~9', 'X', '⇧R']) expect(caps).toContain(k)
+    // …every drawer shut, nothing held
+    expect(guide.querySelector('[data-open]')).toBeNull()
+    expect(guide.querySelector('[data-held]')).toBeNull()
+    for (const row of guide.querySelectorAll('[aria-expanded]'))
+      expect(row.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('a key opens its own detail and nothing else', () => {
+    const { container } = setup()
+    const rows = [...container.querySelectorAll<HTMLButtonElement>('button[class*="guideRow"]')]
+    const alt = rows.find((r) => r.getAttribute('aria-label')?.startsWith('Alt'))!
+    act(() => alt.click())
+    expect(alt.getAttribute('aria-expanded')).toBe('true')
+    expect(
+      rows.filter((r) => r.getAttribute('aria-expanded') === 'true').map((r) => r.textContent),
+    ).toHaveLength(1)
+    // the detail is the keymap's own wording, not a second copy of it
+    expect(alt.parentElement!.textContent).toContain('경로')
+    act(() => alt.click())
+    expect(alt.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('the guide points at the full list', () => {
+    const { container } = setup()
+    const all = [...container.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('단축키 전체 보기'),
+    )!
+    expect(all).toBeTruthy()
+    act(() => all.click())
+    expect(useUiStore.getState().shortcutsOpen).toBe(true)
   })
 })
 

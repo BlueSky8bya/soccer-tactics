@@ -3523,3 +3523,52 @@ Validation: typecheck/lint/**351 tests**/build/harness PASS. 브라우저 **206 
 행만 사라지고 레일은 남음). 라이트/다크 스크린샷 확인.
 
 Related: ADR-0009 v32(v31 §6 부분 대체), PLAN-20260825-017 R-4, CHG-20260825-213
+
+## CHG-20260825-215 — 단축키 안내는 피치가 못 쓰는 왼쪽 여백으로 (ADR-0009 v33)
+
+Date: 2026-08-25 · Type: UX · Level: L2
+
+Problem (사용자 2026-08-25, 스크린샷 첨부): "이것만 보고 이게 뭔지 직관적으로 알 수 있겠니? 그리고
+왜 위쪽에 나열했어 좌/우 남는 여백이 이렇게 많은데. 보드 펼치면 나오는 단축키도 다 밖으로 보이게
+하고 더 크고 각각의 버튼에 호버링했을 때도 상호작용되는 애니메이션 등등 만들어서 디자인의 조화성
+좀 챙겨줘. 연구자료나 웹 검색 다시 해."
+
+셋 다 맞다. (a) `Ctrl 선수` 낱말 하나로는 뭘 하라는 건지 알 수 없다. (b) 보드는 전 구간 **높이
+제약**이라 1440×900에서 한쪽 약 **135px 잔디가 영원히 남는데** v32는 그걸 두고 붐비는 위쪽을 썼다.
+(c) 펼친 상세가 피치 위로 날아갔다.
+
+조사부터 다시 했다 — `docs/product/DISCOVERABILITY_RESEARCH_2026-08-25.md`(신규):
+- **ExposeHK (CHI 2013)**: 수정자를 쥔 동안 단축키를 보이면 선택의 **99%가 단축키**(기준선 64%),
+  속도 손해 없음. 핵심은 하이라이트가 아니라 **물리적 리허설**.
+- **KeyMap (CHI 2020)**: 선형 목록 대신 **공간 배치** → 회상 직후 +1, **24h 뒤 +4.5**.
+- **CommandMaps**: **공간 안정성 > 재배치**. 가리키던 것이 움직이면 안 된다.
+- **Blender 2.8 상태 표시줄**: 맥락 키를 고정 자리에, 수정자는 둥근 배지.
+- **접근성**: 호버가 유일 경로면 실패. 상시 트리거를 함께.
+
+Change:
+- **`KeyGuide`(신규, `BoardHints` 대체)** — 왼쪽 여백의 200px 열. **만들기 / 보기 / 정리** 세 그룹
+  카드, 행마다 `[캡] 낱말`, 34px(WCAG 2.5.8 24×24 초과).
+- **보드는 값을 치르지 않는다** — `usePitchView(..., safeLeft)`가 예약을 **슬랙**으로 상한한다.
+  `(width − slack)/baseW === free`라 슬랙만큼은 구성상 공짜. 실측 마킹 폭 1280/1440/1920/1024 =
+  **957 / 1102 / 1365 / 910**으로 v31·v32와 **동일**. ≤1180px에서는 낱말을 버리고 캡만(62px).
+- **여는 방법 3가지** — 키를 실제로 쥠(그 키만 열림+강조), 호버, 포커스. **클릭은 핀**, 바깥
+  클릭으로 해제. `?  단축키 전체 보기`가 열 아래에 상시.
+- **상세는 열 안에서만** 열린다(피치 위로 안 나감). 가리키던 행은 안 움직이고 아래 행만 밀린다.
+  높이는 `grid-template-rows: 0fr → 1fr`로 오버레이 스프링을 탄다.
+- **상호작용** — 행: hover 시 배경+`translateX(2px)`, press `scale(0.98)`, held는 액센트 채움.
+  `? 전체 보기`: hover 리프트+그림자, press 스프링. 전부 기존 토큰/스프링.
+- 접근명 정리: 행은 `"Space — 재생 단축키 설명"`. `"재생"`이면 트랜스포트 버튼과 이름이 겹친다.
+
+Files: src/ui/KeyGuide.tsx(신규), src/ui/BoardHints.tsx(삭제), src/ui/keymap.ts,
+src/ui/shell.module.css, src/ui/tokens.css, src/ui/pitch/useSvgMetrics.ts,
+src/ui/pitch/SimplePitch.tsx, src/ui/AppShell.tsx, src/ui/i18n/ko.ts, src/ui/AppShell.test.tsx,
+pw/full-bleed.cjs, docs/product/DISCOVERABILITY_RESEARCH_2026-08-25.md(신규),
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/plans/ACTIVE_PLAN.md,
+docs/agent/PROJECT_MAP.md, docs/agent/CURRENT_STATE.md
+
+Validation: typecheck/lint/**353 tests**/build/harness PASS. 브라우저 **209 checks ALL PASS**
+(`full-bleed` 27 → 30). 새 계약: 세 해상도에서 **열 오른쪽 끝 ≤ 마킹 왼쪽 끝**, 유휴 시 열린 행
+0·강조 0, Ctrl을 쥐면 정확히 한 행만 열리고 내용이 Ctrl 어휘, 키를 떼면 닫히고 열은 남음, 호버로
+열림·클릭으로 고정·보드를 건드리면 해제. 라이트/다크 스크린샷 확인.
+
+Related: ADR-0009 v33(v32 레일 대체), PLAN-20260825-017 R-5, CHG-20260825-214, CHG-20260825-213

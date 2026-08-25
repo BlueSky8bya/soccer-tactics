@@ -242,6 +242,7 @@ export const ko = {
   'panel.team': '팀 구성',
   'panel.cleanup': '정리',
   'panel.boardMenu': '보드',
+  'guide.all': '단축키 전체 보기',
   'panel.ctrl': 'Ctrl 단축키',
   'zen.exit': '패널 보이기',
   'player.roleNone': '지정 안 함',

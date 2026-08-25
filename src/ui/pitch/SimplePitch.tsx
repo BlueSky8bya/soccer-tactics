@@ -83,7 +83,7 @@ import { BallMark } from '@/renderer/Token'
 import styles from '@/renderer/pitch.module.css'
 import { playableEnd } from '@/editor/usePlayback'
 import { clientToPitch } from '@/renderer/pointer'
-import { BOARD_SAFE_BOTTOM_PX, clampToView, usePitchView } from './useSvgMetrics'
+import { BOARD_SAFE_BOTTOM_PX, BOARD_SAFE_LEFT_PX, clampToView, usePitchView } from './useSvgMetrics'
 import { t } from '../i18n'
 import { completedStepAt, stepOpensAt } from '../stepTiming'
 import { entityChipOf, entityColorOf, teamColorOf } from '../teamColor'
@@ -401,6 +401,7 @@ export function SimplePitch() {
     doc.pitch.width,
     undefined,
     ui.zen ? 0 : BOARD_SAFE_BOTTOM_PX,
+    ui.zen ? 0 : BOARD_SAFE_LEFT_PX,
   )
   const flingDoneRef = useRef<(() => void) | null>(null)
   const flingKeyRef = useRef(0)

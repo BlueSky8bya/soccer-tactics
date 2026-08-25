@@ -11,7 +11,7 @@ import { playableEnd, usePlaybackController } from '@/editor/usePlayback'
 import { useUiStore } from '@/editor/uiStore'
 import { PlayerCard } from './PlayerCard'
 import { SelectionActionBar } from './SelectionActionBar'
-import { BoardHints } from './BoardHints'
+import { KeyGuide } from './KeyGuide'
 import { BoardMenu, TeamMenu } from './ToolbarMenus'
 import { ShortcutsOverlay } from './ShortcutsOverlay'
 import { StepBar } from './StepBar'
@@ -358,7 +358,7 @@ export function AppShell() {
           <SimplePitch />
         </div>
         {!ui.annotate.on && <StepPanel />}
-        <BoardHints />
+        <KeyGuide />
         {/* Zen hid every surface that named the key that undoes it, so the only way back was
             knowing F already (user 2026-08-22: 다시 펼치는 F 단축키 안내가 어디에도 없어서).
             A button, not a caption — a pointer user must not need the keyboard to get out. */}

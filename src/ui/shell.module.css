@@ -2316,7 +2316,7 @@
  * than as deliberately quiet; 0.6 keeps it above 3:1 while still stepping clearly back.
  */
 .shell[data-playing='true'] .simpleBar,
-.shell[data-playing='true'] .boardHints,
+.shell[data-playing='true'] .keyGuide,
 .shell[data-playing='true'] .top {
   opacity: 0.6;
   transition: opacity var(--st-motion-transition) var(--st-ease-standard);
@@ -2530,7 +2530,7 @@
  */
 .shell[data-zen='true'] .bottomWrap,
 .shell[data-zen='true'] .stepPanel,
-.shell[data-zen='true'] .boardHints {
+.shell[data-zen='true'] .keyGuide {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--st-motion-transition) var(--st-ease-standard);
@@ -2538,17 +2538,17 @@
 
 .bottomWrap,
 .stepPanel,
-.boardHints {
+.keyGuide {
   transition: opacity var(--st-motion-transition) var(--st-ease-standard);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .shell[data-zen='true'] .bottomWrap,
   .shell[data-zen='true'] .stepPanel,
-  .shell[data-zen='true'] .boardHints,
+  .shell[data-zen='true'] .keyGuide,
   .bottomWrap,
   .stepPanel,
-  .boardHints {
+  .keyGuide {
     transition: none;
   }
 }
@@ -2743,147 +2743,211 @@
 
 
 /* =========================================================================
- * BOARD HINTS (v31) — the guide is a state, not a wall
+ * THE KEY GUIDE (v33) — a column in the margin the pitch cannot use
  *
- * The standing 조작법 column said everything at one volume, forever, and repeated what the `?`
- * overlay already holds. What replaces it says ONE thing at a time and only while it is true:
- * `useActiveCues()` already gates Ctrl/Alt/Shift/Space/공/선수/경로 through an anti-flicker gate
- * (CUE_ENTER_MS 180 / CUE_EXIT_MS 340), so the strip cannot strobe (WCAG 2.3.1 territory).
+ * The board is height-constrained at every laptop size, so ~135px of grass sits unusable on each
+ * side at 1440×900. v32 spent the TOP edge on a rail while both margins stood empty; this is the
+ * same information in the space that was already free, at a size you can read
+ * (user 2026-08-25: 좌/우 남는 여백이 이렇게 많은데 … 더 크고).
  *
- * Idle board: nothing here at all.
+ * Behaviour follows the hotkey-learning literature (see `KEY_GUIDE` in keymap.ts): holding the
+ * real key opens its set (ExposeHK rehearsal), hover and focus open it too, a click pins it, and
+ * opening flies out SIDEWAYS so no row ever moves (CommandMaps: stability beats reflow).
  * ========================================================================= */
-.boardHints {
+.keyGuide {
   position: absolute;
   top: var(--st-space-4);
-  left: var(--st-space-4);
+  left: var(--st-space-3);
   z-index: 30;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
+  gap: var(--st-space-3);
+  width: var(--st-guide-w);
+  max-width: 40%;
+  /* the column itself is not a surface — each group is, so the margin keeps showing through */
   pointer-events: none;
-  max-width: calc(100% - var(--st-space-6));
+}
+
+.guideGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--st-inset);
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-card);
+  box-shadow: var(--st-depth-rest);
+  pointer-events: auto;
+}
+
+.guideGroupLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--st-text-3);
+  padding: 2px var(--st-space-2) 4px;
+}
+
+.guideItem {
+  position: relative;
 }
 
 /*
- * The rail (v32): one line, one key per chip, one word per key. It is an INDEX — it exists so a
- * first-time visitor knows a key is there at all. It never grows; the detail is the rows below.
+ * One row = one key. 34px tall, which clears WCAG 2.5.8's 24×24 minimum with room for the cap to
+ * sit on its own baseline, and is the same rhythm as the menu rows in the toolbar.
  */
-.hintRail {
+.guideRow {
+  appearance: none;
+  width: 100%;
+  height: 34px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
-}
-
-.hintKey {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 9px 3px 4px;
-  border-radius: var(--st-radius-pill);
-  background: var(--st-surface);
-  border: 1px solid var(--st-border);
-  box-shadow: var(--st-depth-rest);
-  font-size: 11.5px;
-  line-height: 1.2;
-  color: var(--st-text-3);
-  white-space: nowrap;
-  /* quiet at rest: it is furniture until the key it names is the key in your hand */
-  opacity: 0.72;
+  gap: var(--st-space-2);
+  padding: 0 var(--st-space-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--st-radius-control);
+  font: inherit;
+  font-size: 13px;
+  color: var(--st-text-2);
+  text-align: left;
+  cursor: default;
   transition:
-    opacity var(--st-motion-feedback) var(--st-ease-standard),
-    background-color var(--st-motion-feedback) var(--st-ease-standard),
-    border-color var(--st-motion-feedback) var(--st-ease-standard),
-    color var(--st-motion-feedback) var(--st-ease-standard),
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    border-color var(--st-motion-fast) var(--st-ease-out),
+    color var(--st-motion-fast) var(--st-ease-out),
     transform var(--st-spring-press-ms) var(--st-spring-press);
 }
 
-/*
- * Held. The chip is the ANCHOR for the rows that just unfolded underneath it, so it has to change
- * enough to be found in peripheral vision — colour, weight and a small lift, all at once.
- */
-.hintKey[data-on='true'] {
-  opacity: 1;
+.guideRow:hover,
+.guideRow:focus-visible {
+  background: var(--st-surface-2);
+  color: var(--st-text);
+  transform: translateX(2px);
+}
+
+.guideRow:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 1px;
+}
+
+.guideRow:active {
+  transform: translateX(2px) scale(0.98);
+  transition-duration: var(--st-motion-instant);
+  transition-timing-function: var(--st-ease-out);
+}
+
+/* HELD: the key is actually under the user's finger. This is the rehearsal moment, so it is the
+   loudest state the guide has. */
+.guideRow[data-held] {
   background: var(--st-accent-soft);
   border-color: var(--st-accent);
   color: var(--st-accent-text, var(--st-accent));
-  transform: translateY(-1px);
-  box-shadow: var(--st-depth-raised);
+  transform: translateX(3px);
 }
 
-.hintKey[data-on='true'] .kbd {
-  color: var(--st-accent-text, var(--st-accent));
+.guideCap {
+  flex: none;
+  min-width: 44px;
+  padding: 3px 7px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--st-text-2);
+  background: var(--st-surface-2);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-chip);
+  transition:
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    border-color var(--st-motion-fast) var(--st-ease-out),
+    color var(--st-motion-fast) var(--st-ease-out);
+}
+
+.guideRow[data-held] .guideCap {
+  background: var(--st-surface);
   border-color: var(--st-accent);
-  background: transparent;
+  color: var(--st-accent-text, var(--st-accent));
 }
 
-.hintKeyWord {
-  font-weight: 500;
+.guideWord {
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.hintRows {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  max-width: min(38%, 340px);
+/*
+ * The detail opens UNDER its own row, inside the column. It never goes over the board: the whole
+ * point of putting the guide in the margin was that the margin is the space the pitch cannot use
+ * (user 2026-08-25: 보드 펼치면 나오는 단축키도 다 밖으로 보이게).
+ *
+ * `grid-template-rows: 0fr → 1fr` is what makes that sprung. `height: auto` is not animatable, and
+ * a panel that snaps open is the one piece of the app that would not move like the rest of it.
+ */
+.guideDrawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--st-spring-overlay-ms) var(--st-spring-overlay);
+}
+
+.guideDrawer[data-open] {
+  grid-template-rows: 1fr;
+}
+
+.guideDrawerInner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.guideDetail {
+  padding: 3px 0 5px var(--st-space-2);
+  margin-left: var(--st-space-2);
+  /* a hairline that ties every detail line back to the key it belongs to */
+  border-left: 1.5px solid var(--st-accent-soft);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--st-text-2);
+}
+
+.guideRow[data-held] + .guideDrawer .guideDetail {
+  border-left-color: var(--st-accent);
+}
+
+.guideDetail .kbd,
+.guideGesture {
+  display: inline-block;
+  margin-bottom: 1px;
+}
+
+.guideGesture {
+  font-weight: 650;
+  font-size: 11.5px;
+  color: var(--st-accent-text, var(--st-accent));
+}
+
+.guideHint {
+  display: block;
+  color: var(--st-text-2);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hintKey {
+  .guideRow,
+  .guideCap {
+    transition: none;
+  }
+
+  .guideRow:hover,
+  .guideRow:focus-visible,
+  .guideRow:active,
+  .guideRow[data-held] {
+    transform: none;
+  }
+
+  .guideDrawer {
     transition: none;
   }
 }
-
-.boardHint {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 6px 11px;
-  font-size: 12.5px;
-  line-height: 1.35;
-  color: var(--st-text);
-  background: var(--st-surface);
-  border: 1px solid var(--st-border);
-  border-radius: var(--st-radius-pill);
-  box-shadow: var(--st-depth-raised);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* each row arrives on the overlay spring rather than blinking into existence */
-  animation: hintIn var(--st-spring-overlay-ms) var(--st-spring-overlay) both;
-}
-
-.boardHintLabel {
-  font-weight: 650;
-  color: var(--st-accent-text, var(--st-accent));
-  flex: none;
-}
-
-.boardHintText {
-  color: var(--st-text-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@keyframes hintIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .boardHint {
-    animation: none;
-  }
-}
-
 
 /* The toolbar's left cell: identity + the two document menus, as one group (v31). */
 .topLeft {
@@ -2892,4 +2956,92 @@
   gap: var(--st-space-2);
   justify-self: start;
   min-width: 0;
+}
+
+/*
+ * Narrow windows: the slack shrinks with the width, so the guide gives up its words and keeps its
+ * caps. The key is the part you cannot infer — `Alt` is meaningless without the cap, `경로` is
+ * merely nice — and the words come back the moment they are affordable. Hover and holding the key
+ * still open the full detail.
+ */
+@media (max-width: 1180px) {
+  .keyGuide {
+    --st-guide-w: 62px;
+    gap: var(--st-space-2);
+  }
+
+  .guideWord,
+  .guideGroupLabel {
+    display: none;
+  }
+
+  .guideRow {
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  .guideCap {
+    min-width: 0;
+  }
+}
+
+/* The guide's own way out: the whole keymap, in the dialog that already holds it. */
+.guideAll {
+  appearance: none;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 var(--st-space-3) 0 var(--st-space-2);
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-pill);
+  box-shadow: var(--st-depth-rest);
+  font: inherit;
+  font-size: 12px;
+  color: var(--st-text-2);
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background-color var(--st-motion-fast) var(--st-ease-out),
+    color var(--st-motion-fast) var(--st-ease-out),
+    box-shadow var(--st-motion-feedback) var(--st-ease-out),
+    transform var(--st-spring-press-ms) var(--st-spring-press);
+}
+
+.guideAll:hover {
+  color: var(--st-text);
+  transform: translateY(-1px);
+  box-shadow: var(--st-depth-raised);
+}
+
+.guideAll:active {
+  transform: translateY(-1px) scale(0.96);
+  transition-duration: var(--st-motion-instant);
+  transition-timing-function: var(--st-ease-out);
+}
+
+.guideAll:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 1px;
+}
+
+@media (max-width: 1180px) {
+  .guideAll {
+    padding: 0;
+    width: 30px;
+    justify-content: center;
+  }
+
+  .guideAll span:not([class*='kbd']) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guideAll:hover,
+  .guideAll:active {
+    transform: none;
+  }
 }

@@ -170,6 +170,13 @@
   --st-spring-overlay: linear(0, 0.0519, 0.1599, 0.2888, 0.4181, 0.5368, 0.6397, 0.7254, 0.7946, 0.8492, 0.8912, 0.923, 0.9466, 0.9638, 0.9761, 0.9847, 0.9906, 0.9946, 0.9972, 0.9988, 1);
 
   /* Hit targets (ADR-0006 D3) */
+  /*
+   * The key guide's column (ADR-0009 v33). It has to agree with `BOARD_SAFE_LEFT_PX`, which is
+   * this width plus the 12px it is inset by plus a hair of grass — that constant is what tells the
+   * pitch to lay itself out beside the guide rather than under it.
+   */
+  --st-guide-w: 200px;
+
   --st-hit-token: 28px;
   --st-hit-handle: 16px;
   --st-hit-edge: 8px;

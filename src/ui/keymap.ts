@@ -203,46 +203,140 @@ export const KEYMAP_GROUPS: { title: string; items: Binding[] }[] = [
 ]
 
 /**
- * THE KEY RAIL (ADR-0009 v32, user 2026-08-25: 단축키가 아예 다 사라져서 처음 사이트 들어가는
- * 사람들은 뭘 어떻게 해야 할지 모를 것 같은데).
+ * THE KEY GUIDE (ADR-0009 v33) — what the board's left margin is for.
  *
- * v31 made the whole guide contextual, and contextual means INVISIBLE UNTIL YOU ALREADY KNOW: a
- * first-time visitor never holds Ctrl, so they never learn that Ctrl is what puts a player on the
- * pitch. The fix is not to bring the wall back — it is to keep a standing INDEX and let the
- * context supply the detail.
+ * Two rounds of user judgement got us here. v31 hid every hint behind a cue, and that hid the
+ * entrance: a contextual hint is only visible to someone who already knows. v32 put a one-line
+ * rail across the TOP of the board, and the user's answer was the right one — `Ctrl 선수` alone
+ * is not intuitive, and the board's left and right margins were sitting empty while the guide
+ * crowded the top edge (2026-08-25: 이것만 보고 이게 뭔지 직관적으로 알 수 있겠니? 그리고 왜 위쪽에
+ * 나열했어 좌/우 남는 여백이 이렇게 많은데).
  *
- * Each rail entry is one key and ONE WORD. The word is what the key is for, not how it works; the
- * how arrives as full rows the moment the key is actually held (`cue`), and the entry itself lights
- * up so the eye can connect the two. Entries without a cue are single-press commands — nothing to
- * hold, so the word IS the whole hint.
+ * The research this is built on:
+ *
+ *  · ExposeHK (Malacria, Bailly, Harrison, Cockburn, Gutwin — CHI 2013) shows hotkeys ON their
+ *    commands while the modifier is HELD, as physical rehearsal of expert behaviour. Measured:
+ *    99% of selections were made by hotkey (93% in block 1 → 100% by block 6) against 64% for an
+ *    audio-feedback baseline. That is why holding a key here does not merely highlight a chip —
+ *    it opens the full set for that key, in place, while the hand is already on it.
+ *  · KeyMap (Lewis, Deon, Cockburn et al. — CHI 2020) beat ExposeHK on RECALL by laying the
+ *    commands out spatially instead of as a linear menu: +1 shortcut immediately, +4.5 after 24h.
+ *    So the guide is grouped by what the key is FOR (만들기 / 보기 / 정리) and each key keeps its
+ *    own fixed slot.
+ *  · CommandMaps (Scarr, Cockburn, Gutwin, Bunt) — spatial stability with scaling dramatically
+ *    outperforms reflowing. So nothing here ever moves: opening a key's detail flies it out to the
+ *    SIDE; it never pushes the rows below it down.
+ *  · Blender's 2.8 status bar draws modifier keys as icon-like roundrects in fixed positions for
+ *    exactly the same reason — the spatial association is the point.
+ *
+ * Each entry is one key: a cap, ONE word for what it is for, and the rows that unfold on hover,
+ * on focus, or while the key is really held.
  */
-export interface RailKey {
+export interface GuideKey {
+  /** What is printed on the cap. */
   label: string
-  /** One word. If it needs a sentence it belongs in the rows, not here. */
+  /** One word: what this key is FOR. Not how it works — that is what `rows` are. */
   word: string
-  /** The state in which this key's full rows unfold and the chip lights up. */
+  /** The state in which this entry opens by itself and lights up. */
   cue?: Cue
+  /** Which group it sits in — the grouping is the spatial mapping (KeyMap). */
+  group: '만들기' | '보기' | '정리'
+  /** The detail. Kept as Bindings so the wording has ONE source (this file). */
+  rows: readonly Binding[]
 }
 
-/*
- * One word each, and they are SHORT on purpose: eight chips at four syllables ran 760px and
- * wrapped to a second line, at which point the index is a paragraph again (measured 1440×900).
- */
-export const RAIL_KEYS: readonly RailKey[] = [
-  { label: 'Ctrl', word: '선수', cue: 'ctrl' },
-  { label: 'Alt', word: '경로', cue: 'alt' },
-  { label: 'Shift', word: '여럿', cue: 'shift' },
-  { label: '1~9', word: '단계' },
-  { label: 'Space', word: '재생', cue: 'space' },
-  { label: 'X', word: '지우기' },
-  { label: '⇧R', word: '새로' },
-  { label: 'F', word: '비우기' },
+const row = (label: string, hint: string, chip = true): Binding => ({ label, hint, chip })
+
+export const KEY_GUIDE: readonly GuideKey[] = [
+  {
+    label: 'Ctrl',
+    word: '선수',
+    cue: 'ctrl',
+    group: '만들기',
+    rows: CTRL_BINDINGS,
+  },
+  {
+    label: 'Alt',
+    word: '경로',
+    cue: 'alt',
+    group: '만들기',
+    rows: [
+      row('Alt+클릭/드래그', '선수·공에 경로 지정'),
+      row('경로 드래그', '당겨서 휘기', false),
+      row('잔상 드래그', '도착 지점 조정', false),
+    ],
+  },
+  {
+    label: 'Shift',
+    word: '여럿',
+    cue: 'shift',
+    group: '만들기',
+    rows: [
+      row('Shift+잔디 드래그', '선택에 더하기'),
+      row('Shift+1~9', '고른 경로를 그 단계로'),
+    ],
+  },
+  {
+    label: '클릭',
+    word: '고른 것',
+    cue: 'path',
+    group: '만들기',
+    rows: [
+      row('드래그', '한 명 = 시작점만 · 여러 명 = 경로까지', false),
+      row('빈 잔디 드래그', '박스로 여러 명 선택', false),
+      row('Delete', '고른 것 삭제'),
+    ],
+  },
+  {
+    label: '1~9',
+    word: '단계',
+    group: '보기',
+    rows: [KEYMAP.edit.step, KEYMAP.edit.stepAll, KEYMAP.edit.moveStep],
+  },
+  {
+    label: 'Space',
+    word: '재생',
+    cue: 'space',
+    group: '보기',
+    rows: [KEYMAP.playback.toggle, KEYMAP.playback.boost, KEYMAP.playback.restart, KEYMAP.playback.loop],
+  },
+  {
+    label: 'F',
+    word: '비우기',
+    group: '보기',
+    rows: [KEYMAP.playback.zen],
+  },
+  {
+    label: 'X',
+    word: '지우기',
+    group: '정리',
+    rows: [KEYMAP.edit.clearAll, KEYMAP.edit.undo],
+  },
+  {
+    label: '⇧R',
+    word: '새로',
+    group: '정리',
+    rows: [KEYMAP.edit.reset],
+  },
 ]
 
-/** The pen owns the board in draw mode, so the rail says the pen's keys instead. */
-export const DRAW_RAIL_KEYS: readonly RailKey[] = [
-  { label: 'V / P / E', word: '선택 · 펜 · 지우개' },
-  { label: 'Ctrl+Z', word: '한 획 되돌리기' },
-  { label: 'Delete', word: '고른 것 지우기' },
-  { label: 'D', word: '전술 보드로' },
+/** The pen owns the board in draw mode, so the guide says the pen's keys instead. */
+export const DRAW_KEY_GUIDE: readonly GuideKey[] = [
+  {
+    label: 'P / E',
+    word: '펜',
+    group: '만들기',
+    rows: [row('P', '펜'), row('E', '지우개'), row('드래그', '펜: 자유 곡선 · 지우개: 획 삭제', false)],
+  },
+  {
+    label: 'V',
+    word: '선택',
+    group: '만들기',
+    rows: [row('V', '선택 도구 — 선수·공 옮기기'), row('Delete', '고른 선수 삭제')],
+  },
+  { label: 'Ctrl+Z', word: '되돌리기', group: '정리', rows: [row('Ctrl+Z', '획 하나 되돌리기')] },
+  { label: 'D', word: '보드로', group: '보기', rows: [DRAW_BINDINGS[0]!] },
 ]
+
+/** The groups, in the order they are drawn. */
+export const GUIDE_GROUPS: readonly GuideKey['group'][] = ['만들기', '보기', '정리']

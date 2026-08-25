@@ -10,9 +10,9 @@
  * Three things are pinned:
  *   1. the board fills the window (no docked column may reappear),
  *   2. the PITCH MARKINGS end above the floating transport (the bar may cover grass, never play),
- *   3. the guide is an INDEX PLUS A STATE (v32) — a one-line key rail always standing, no
- *      expanded rows on an idle board, at most three rows while a cue is live with its rail chip
- *      lit, and the rows gone again when the key comes up.
+ *   3. the key guide lives in the margin the pitch cannot use (v33) — it stands there always, it
+ *      never covers the markings, its detail opens only when asked (hover, click, or the key
+ *      really held) and only for the key that was asked about.
  */
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -31,15 +31,21 @@ const geometry = (page) =>
       marksW: Math.round(105 * m.a),
       marksH: Math.round(68 * m.d),
       marksBottom: Math.round(m.f + 68 * m.d),
+      marksLeft: Math.round(m.e),
       boardW: Math.round(board.width),
       barTop: Math.round(bar.y),
       win: window.innerWidth,
     }
   })
 
-const hintRows = (page) => page.locator('[class*=hintRows] > div')
-const railKeys = (page) => page.locator('[class*=hintRail] > span')
-const litKeys = (page) => page.locator('[class*=hintRail] > span[data-on="true"]')
+const guideRows = (page) => page.locator('button[class*=guideRow]')
+const openRows = (page) => page.locator('button[class*=guideRow][aria-expanded="true"]')
+const heldRows = (page) => page.locator('button[class*=guideRow][data-held]')
+const guideBox = (page) =>
+  page.evaluate(() => {
+    const g = document.querySelector('[class*=keyGuide]').getBoundingClientRect()
+    return { right: Math.round(g.x + g.width), width: Math.round(g.width) }
+  })
 
 module.exports = {
   id: 'full-bleed',
@@ -68,8 +74,17 @@ module.exports = {
           `markings end ${g.marksBottom}, bar top ${g.barTop}`,
         ),
       )
+      const guide = await guideBox(page)
+      out.push(
+        h.check(
+          `${tag} the guide sits beside the pitch, not on it`,
+          guide.right <= g.marksLeft,
+          `guide ends ${guide.right}, markings start ${g.marksLeft}`,
+        ),
+      )
       // The floor is the layout this replaced (921 at 1440, 767 at 1280) plus a margin; the point
-      // is that a re-docked panel would drop straight through it.
+      // is that a re-docked panel would drop straight through it — and the guide is free, so it
+      // must not move this number either.
       const floor = Math.round(vp.width * 0.7)
       out.push(
         h.check(
@@ -92,13 +107,13 @@ module.exports = {
      * learn by already performing it is not discoverable (user 2026-08-25). What it must not carry
      * is EXPLANATION: no expanded rows, and no chip lit, until you are actually in a state.
      */
-    const railCount = await railKeys(page).count()
-    out.push(h.check('an idle board keeps the key rail', railCount >= 6, `${railCount} keys`))
+    const keyCount = await guideRows(page).count()
+    out.push(h.check('an idle board keeps the key guide', keyCount >= 6, `${keyCount} keys`))
     out.push(
-      h.check('the rail fits one line', (await page.evaluate(() => Math.round(document.querySelector('[class*=hintRail]').getBoundingClientRect().height))) < 40),
-    )
-    out.push(
-      h.check('but explains nothing until asked', (await hintRows(page).count()) === 0 && (await litKeys(page).count()) === 0),
+      h.check(
+        'but explains nothing until asked',
+        (await openRows(page).count()) === 0 && (await heldRows(page).count()) === 0,
+      ),
     )
 
     await teamBtn.click()
@@ -136,49 +151,57 @@ module.exports = {
       ),
     )
 
-    // Ctrl — the modifier families
+    // ExposeHK's rehearsal: holding the real key opens that key's set, and only that one
     await page.mouse.move(700, 400)
     await page.keyboard.down('Control')
     await page.waitForTimeout(420)
-    const ctrl = await hintRows(page).allTextContents()
-    const lit = await litKeys(page).allTextContents()
+    const held = await heldRows(page).evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))
+    const openedText = await page
+      .locator('button[class*=guideRow][data-held] + [class*=guideDrawer]')
+      .allTextContents()
     await page.keyboard.up('Control')
     out.push(
       h.check(
-        'holding Ctrl explains Ctrl',
-        ctrl.length > 0 && ctrl.join('|').includes('선수 추가'),
-        ctrl.join(' | '),
+        'holding Ctrl opens exactly the Ctrl key',
+        held.length === 1 && held[0].startsWith('Ctrl'),
+        held.join(' | ') || 'nothing held',
       ),
     )
     out.push(
       h.check(
-        'and the rail chip it came from lights up',
-        lit.length === 1 && lit[0].startsWith('Ctrl'),
-        lit.join(' | ') || 'nothing lit',
+        'and its detail is the Ctrl vocabulary',
+        openedText.join('|').includes('선수 추가'),
+        openedText.join(' | '),
       ),
     )
-    out.push(h.check('at most three rows', ctrl.length <= 3, `${ctrl.length} rows`))
     await page.waitForTimeout(600)
     out.push(
       h.check(
-        'the rows leave with the key, the rail stays',
-        (await hintRows(page).count()) === 0 &&
-          (await litKeys(page).count()) === 0 &&
-          (await railKeys(page).count()) === railCount,
+        'the detail closes with the key, the guide stays',
+        (await openRows(page).count()) === 0 &&
+          (await heldRows(page).count()) === 0 &&
+          (await guideRows(page).count()) === keyCount,
       ),
     )
 
-    // selection — the "I clicked this, now what" families
-    const ballPt = await page.evaluate(() => {
-      const m = document.querySelector('main svg').getScreenCTM()
-      const b = window.__stDoc.ball.home
-      return { x: m.a * b.x + m.e, y: m.d * b.y + m.f }
-    })
-    await page.mouse.click(ballPt.x, ballPt.y)
-    await page.waitForTimeout(420)
-    const ball = await hintRows(page).allTextContents()
-    out.push(h.check('picking the ball explains the ball', ball.length > 0, ball.join(' | ')))
+    // pointer: hover opens, click pins, clicking away unpins
+    const altRow = page.locator('button[class*=guideRow][aria-label^="Alt"]')
+    await altRow.hover()
+    await page.waitForTimeout(200)
+    out.push(h.check('hover opens a key', (await altRow.getAttribute('aria-expanded')) === 'true'))
+    await altRow.click()
+    await page.mouse.move(900, 500)
+    await page.waitForTimeout(250)
+    out.push(
+      h.check('a click pins it open', (await altRow.getAttribute('aria-expanded')) === 'true'),
+    )
+    await page.mouse.click(900, 500)
+    await page.waitForTimeout(250)
+    out.push(
+      h.check('and touching the board puts it away', (await altRow.getAttribute('aria-expanded')) === 'false'),
+    )
     await page.keyboard.press('Escape')
+
 
     // zen gives the reserved strip back to the pitch
     const before = (await geometry(page)).marksW
