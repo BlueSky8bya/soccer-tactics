@@ -18,9 +18,11 @@ import styles from './shell.module.css'
  * 해 균형적으로). So they moved to the opposite margin, and the two columns split the grass the
  * pitch cannot use: 168px on the left for the keys, 90px on the right for these.
  *
- * 62px of width holds an icon and a keycap, not a Korean sentence — so the label lives in the
- * tooltip and the cap says which key does the same thing. Both commands undo in one step, which is
- * what lets them stand in the open at all.
+ * The column is a SHARE of the grass (v37), so its width varies: at 52px it is an icon and a cap
+ * with the name in the tooltip, and from 140px up it says the name out loud. That decision is a
+ * container query on the column itself — the buttons ask how much room they were given rather than
+ * asking how big the window is. Both commands undo in one step, which is what lets them stand in
+ * the open at all.
  */
 export function BoardActions() {
   const core = useEditor()
@@ -40,6 +42,7 @@ export function BoardActions() {
         aria-label={t('panel.clearAll')}
       >
         <UiIcon name="trash" size={17} />
+        <span className={styles.actionLabel}>{t('panel.clearAll')}</span>
         <span className={styles.actionKey} aria-hidden="true">
           X
         </span>
@@ -60,6 +63,7 @@ export function BoardActions() {
         aria-label={t('panel.reset')}
       >
         <UiIcon name="restart" size={17} />
+        <span className={styles.actionLabel}>{t('panel.reset')}</span>
         <span className={styles.actionKey} aria-hidden="true">
           ⇧R
         </span>
@@ -79,6 +83,7 @@ export function BoardActions() {
         <span className={styles.switchTrack} aria-hidden="true">
           <span className={styles.switchKnob} />
         </span>
+        <span className={styles.actionLabel}>{t('setting.ballFling')}</span>
       </button>
     </div>
   )

@@ -2387,10 +2387,14 @@
  */
 .stepPanel {
   position: absolute;
-  /* clear of the board's rounded corner: 16px left it 8px from the radius, so its square corner
-     nearly collided with the curve (lab review, 2026-08-24) */
-  right: var(--st-space-6);
-  top: var(--st-space-6);
+  /*
+   * Bottom right since v38. The top right belongs to the action column now, and two panels sharing
+   * one corner — one of them transient — is exactly the kind of collision that reads as clutter.
+   * Down here it is beside the step bar, which is what it is about, and clear of the transport
+   * (the bar is centred and never reaches this far out).
+   */
+  right: var(--st-guide-right-x, var(--st-space-6));
+  bottom: var(--st-space-6);
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -2783,7 +2787,12 @@
 .keyGuideRight {
   position: absolute;
   right: var(--st-guide-right-x, var(--st-space-3));
-  bottom: var(--st-space-6);
+  /* TOP, like its opposite number: two columns that start on the same line read as a pair holding
+     the board between them; one hanging at the bottom read as an afterthought
+     (user 2026-08-25: 다시 조화롭지 않아). */
+  top: var(--st-space-6);
+  /* its own container, so the buttons inside can decide whether they have room for words */
+  container-type: inline-size;
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -3218,4 +3227,47 @@
   height: 34px;
   justify-content: center;
   padding: 0;
+}
+
+/*
+ * The action column says the name out loud as soon as it has room for it (v38). A container query,
+ * not a media query: the column's width is a share of the board's spare grass, so what matters is
+ * how wide THIS COLUMN turned out, not how wide the window is.
+ */
+.actionLabel {
+  display: none;
+}
+
+@container (min-width: 140px) {
+  .actionBtn {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--st-space-2);
+    height: 38px;
+    padding: 0 var(--st-space-2);
+  }
+
+  .actionLabel {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .actionKey {
+    margin-left: auto;
+  }
+
+  .actionSwitch {
+    justify-content: flex-start;
+    gap: var(--st-space-2);
+    padding: 0 var(--st-space-2);
+  }
+
+  .actionSwitch .actionLabel {
+    font-weight: 500;
+    color: var(--st-text-2);
+  }
 }

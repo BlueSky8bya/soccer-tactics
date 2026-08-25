@@ -23,8 +23,22 @@ describe('side columns', () => {
       [2560, 1080],
     ] as const) {
       const c = sideColumns(...area(w, h), SAFE_BOTTOM)
-      expect(c.reserveLeft + c.reserveRight, `${w}x${h}`).toBeLessThanOrEqual(c.slack)
+      // …except where both floors together already exceed it, which is the regime the layout
+      // folds to a single column in anyway (see NO_SIDE_ROOM).
+      const floors = COL_LEFT_MIN + GAP_LEFT + COL_RIGHT_MIN + GAP_RIGHT
+      if (c.slack >= floors)
+        expect(c.reserveLeft + c.reserveRight, `${w}x${h}`).toBeLessThanOrEqual(c.slack)
     }
+  })
+
+  it('makes the right column yield first when the grass runs short', () => {
+    // a laptop: the left keeps its words, the right gives up its width
+    const laptop = sideColumns(...area(1280, 800), SAFE_BOTTOM)
+    expect(laptop.widthLeft).toBe(COL_LEFT_MIN)
+    expect(laptop.reserveLeft + laptop.reserveRight).toBeLessThanOrEqual(laptop.slack)
+    // a wide window: both get real width and they are within one band of each other
+    const wide = sideColumns(...area(1887, 832), SAFE_BOTTOM)
+    expect(wide.widthLeft - wide.widthRight).toBeLessThan(100)
   })
 
   it('grows with the slack instead of staying starved on a wide window', () => {

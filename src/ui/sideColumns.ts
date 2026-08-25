@@ -7,10 +7,16 @@
  * wrapped mid-phrase (user 2026-08-25: 비율들이 너무 멋 없는데 … 너무 너비가 짧아서 보기 힘들어).
  *
  * So the columns are a SHARE of the slack, clamped at both ends:
- *   · the minimum is what a keycap plus its word needs (136 / 62),
+ *   · the minimum is what a keycap plus its word needs (136 / 52),
  *   · the maximum is where a reading column stops helping — 288px is inside the 230–340px band
- *     eight independent tool codebases converge on (DESIGN_RESEARCH §4c), and the icon column has
- *     no text to set, so it stops at 122.
+ *     eight independent tool codebases converge on (DESIGN_RESEARCH §4c), and 240 puts the action
+ *     column in the same band so the two read as a PAIR rather than a slab and a sliver
+ *     (user 2026-08-25: 다시 조화롭지 않아 — measured 288×588 against 122×181).
+ *
+ * The shares are near-even (0.55 / 0.45) for the same reason: where there is room for both, the
+ * board should sit between two columns of comparable weight. Where there is not — a laptop with
+ * 263px of slack — the left one keeps its words and the right one falls back to its icon width,
+ * because a guide you cannot read helps nobody.
  *
  * Pure on purpose: the same numbers drive the CSS widths and the pitch's own reserve, and a shared
  * function is the only way those two cannot drift apart.
@@ -20,13 +26,13 @@
 export const COL_LEFT_MIN = 136
 export const COL_LEFT_MAX = 288
 export const COL_RIGHT_MIN = 52
-export const COL_RIGHT_MAX = 122
+export const COL_RIGHT_MAX = 240
 /** Reserve = column + its inset + a gap of grass before the pitch starts. */
 export const GAP_LEFT = 32
 export const GAP_RIGHT = 24
 /** Share of the slack each side may claim (the left one carries the sentences). */
-const SHARE_LEFT = 0.72
-const SHARE_RIGHT = 0.28
+const SHARE_LEFT = 0.55
+const SHARE_RIGHT = 0.45
 /** How far the columns sit from the window edge before the hug (see `insetLeft`). */
 const BASE_INSET = 12
 
@@ -69,14 +75,17 @@ export function sideColumns(
     COL_RIGHT_MIN + GAP_RIGHT,
     COL_RIGHT_MAX + GAP_RIGHT,
   )
-  // The pair never asks for more grass than there is. `usePitchView` caps it too — this is the
-  // same rule stated where the WIDTHS are decided, so the panels shrink with their reserve rather
-  // than hanging over the touchline.
-  const total = reserveLeft + reserveRight
-  if (total > slack && total > 0) {
-    const k = slack / total
-    reserveLeft = Math.max(COL_LEFT_MIN + GAP_LEFT, Math.floor(reserveLeft * k))
-    reserveRight = Math.max(COL_RIGHT_MIN + GAP_RIGHT, Math.floor(reserveRight * k))
+  /*
+   * The pair never asks for more grass than there is, and the RIGHT one yields first: it holds two
+   * commands and a switch that can fall back to icons, while the left one is the only place the
+   * gestures are written out. Scaling both proportionally does not work — each has a floor, and
+   * two floors can add up to more than the slack (measured: 276 wanted against 263 available at
+   * 1280×800), which is how a column ends up standing on the touchline.
+   */
+  if (reserveLeft + reserveRight > slack) {
+    reserveRight = Math.max(COL_RIGHT_MIN + GAP_RIGHT, Math.floor(slack - reserveLeft))
+    if (reserveLeft + reserveRight > slack)
+      reserveLeft = Math.max(COL_LEFT_MIN + GAP_LEFT, Math.floor(slack - reserveRight))
   }
   const spare = Math.max(0, Math.floor((slack - reserveLeft - reserveRight) / 2))
   return {

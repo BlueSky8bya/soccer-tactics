@@ -3698,3 +3698,30 @@ Validation: typecheck/lint/**358 tests**/build/harness PASS. 브라우저 **216 
 (신규: 열이 자기 몫만큼 자란다 — 1280 155px → 1920 288px). 마킹 폭 957/1102/1365 불변.
 
 Related: ADR-0009 v37, PLAN-20260825-017 R-9, CHG-20260825-218
+
+## CHG-20260825-220 — 두 열을 한 쌍으로: 같은 기준선, 비슷한 무게 (ADR-0009 v38)
+
+Date: 2026-08-25 · Type: UX · Level: L1
+
+Problem (사용자 2026-08-25): "다시 조화롭지 않아." 실측(1887×832): 왼쪽 열 **288×588 @y=72**,
+오른쪽 열 **122×181 @y=627** — 질량도 다르고 공유하는 기준선도 없었다. 게다가 단계 패널(오른쪽 위)과
+액션 열(오른쪽 아래)이 같은 변을 성격 다르게 나눠 썼다.
+
+Change:
+- **몫 0.55/0.45**(전 0.72/0.28), 오른쪽 상한 122 → **240**. 여유 있는 창에서 두 열이 같은 밴드에
+  든다: 1887×832 **288/240** · 1920×1080 **231/192** · 1440×900 136/79 · 1280×800 136/70.
+- **부족하면 오른쪽이 먼저 양보.** 하한 합(244)이 슬랙을 넘을 수 있어 비례 축소는 틀렸다 —
+  1280×800에서 276 > 263으로 열이 터치라인에 올라탔다(테스트가 잡음). 문장이 적힌 왼쪽이 마지막.
+- **둘 다 `top`에서 시작** — 보드를 사이에 낀 한 쌍.
+- **단계 패널은 오른쪽 아래로** — 위 모서리는 액션 열의 것.
+- **액션 열은 폭이 140px을 넘으면 이름을 말한다** — `@container`, 미디어 쿼리가 아니라. 열 폭은
+  창이 아니라 잔디의 몫이므로 물어야 할 질문은 "내가 얼마를 받았나"다.
+
+Files: src/ui/sideColumns.ts, src/ui/sideColumns.test.ts, src/ui/BoardActions.tsx,
+src/ui/shell.module.css, docs/agent/decisions/ADR-0009-simple-mode-interaction.md,
+docs/agent/CURRENT_STATE.md, docs/agent/plans/ACTIVE_PLAN.md
+
+Validation: typecheck/lint/**359 tests**/build/harness PASS. 브라우저 **216 checks ALL PASS**.
+라이트/다크 스크린샷 확인. 마킹 폭 불변.
+
+Related: ADR-0009 v38, PLAN-20260825-017 R-10, CHG-20260825-219
