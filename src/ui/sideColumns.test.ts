@@ -59,13 +59,17 @@ describe('side columns', () => {
     expect(none.widthRight).toBe(COL_RIGHT_MIN)
   })
 
-  it('hugs the board when the slack is bigger than the columns need', () => {
-    const wide = sideColumns(...area(2560, 1080), SAFE_BOTTOM)
-    // half the leftover on each side, so the panels sit beside the pitch, not against the glass
-    expect(wide.insetLeft).toBeGreaterThan(12)
-    expect(wide.insetLeft + wide.widthLeft).toBeLessThanOrEqual(wide.reserveLeft + wide.insetLeft)
-    const laptop = sideColumns(...area(1440, 900), SAFE_BOTTOM)
-    expect(laptop.insetLeft).toBe(12)
+  it('pins the columns to the frame at every size', () => {
+    // v38: the leftover grass pools between column and pitch, not as padding around the column
+    for (const [w, h] of [
+      [1280, 800],
+      [1440, 900],
+      [2560, 1080],
+    ] as const) {
+      const c = sideColumns(...area(w, h), SAFE_BOTTOM)
+      expect(c.insetLeft, `${w}x${h}`).toBe(c.insetRight)
+      expect(c.insetLeft).toBeLessThanOrEqual(16)
+    }
   })
 
   it('keeps width and reserve in step', () => {

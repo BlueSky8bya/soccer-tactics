@@ -3725,3 +3725,25 @@ Validation: typecheck/lint/**359 tests**/build/harness PASS. 브라우저 **216 
 라이트/다크 스크린샷 확인. 마킹 폭 불변.
 
 Related: ADR-0009 v38, PLAN-20260825-017 R-10, CHG-20260825-219
+
+## CHG-20260825-221 — 열을 창틀에 붙이고 남는 잔디는 한 곳으로 (ADR-0009 v39)
+
+Date: 2026-08-25 · Type: UX · Level: L1
+
+Problem (사용자 2026-08-25): "좌우 패딩이 너무 과해 왜이리 떨어져있어." 실측(1885×842): v37의
+hug 때문에 열 **바깥 140px / 안쪽 51px** — 창틀에도 피치에도 붙지 않고 초록 한가운데 떠 있었다.
+
+Change:
+- **hug 폐지, inset 상수 16px.** 남는 잔디는 열과 피치 사이 **한 곳**에 모여 보드의 여백으로
+  읽힌다. 실측 1885×842: 바깥 16/16 · 열 **320/280** · 피치까지 122/114.
+- **상한 288/240 → 320/280.** 남는 잔디를 줄이는 유일한 방법은 열이 더 가져가는 것이다(피치는
+  높이 제약이라 못 큰다). 320은 여전히 읽는 열의 밴드(230~340, `DESIGN_RESEARCH §4c`) 안.
+
+Files: src/ui/sideColumns.ts, src/ui/sideColumns.test.ts,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/CURRENT_STATE.md,
+docs/agent/plans/ACTIVE_PLAN.md
+
+Validation: typecheck/lint/**359 tests**/build/harness PASS. 브라우저 **216 checks ALL PASS**.
+마킹 폭 불변.
+
+Related: ADR-0009 v39, PLAN-20260825-017 R-11, CHG-20260825-220

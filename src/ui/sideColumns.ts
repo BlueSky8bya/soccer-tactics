@@ -24,17 +24,17 @@
 
 /** Column width bounds, in px. */
 export const COL_LEFT_MIN = 136
-export const COL_LEFT_MAX = 288
+export const COL_LEFT_MAX = 320
 export const COL_RIGHT_MIN = 52
-export const COL_RIGHT_MAX = 240
+export const COL_RIGHT_MAX = 280
 /** Reserve = column + its inset + a gap of grass before the pitch starts. */
 export const GAP_LEFT = 32
 export const GAP_RIGHT = 24
 /** Share of the slack each side may claim (the left one carries the sentences). */
 const SHARE_LEFT = 0.55
 const SHARE_RIGHT = 0.45
-/** How far the columns sit from the window edge before the hug (see `insetLeft`). */
-const BASE_INSET = 12
+/** How far the columns sit from the window edge — the board itself is inset 12, so this is flush. */
+const BASE_INSET = 16
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 
@@ -46,10 +46,14 @@ export interface SideColumns {
   reserveLeft: number
   reserveRight: number
   /**
-   * Where each column sits, measured from its own window edge. On a wide window the columns take
-   * only part of the slack, and the rest would open as a gulf between panel and pitch — so they
-   * move INWARD by half of what is left over and hug the board. The grass then pools at the window
-   * edge, where nothing has to be read across it.
+   * Where each column sits, measured from its own window edge — a constant.
+   *
+   * v37 moved them inward by half the leftover so they would hug the board. Measured on a
+   * 1885×842 window that put 140px of grass OUTSIDE each column and 51px inside it: the panels
+   * floated in the middle of the green with padding on both sides, which is what the user saw
+   * (2026-08-25: 좌우 패딩이 너무 과해 왜이리 떨어져있어). A panel pinned to the frame reads as part
+   * of the window; the spare grass then pools in ONE place — between the column and the pitch —
+   * where it is the board's own margin rather than a frame around the chrome.
    */
   insetLeft: number
   insetRight: number
@@ -87,14 +91,13 @@ export function sideColumns(
     if (reserveLeft + reserveRight > slack)
       reserveLeft = Math.max(COL_LEFT_MIN + GAP_LEFT, Math.floor(slack - reserveRight))
   }
-  const spare = Math.max(0, Math.floor((slack - reserveLeft - reserveRight) / 2))
   return {
     slack: Math.round(slack),
     widthLeft: reserveLeft - GAP_LEFT,
     widthRight: reserveRight - GAP_RIGHT,
     reserveLeft,
     reserveRight,
-    insetLeft: BASE_INSET + spare,
-    insetRight: BASE_INSET + spare,
+    insetLeft: BASE_INSET,
+    insetRight: BASE_INSET,
   }
 }
