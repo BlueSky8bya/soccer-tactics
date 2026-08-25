@@ -3634,3 +3634,39 @@ Validation: typecheck/lint/**353 tests**/build/harness PASS. 브라우저 **211 
 드래그가 다시 통한다.
 
 Related: ADR-0009 v35, PLAN-20260825-017 R-7, CHG-20260825-216
+
+## CHG-20260825-218 — 안내를 두 여백에 나눠 싣고, 열이 보드를 넘지 않게 (ADR-0009 v36)
+
+Date: 2026-08-25 · Type: UX · Level: L2
+
+Problem (사용자 2026-08-25): "이거 왼쪽에 있는거 확장되다보면 세로로 넘어버리잖아. 오른쪽으로 좀
+분배하든지 해 균형적으로."
+
+실측이 그대로였다: Space(4행)를 펼치면 왼쪽 열이 **857px**, 보드는 828(1440×900)/**728**(1280×800)
+— **최대 129px가 화면 밖으로** 나갔다.
+
+Change:
+- **두 열로 분배.** 왼쪽 = 키 가이드(136px), 오른쪽 아래 = 보드 명령(62px). 예약 168 + 90 = **258**로
+  가장 좁은 창의 슬랙(**263** @1280×800) 안에 들어간다 — 보드는 여전히 한 픽셀도 내지 않는다.
+  왼쪽 열은 정리 카드가 빠져 **653px**, 어떤 창에서도 넘지 않는다.
+- **오른쪽 열은 아이콘+캡**(휴지통/`X`, 재시작/`⇧R`, 스위치). 62px에 한국어 문장은 안 들어간다 —
+  이름은 툴팁과 `?` 오버레이. `restart` 아이콘 신규.
+- **폭과 예약을 한 곳으로.** `--st-guide-w` / `--st-guide-right-w` / `--st-reserve-left` /
+  `--st-reserve-right`를 `tokens.css`에 두고 `usePitchView`가 **CSS에서 읽는다**(옛 `BOARD_SAFE_
+  LEFT_PX` 상수 삭제). 레이아웃과 피치가 어긋날 방법이 없어진다.
+- **한 열 모드**(≤1180px 또는 종횡비 ≤1.57)에서는 명령이 왼쪽 열 발치로 돌아온다. DOM은 한 벌만 —
+  `useMediaQuery`(신규)가 스타일시트와 같은 질의를 공유한다.
+- 낱말 잘림(고른 것 → "고...") 수정: 캡 min-width 48→40, 행 간격/패딩 재조정. 상세는
+  `word-break: keep-all`로 한글이 토큰 중간에서 끊기지 않는다.
+
+Files: src/ui/KeyGuide.tsx, src/ui/BoardActions.tsx, src/ui/useMediaQuery.ts(신규),
+src/ui/UiIcon.tsx, src/ui/tokens.css, src/ui/shell.module.css, src/ui/pitch/useSvgMetrics.ts,
+src/ui/pitch/SimplePitch.tsx, pw/full-bleed.cjs, pw/shell-feedback.cjs,
+docs/agent/decisions/ADR-0009-simple-mode-interaction.md, docs/agent/CURRENT_STATE.md,
+docs/agent/plans/ACTIVE_PLAN.md
+
+Validation: typecheck/lint/**353 tests**/build/harness PASS. 브라우저 **215 checks ALL PASS**
+(`full-bleed` 32 → 36). 새 계약: 가장 큰 세트를 펼쳐도 열이 보드 안(725 ≤ 888), 두 번째 열도 피치
+밖(마킹 끝 1310 < 열 시작 1366). 마킹 폭 957 / 1102 / 1365 불변. 라이트/다크 확인.
+
+Related: ADR-0009 v36, PLAN-20260825-017 R-8, CHG-20260825-217

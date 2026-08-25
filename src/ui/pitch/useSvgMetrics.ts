@@ -25,11 +25,13 @@ const round = (n: number) => Math.round(n * 100) / 100
  * coordinates. Everything that maps through `getScreenCTM` — pointer picking, overlays, export —
  * follows automatically.
  *
- * `safeLeft` (ADR-0009 v33) is the same idea applied sideways, with one extra rule: it is capped at
- * the SLACK, so it is always free. The pitch is height-constrained at every laptop size, which
- * leaves grass in the left and right margins that no scaling will ever use — the key guide lives in
- * it. Where the slack is smaller than the guide (a short, narrow window) the pitch simply shifts by
- * what slack there is and the guide overlaps the rest; it never shrinks the pitch to make room.
+ * The SIDE reserves (ADR-0009 v33, split in two in v36) are the same idea applied sideways, with
+ * one extra rule: together they are capped at the SLACK, so they are always free. The pitch is
+ * height-constrained at every laptop size, which leaves grass in the left and right margins that no
+ * scaling will ever use — the key guide lives in the left one, the board's own commands in the
+ * right. Their widths are `--st-reserve-left` / `--st-reserve-right`, read from CSS so the layout
+ * and the pitch cannot drift apart. Where the slack is smaller than the pair asks for, both shrink
+ * in proportion and the panels overlap the surround; the pitch never shrinks to make room.
  *
  * `safeBottom` (ADR-0009 v31) is how the full-bleed board and the floating transport share the
  * window. The board fills it — every pixel keeps coordinates, so the pen and the pointer still
@@ -43,7 +45,8 @@ export function usePitchView(
   pitchWidth: number,
   pad: number = PITCH_MARGIN_M,
   safeBottom: number = 0,
-  safeLeft: number = 0,
+  /** Read the side reserves from CSS instead of hard-coding them (`false` in zen). */
+  sideReserves = true,
 ): PitchView {
   const baseW = pitchLength + pad * 2
   const baseH = pitchWidth + pad * 2
@@ -61,19 +64,24 @@ export function usePitchView(
       // `meet` scale — the axis that binds keeps exactly the base box, minus the reserved strip
       const free = Math.min(r.width / baseW, (r.height - safe) / baseH)
       /*
-       * The side reserve is capped at the SLACK — the grass the pitch cannot use at the scale it
+       * The side reserves are capped at the SLACK — the grass the pitch cannot use at the scale it
        * would have had anyway (`r.width − baseW·free`). Taking exactly that much is free by
        * construction: `(r.width − slack) / baseW === free`, so the binding axis never changes.
-       * Ask for more than the slack and you get the slack; the board never pays for the guide.
+       * Ask for more than the slack and both sides shrink in proportion; the board never pays.
        */
+      const cs = getComputedStyle(el)
+      const askL = sideReserves ? parseFloat(cs.getPropertyValue('--st-reserve-left')) || 0 : 0
+      const askR = sideReserves ? parseFloat(cs.getPropertyValue('--st-reserve-right')) || 0 : 0
       const slack = Math.max(0, r.width - baseW * free)
-      const left = Math.max(0, Math.min(safeLeft, slack))
-      const scale = Math.min((r.width - left) / baseW, (r.height - safe) / baseH)
+      const k = askL + askR > slack ? slack / (askL + askR) : 1
+      const left = askL * k
+      const right = askR * k
+      const scale = Math.min((r.width - left - right) / baseW, (r.height - safe) / baseH)
       const w = round(r.width / scale)
       const h = round(r.height / scale)
       const next = {
-        // half the side reserve, in metres: the pitch centres in what is left of the width
-        x: round(pitchLength / 2 - w / 2 - left / 2 / scale),
+        // the pitch centres in what is left between the two columns
+        x: round(pitchLength / 2 - w / 2 - (left - right) / 2 / scale),
         // half the reserve, in metres: centring the pitch in the free area is the same as moving
         // it up by half of what was taken from the bottom
         y: round(pitchWidth / 2 - h / 2 + safe / 2 / scale),
@@ -94,7 +102,7 @@ export function usePitchView(
       ro.disconnect()
       window.removeEventListener('resize', compute)
     }
-  }, [svgRef, baseW, baseH, pitchLength, pitchWidth, safeBottom, safeLeft])
+  }, [svgRef, baseW, baseH, pitchLength, pitchWidth, safeBottom, sideReserves])
   return view
 }
 
@@ -120,8 +128,4 @@ export function clampToView(p: { x: number; y: number }, v: PitchView): { x: num
  */
 export const BOARD_SAFE_BOTTOM_PX = 72
 
-/**
- * The strip the key guide claims on the left (ADR-0009 v33): `--st-guide-w` (224) + the 16px it is
- * inset by + 16px of grass between it and the pitch. Capped at the slack — see `safeLeft`.
- */
-export const BOARD_SAFE_LEFT_PX = 256
+

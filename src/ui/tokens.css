@@ -171,15 +171,42 @@
 
   /* Hit targets (ADR-0006 D3) */
   /*
-   * The key guide's column (ADR-0009 v33). It has to agree with `BOARD_SAFE_LEFT_PX`, which is
-   * this width plus the 12px it is inset by plus a hair of grass — that constant is what tells the
-   * pitch to lay itself out beside the guide rather than under it.
+   * The two side columns (ADR-0009 v36) and the reserve each one asks the board for.
+   *
+   * These four numbers are ONE fact stated where both halves can read it: the CSS lays the columns
+   * out, and `usePitchView` reads the reserves off `:root` and lays the pitch beside them. Before
+   * this the widths lived here and the reserve lived in a TS constant, and keeping them in step
+   * was a promise rather than a mechanism.
+   *
+   * reserve = width + inset + a gap of grass. Their sum has to stay inside the board's horizontal
+   * slack, which is 263px at 1280×800 and 272px at 1440×900 — hence 136 + 62 and not more.
    */
-  --st-guide-w: 224px;
+  --st-guide-w: 136px;
+  --st-guide-right-w: 62px;
+  --st-reserve-left: 168px;
+  --st-reserve-right: 90px;
 
   --st-hit-token: 28px;
   --st-hit-handle: 16px;
   --st-hit-edge: 8px;
+}
+
+/*
+ * WHEN THERE IS NO GRASS TO STAND ON, one column of caps and nothing else (ADR-0009 v35/v36).
+ *
+ * The condition is not "narrow window", it is "no slack": the pitch is height-constrained, so the
+ * grass beside it is `W_board − 109·(H_board − 72)/72`, and two columns need 258px of it. Solving
+ * that for the viewport lands on an aspect of about 1.57 at every laptop height — which is why the
+ * second query is an ASPECT. A 1440×1000 window is wide by any width rule and still has only 120px
+ * of grass, and the columns would then sit on the touchline (caught by `pw/hit-scale`).
+ */
+@media (max-width: 1180px), (max-aspect-ratio: 157/100) {
+  :root {
+    --st-guide-w: 62px;
+    --st-guide-right-w: 0px;
+    --st-reserve-left: 90px;
+    --st-reserve-right: 0px;
+  }
 }
 
 /*

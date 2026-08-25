@@ -43,8 +43,18 @@ const openRows = (page) => page.locator('button[class*=guideRow][aria-expanded="
 const heldRows = (page) => page.locator('button[class*=guideRow][data-held]')
 const guideBox = (page) =>
   page.evaluate(() => {
-    const g = document.querySelector('[class*=keyGuide]').getBoundingClientRect()
-    return { right: Math.round(g.x + g.width), width: Math.round(g.width) }
+    const l = document
+      .querySelector('[class*=keyGuide]:not([class*=Right])')
+      .getBoundingClientRect()
+    const r = document.querySelector('[class*=keyGuideRight]')?.getBoundingClientRect()
+    const board = document.querySelector('main svg').getBoundingClientRect()
+    return {
+      right: Math.round(l.x + l.width),
+      width: Math.round(l.width),
+      bottom: Math.round(l.y + l.height),
+      boardBottom: Math.round(board.y + board.height),
+      rightColLeft: r ? Math.round(r.x) : null,
+    }
   })
 
 module.exports = {
@@ -80,6 +90,16 @@ module.exports = {
           `${tag} the guide sits beside the pitch, not on it`,
           guide.right <= g.marksLeft,
           `guide ends ${guide.right}, markings start ${g.marksLeft}`,
+        ),
+      )
+      const marksRight = g.marksLeft + g.marksW
+      out.push(
+        h.check(
+          `${tag} the second column keeps off the pitch too`,
+          guide.rightColLeft === null || guide.rightColLeft >= marksRight,
+          guide.rightColLeft === null
+            ? 'one column at this size'
+            : `markings end ${marksRight}, column starts ${guide.rightColLeft}`,
         ),
       )
       // The floor is the layout this replaced (921 at 1440, 767 at 1280) plus a margin; the point
@@ -178,6 +198,24 @@ module.exports = {
           (await guideRows(page).count()) === keyCount,
       ),
     )
+
+    /*
+     * The column may not outgrow the board. Stacking the actions under seven key rows made it
+     * 857px once a key was opened, which ran 130px past a 1280×800 board (user 2026-08-25: 왼쪽에
+     * 있는거 확장되다보면 세로로 넘어버리잖아). The tallest set — Space, four rows — is the test.
+     */
+    await page.locator('button[class*=guideRow][aria-label^="Space"]').click()
+    await page.waitForTimeout(450)
+    const opened = await guideBox(page)
+    out.push(
+      h.check(
+        'the widest set still fits the board',
+        opened.bottom <= opened.boardBottom,
+        `column ends ${opened.bottom}, board ends ${opened.boardBottom}`,
+      ),
+    )
+    await page.locator('button[class*=guideRow][aria-label^="Space"]').click()
+    await page.waitForTimeout(350)
 
     /*
      * Pointer: hover must NOT open anything. It used to, and sweeping down the column opened and

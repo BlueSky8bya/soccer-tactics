@@ -90,8 +90,8 @@ module.exports = {
       ['[class*=stepChip]', 'step chip', null],
       ['[class*=stepAll]', '전체 cell', null],
       ['[class*=variantSeg]', 'variant chip', null],
-      // back in the open since v35: the board's own commands stand in the side column
-      ['[class*=panelBtn]', 'panel button', null],
+      // in the open since v35, in its own column since v36 — the board's own commands
+      ['[class*=actionBtn]', 'board action', null],
     ]
     for (const [sel, name, menu] of pressables) {
       if (menu) await h.openMenu(page, menu)
